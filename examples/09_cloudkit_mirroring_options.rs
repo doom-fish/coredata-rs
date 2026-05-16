@@ -36,6 +36,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         CloudKitDatabaseScope::Private
     ));
 
+    let request = NSPersistentCloudKitContainerEventRequest::fetch_events_after_date(
+        std::time::UNIX_EPOCH,
+    )?;
+    assert!(matches!(
+        request.result_type(),
+        NSPersistentCloudKitContainerEventResultType::Events
+    ));
+    assert!(NSPersistentCloudKitContainerEventRequest::fetch_request_for_events()?
+        .entity_name()
+        .is_some());
+    assert_eq!(
+        event_notification_names::CHANGED,
+        "NSPersistentCloudKitContainerEventChangedNotification"
+    );
+
     println!("✅ CloudKit example OK");
     Ok(())
 }

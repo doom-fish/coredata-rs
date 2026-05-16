@@ -1,10 +1,10 @@
 # coredata-rs coverage audit (vs MacOSX26.2.sdk)
 
 SDK_PUBLIC_SYMBOLS: 180
-VERIFIED: 42
-GAPS: 119
+VERIFIED: 70
+GAPS: 91
 EXEMPT: 19
-COVERAGE_PCT: 26.1%
+COVERAGE_PCT: 38.9%
 
 Audit notes:
 - Scope is top-level CoreData.framework symbols only: interfaces, protocols, typedef enum/option types, exported constants, and C functions (none found).
@@ -57,6 +57,34 @@ Audit notes:
 | `NSRelationshipDescription` | Interface | `NSRelationshipDescription.h` | `schema::NSRelationshipDescription` |
 | `NSSQLitePragmasOption` | Constant | `NSPersistentStoreCoordinator.h` | `NSPersistentStoreDescription::{sqlite_pragmas,set_sqlite_pragma}` |
 | `NSSQLiteStoreType` | Constant | `NSPersistentStoreCoordinator.h` | `store::store_types::SQLITE` |
+| `NSBatchUpdateRequest` | Interface | `NSBatchUpdateRequest.h` | `batch_operation::NSBatchUpdateRequest` |
+| `NSBatchUpdateRequestResultType` | Type | `NSPersistentStoreResult.h` | `batch_operation::BatchUpdateRequestResultType` |
+| `NSBatchUpdateResult` | Interface | `NSPersistentStoreResult.h` | `batch_operation::NSBatchUpdateResult` |
+| `NSErrorMergePolicy` | Constant | `NSMergePolicy.h` | `merge_policy::NSMergePolicy::error_policy` |
+| `NSFetchedResultsChangeType` | Type | `NSFetchedResultsController.h` | `fetched_results_controller::NSFetchedResultsChangeType` |
+| `NSFetchedResultsController` | Interface | `NSFetchedResultsController.h` | `fetched_results_controller::NSFetchedResultsController` |
+| `NSFetchedResultsSectionInfo` | Protocol | `NSFetchedResultsController.h` | `fetched_results_controller::NSFetchedResultsSectionInfo` |
+| `NSMappingModel` | Interface | `NSMappingModel.h` | `migration::NSMappingModel` |
+| `NSMergeByPropertyObjectTrumpMergePolicy` | Constant | `NSMergePolicy.h` | `merge_policy::NSMergePolicy::merge_by_property_object_trump_policy` |
+| `NSMergeByPropertyStoreTrumpMergePolicy` | Constant | `NSMergePolicy.h` | `merge_policy::NSMergePolicy::merge_by_property_store_trump_policy` |
+| `NSMergePolicy` | Interface | `NSMergePolicy.h` | `merge_policy::NSMergePolicy` |
+| `NSMergePolicyType` | Type | `NSMergePolicy.h` | `merge_policy::MergePolicyType` |
+| `NSMigrationDestinationObjectKey` | Constant | `NSEntityMigrationPolicy.h` | `migration::migration_expression_keys::DESTINATION_OBJECT` |
+| `NSMigrationEntityMappingKey` | Constant | `NSEntityMigrationPolicy.h` | `migration::migration_expression_keys::ENTITY_MAPPING` |
+| `NSMigrationEntityPolicyKey` | Constant | `NSEntityMigrationPolicy.h` | `migration::migration_expression_keys::ENTITY_POLICY` |
+| `NSMigrationManager` | Interface | `NSMigrationManager.h` | `migration::NSMigrationManager` |
+| `NSMigrationManagerKey` | Constant | `NSEntityMigrationPolicy.h` | `migration::migration_expression_keys::MANAGER` |
+| `NSMigrationPropertyMappingKey` | Constant | `NSEntityMigrationPolicy.h` | `migration::migration_expression_keys::PROPERTY_MAPPING` |
+| `NSMigrationSourceObjectKey` | Constant | `NSEntityMigrationPolicy.h` | `migration::migration_expression_keys::SOURCE_OBJECT` |
+| `NSOverwriteMergePolicy` | Constant | `NSMergePolicy.h` | `merge_policy::NSMergePolicy::overwrite_policy` |
+| `NSPersistentCloudKitContainerEvent` | Interface | `NSPersistentCloudKitContainerEvent.h` | `cloudkit_mirroring::NSPersistentCloudKitContainerEvent` |
+| `NSPersistentCloudKitContainerEventChangedNotification` | Constant | `NSPersistentCloudKitContainerEvent.h` | `cloudkit_mirroring::event_notification_names::CHANGED` |
+| `NSPersistentCloudKitContainerEventRequest` | Interface | `NSPersistentCloudKitContainerEventRequest.h` | `cloudkit_mirroring::NSPersistentCloudKitContainerEventRequest` |
+| `NSPersistentCloudKitContainerEventResult` | Interface | `NSPersistentStoreResult.h` | `cloudkit_mirroring::NSPersistentCloudKitContainerEventResult` |
+| `NSPersistentCloudKitContainerEventResultType` | Type | `NSPersistentStoreResult.h` | `cloudkit_mirroring::NSPersistentCloudKitContainerEventResultType` |
+| `NSPersistentCloudKitContainerEventType` | Type | `NSPersistentCloudKitContainerEvent.h` | `cloudkit_mirroring::NSPersistentCloudKitContainerEventType` |
+| `NSPersistentCloudKitContainerEventUserInfoKey` | Constant | `NSPersistentCloudKitContainerEvent.h` | `cloudkit_mirroring::event_user_info_keys::EVENT` |
+| `NSRollbackMergePolicy` | Constant | `NSMergePolicy.h` | `merge_policy::NSMergePolicy::rollback_policy` |
 
 ## 🔴 GAPS
 | Symbol | Kind | Header | Notes |
@@ -68,9 +96,6 @@ Audit notes:
 | `NSAsynchronousFetchResult` | Interface | `NSPersistentStoreResult.h` | Async/base persistent-store request APIs are not wrapped. |
 | `NSAtomicStore` | Interface | `NSAtomicStore.h` | Custom/atomic store APIs are not wrapped. |
 | `NSAtomicStoreCacheNode` | Interface | `NSAtomicStoreCacheNode.h` | Custom/atomic store APIs are not wrapped. |
-| `NSBatchUpdateRequest` | Interface | `NSBatchUpdateRequest.h` | Batch delete/insert are wrapped, but batch update is not. |
-| `NSBatchUpdateRequestResultType` | Type | `NSPersistentStoreResult.h` | Batch delete/insert are wrapped, but batch update is not. |
-| `NSBatchUpdateResult` | Interface | `NSPersistentStoreResult.h` | Batch delete/insert are wrapped, but batch update is not. |
 | `NSBinaryStoreInsecureDecodingCompatibilityOption` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
 | `NSBinaryStoreSecureDecodingClasses` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
 | `NSCompositeAttributeDescription` | Interface | `NSCompositeAttributeDescription.h` | Advanced model metadata APIs are not wrapped. |
@@ -87,7 +112,6 @@ Audit notes:
 | `NSEntityMapping` | Interface | `NSEntityMapping.h` | Migration/mapping APIs are not wrapped. |
 | `NSEntityMappingType` | Type | `NSEntityMapping.h` | Migration/mapping APIs are not wrapped. |
 | `NSEntityMigrationPolicy` | Interface | `NSEntityMigrationPolicy.h` | Migration/mapping APIs are not wrapped. |
-| `NSErrorMergePolicy` | Constant | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
 | `NSExpressionDescription` | Interface | `NSExpressionDescription.h` | Advanced model metadata APIs are not wrapped. |
 | `NSFetchIndexDescription` | Interface | `NSFetchIndexDescription.h` | Advanced model metadata APIs are not wrapped. |
 | `NSFetchIndexElementDescription` | Interface | `NSFetchIndexElementDescription.h` | Advanced model metadata APIs are not wrapped. |
@@ -95,10 +119,7 @@ Audit notes:
 | `NSFetchRequestExpression` | Interface | `NSFetchRequestExpression.h` | Async/base persistent-store request APIs are not wrapped. |
 | `NSFetchRequestResult` | Protocol | `NSFetchRequest.h` | No public Rust analogue. |
 | `NSFetchedPropertyDescription` | Interface | `NSFetchedPropertyDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSFetchedResultsChangeType` | Type | `NSFetchedResultsController.h` | Fetched-results-controller APIs are not wrapped. |
-| `NSFetchedResultsController` | Interface | `NSFetchedResultsController.h` | Fetched-results-controller APIs are not wrapped. |
-| `NSFetchedResultsControllerDelegate` | Protocol | `NSFetchedResultsController.h` | Fetched-results-controller APIs are not wrapped. |
-| `NSFetchedResultsSectionInfo` | Protocol | `NSFetchedResultsController.h` | Fetched-results-controller APIs are not wrapped. |
+| `NSFetchedResultsControllerDelegate` | Protocol | `NSFetchedResultsController.h` | Fetched-results-controller APIs are not yet wrapped. |
 | `NSIgnorePersistentStoreVersioningOption` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
 | `NSIncrementalStore` | Interface | `NSIncrementalStore.h` | Custom/atomic store APIs are not wrapped. |
 | `NSIncrementalStoreNode` | Interface | `NSIncrementalStoreNode.h` | Custom/atomic store APIs are not wrapped. |
@@ -115,28 +136,8 @@ Audit notes:
 | `NSManagedObjectContextQueryGenerationKey` | Constant | `NSManagedObjectContext.h` | Query-generation APIs are not wrapped. |
 | `NSManagedObjectContextWillSaveNotification` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
 | `NSManagedObjectModelReference` | Interface | `NSManagedObjectModelReference.h` | Migration/mapping APIs are not wrapped. |
-| `NSMappingModel` | Interface | `NSMappingModel.h` | Migration/mapping APIs are not wrapped. |
-| `NSMergeByPropertyObjectTrumpMergePolicy` | Constant | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
-| `NSMergeByPropertyStoreTrumpMergePolicy` | Constant | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
-| `NSMergeConflict` | Interface | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
-| `NSMergePolicy` | Interface | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
-| `NSMergePolicyType` | Type | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
-| `NSMigrationDestinationObjectKey` | Constant | `NSEntityMigrationPolicy.h` | Migration helper constant is not wrapped. |
-| `NSMigrationEntityMappingKey` | Constant | `NSEntityMigrationPolicy.h` | Migration helper constant is not wrapped. |
-| `NSMigrationEntityPolicyKey` | Constant | `NSEntityMigrationPolicy.h` | Migration helper constant is not wrapped. |
-| `NSMigrationManager` | Interface | `NSMigrationManager.h` | Migration/mapping APIs are not wrapped. |
-| `NSMigrationManagerKey` | Constant | `NSEntityMigrationPolicy.h` | Migration helper constant is not wrapped. |
-| `NSMigrationPropertyMappingKey` | Constant | `NSEntityMigrationPolicy.h` | Migration helper constant is not wrapped. |
-| `NSMigrationSourceObjectKey` | Constant | `NSEntityMigrationPolicy.h` | Migration helper constant is not wrapped. |
+| `NSMergeConflict` | Interface | `NSMergePolicy.h` | Merge policy/conflict APIs are not yet fully wrapped. |
 | `NSMigrationStage` | Interface | `NSMigrationStage.h` | Migration/mapping APIs are not wrapped. |
-| `NSOverwriteMergePolicy` | Constant | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
-| `NSPersistentCloudKitContainerEvent` | Interface | `NSPersistentCloudKitContainerEvent.h` | CloudKit event observation/request APIs are not wrapped. |
-| `NSPersistentCloudKitContainerEventChangedNotification` | Constant | `NSPersistentCloudKitContainerEvent.h` | CloudKit event observation/request APIs are not wrapped. |
-| `NSPersistentCloudKitContainerEventRequest` | Interface | `NSPersistentCloudKitContainerEventRequest.h` | CloudKit event observation/request APIs are not wrapped. |
-| `NSPersistentCloudKitContainerEventResult` | Interface | `NSPersistentStoreResult.h` | CloudKit event observation/request APIs are not wrapped. |
-| `NSPersistentCloudKitContainerEventResultType` | Type | `NSPersistentStoreResult.h` | CloudKit event observation/request APIs are not wrapped. |
-| `NSPersistentCloudKitContainerEventType` | Type | `NSPersistentCloudKitContainerEvent.h` | CloudKit event observation/request APIs are not wrapped. |
-| `NSPersistentCloudKitContainerEventUserInfoKey` | Constant | `NSPersistentCloudKitContainerEvent.h` | CloudKit event observation/request APIs are not wrapped. |
 | `NSPersistentHistoryTokenKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
 | `NSPersistentStoreAsynchronousResult` | Interface | `NSPersistentStoreResult.h` | Async/base persistent-store request APIs are not wrapped. |
 | `NSPersistentStoreConnectionPoolMaxSizeKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
@@ -160,7 +161,6 @@ Audit notes:
 | `NSRefreshedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
 | `NSRefreshedObjectsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
 | `NSRemovedPersistentStoresKey` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSRollbackMergePolicy` | Constant | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
 | `NSSQLiteAnalyzeOption` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
 | `NSSQLiteErrorDomain` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
 | `NSSQLiteManualVacuumOption` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |

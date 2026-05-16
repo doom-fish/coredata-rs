@@ -24,6 +24,13 @@ pub struct RelationshipModelFixture {
     pub parent: NSRelationshipDescription,
 }
 
+pub struct MigrationModelFixture {
+    pub source_model: NSManagedObjectModel,
+    pub destination_model: NSManagedObjectModel,
+    pub source_person: NSEntityDescription,
+    pub destination_person: NSEntityDescription,
+}
+
 #[derive(Debug, Clone)]
 pub struct SqliteStoreArtifact {
     pub path: PathBuf,
@@ -133,6 +140,42 @@ pub fn relationship_model() -> Result<RelationshipModelFixture, CoreDataError> {
         task,
         children,
         parent,
+    })
+}
+
+pub fn migration_models() -> Result<MigrationModelFixture, CoreDataError> {
+    let source_model = NSManagedObjectModel::new()?;
+    let source_person = NSEntityDescription::named("Person")?;
+    source_person.set_managed_object_class_name("NSManagedObject")?;
+
+    let source_name = NSAttributeDescription::new("name", AttributeType::String)?;
+    source_name.set_optional(false)?;
+    let source_age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
+    source_age.set_optional(false)?;
+    source_person.add_attribute(&source_name)?;
+    source_person.add_attribute(&source_age)?;
+    source_model.add_entity(&source_person)?;
+
+    let destination_model = NSManagedObjectModel::new()?;
+    let destination_person = NSEntityDescription::named("Person")?;
+    destination_person.set_managed_object_class_name("NSManagedObject")?;
+
+    let destination_name = NSAttributeDescription::new("name", AttributeType::String)?;
+    destination_name.set_optional(false)?;
+    let destination_age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
+    destination_age.set_optional(false)?;
+    let nickname = NSAttributeDescription::new("nickname", AttributeType::String)?;
+    nickname.set_optional(true)?;
+    destination_person.add_attribute(&destination_name)?;
+    destination_person.add_attribute(&destination_age)?;
+    destination_person.add_attribute(&nickname)?;
+    destination_model.add_entity(&destination_person)?;
+
+    Ok(MigrationModelFixture {
+        source_model,
+        destination_model,
+        source_person,
+        destination_person,
     })
 }
 

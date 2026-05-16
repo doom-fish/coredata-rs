@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1 - 2026-05-16
+
+- Added `NSFetchedResultsController` / `NSFetchedResultsSectionInfo` wrappers plus fetched-results smoke coverage and example usage.
+- Added `NSBatchUpdateRequest` / `NSBatchUpdateResult` wrappers, extending the batch-operation area from insert/delete to batch updates.
+- Added CloudKit event request/result/event wrappers and named helpers for the event notification and user-info constants.
+- Added `NSMergePolicy` wrappers, merge-policy type/singleton helpers, and managed-object-context merge-policy round-tripping.
+- Added `NSMappingModel` / `NSMigrationManager` wrappers with inferred-mapping and SQLite migration smoke coverage.
+- Refreshed `COVERAGE.md` and `COVERAGE_AUDIT.md` and bumped the crate version to `0.2.1`.
+
 ## 0.2.0 - 2026-05-16
 
 - Split the Swift bridge into logical-area files and added matching Rust area modules.

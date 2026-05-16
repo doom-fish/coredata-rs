@@ -25,10 +25,13 @@ pub mod context;
 pub mod entity_description;
 pub mod error;
 pub mod fetch_request;
+pub mod fetched_results_controller;
 pub mod ffi;
 pub mod history;
 pub mod managed_object;
 pub mod managed_object_context;
+pub mod merge_policy;
+pub mod migration;
 pub mod model;
 pub mod ns_predicate;
 pub mod persistent_container;
@@ -42,22 +45,32 @@ pub mod validation;
 pub mod value;
 
 pub use batch_operation::{
-    BatchDeleteRequestResultType, BatchInsertRequestResultType, NSBatchDeleteRequest,
-    NSBatchDeleteResult, NSBatchInsertRequest, NSBatchInsertResult,
+    BatchDeleteRequestResultType, BatchInsertRequestResultType, BatchUpdateRequestResultType,
+    NSBatchDeleteRequest, NSBatchDeleteResult, NSBatchInsertRequest, NSBatchInsertResult,
+    NSBatchUpdateRequest, NSBatchUpdateResult,
 };
 pub use cloudkit_mirroring::{
-    CloudKitDatabaseScope, CloudKitSchemaInitializationOptions, NSPersistentCloudKitContainer,
-    NSPersistentCloudKitContainerOptions,
+    event_notification_names, event_user_info_keys, CloudKitDatabaseScope,
+    CloudKitSchemaInitializationOptions, NSPersistentCloudKitContainer,
+    NSPersistentCloudKitContainerEvent, NSPersistentCloudKitContainerEventRequest,
+    NSPersistentCloudKitContainerEventResult, NSPersistentCloudKitContainerEventResultType,
+    NSPersistentCloudKitContainerEventType, NSPersistentCloudKitContainerOptions,
 };
 pub use context::{NSManagedObject, NSManagedObjectContext, NSManagedObjectContextConcurrencyType};
 pub use error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
 pub use fetch_request::FetchRequestResultType;
+pub use fetched_results_controller::{
+    FetchedResultsIndexPath, NSFetchedResultsChangeType, NSFetchedResultsController,
+    NSFetchedResultsSectionInfo,
+};
 pub use history::{
     NSPersistentHistoryChange, NSPersistentHistoryChangeRequest, NSPersistentHistoryResult,
     NSPersistentHistoryToken, NSPersistentHistoryTransaction, PersistentHistoryChangeType,
     PersistentHistoryResultType,
 };
 pub use managed_object::NSManagedObjectID;
+pub use merge_policy::{MergePolicyType, NSMergePolicy};
+pub use migration::{migration_expression_keys, NSMappingModel, NSMigrationManager};
 pub use model::NSManagedObjectModel;
 pub use persistent_container::{option_keys, NSPersistentStoreDescription};
 pub use persistent_store_coordinator::NSPersistentStore;
@@ -75,24 +88,34 @@ pub use value::Value;
 /// Common imports.
 pub mod prelude {
     pub use crate::batch_operation::{
-        BatchDeleteRequestResultType, BatchInsertRequestResultType, NSBatchDeleteRequest,
-        NSBatchDeleteResult, NSBatchInsertRequest, NSBatchInsertResult,
+        BatchDeleteRequestResultType, BatchInsertRequestResultType,
+        BatchUpdateRequestResultType, NSBatchDeleteRequest, NSBatchDeleteResult,
+        NSBatchInsertRequest, NSBatchInsertResult, NSBatchUpdateRequest, NSBatchUpdateResult,
     };
     pub use crate::cloudkit_mirroring::{
-        CloudKitDatabaseScope, CloudKitSchemaInitializationOptions, NSPersistentCloudKitContainer,
-        NSPersistentCloudKitContainerOptions,
+        event_notification_names, event_user_info_keys, CloudKitDatabaseScope,
+        CloudKitSchemaInitializationOptions, NSPersistentCloudKitContainer,
+        NSPersistentCloudKitContainerEvent, NSPersistentCloudKitContainerEventRequest,
+        NSPersistentCloudKitContainerEventResult, NSPersistentCloudKitContainerEventResultType,
+        NSPersistentCloudKitContainerEventType, NSPersistentCloudKitContainerOptions,
     };
     pub use crate::context::{
         NSManagedObject, NSManagedObjectContext, NSManagedObjectContextConcurrencyType,
     };
     pub use crate::error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
     pub use crate::fetch_request::FetchRequestResultType;
+    pub use crate::fetched_results_controller::{
+        FetchedResultsIndexPath, NSFetchedResultsChangeType, NSFetchedResultsController,
+        NSFetchedResultsSectionInfo,
+    };
     pub use crate::history::{
         NSPersistentHistoryChange, NSPersistentHistoryChangeRequest, NSPersistentHistoryResult,
         NSPersistentHistoryToken, NSPersistentHistoryTransaction, PersistentHistoryChangeType,
         PersistentHistoryResultType,
     };
     pub use crate::managed_object::NSManagedObjectID;
+    pub use crate::merge_policy::{MergePolicyType, NSMergePolicy};
+    pub use crate::migration::{migration_expression_keys, NSMappingModel, NSMigrationManager};
     pub use crate::model::NSManagedObjectModel;
     pub use crate::persistent_container::{option_keys, NSPersistentStoreDescription};
     pub use crate::persistent_store_coordinator::NSPersistentStore;

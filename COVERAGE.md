@@ -1,6 +1,6 @@
-# Core Data coverage matrix (v0.2.0)
+# Core Data coverage matrix (v0.2.1)
 
-This audit covers the v0.2.0 target areas requested for `coredata-rs`: persistent containers, store coordinators, contexts, managed objects, entity/relationship metadata, fetch requests, predicates, history, CloudKit mirroring, batch operations, and validation.
+This audit covers the v0.2.1 target areas requested for `coredata-rs`: persistent containers, store coordinators, contexts, managed objects, entity/relationship metadata, fetch requests, fetched-results controllers, predicates, history, CloudKit mirroring/events, batch operations, merge policies, migrations/mapping models, and validation.
 
 Rows below are grouped by API family so the matrix stays reviewable. `✅` means the family is exposed in the safe Rust API and bridged through Swift. `🟡` means the area is partially covered and the note calls out the missing surface. `⏭️` marks surfaces intentionally deferred because they are entitlement-only, app-model-specific, or outside the requested logical-area target for this release.
 
@@ -17,8 +17,8 @@ Rows below are grouped by API family so the matrix stays reviewable. `✅` means
 | API row | Status | Notes |
 | --- | --- | --- |
 | Context construction, concurrency type, naming, save/insert/delete, `perform`, `performAndWait`, and coordinator attachment | ✅ implemented | Existing 0.1.x surface retained. |
-| Parent context, merge flags, transaction author, inserted/updated/deleted/registered object snapshots, refresh/reset/rollback/process-pending-changes, permanent IDs, and history merge helpers | ✅ implemented | Added in `src/managed_object_context.rs`. |
-| Undo manager, merge notifications, remote-context save merging, and object-trump/store-trump policy helpers | 🟡 partial | Not exposed in v0.2.0. |
+| Parent context, merge flags, transaction author, inserted/updated/deleted/registered object snapshots, refresh/reset/rollback/process-pending-changes, permanent IDs, merge-policy round-tripping, and history merge helpers | ✅ implemented | Added in `src/managed_object_context.rs` and `src/merge_policy.rs`. |
+| Undo manager, merge notifications, and remote-context save merging | 🟡 partial | Still deferred in v0.2.1. |
 
 ## ManagedObject
 
@@ -42,7 +42,7 @@ Rows below are grouped by API family so the matrix stays reviewable. `✅` means
 | --- | --- | --- |
 | Relationship construction, naming, optional/transient flags, destination entity, inverse relationship, counts, and delete rule | ✅ implemented | Existing 0.1.x surface retained. |
 | Ordered/to-many inspection and version-hash access | ✅ implemented | Added in `src/relationship_description.rs`. |
-| Derived attributes, fetched properties, and index metadata outside relationship basics | 🟡 partial | Not exposed in v0.2.0. |
+| Derived attributes, fetched properties, and index metadata outside relationship basics | 🟡 partial | Not yet exposed. |
 
 ## FetchRequest
 
@@ -51,6 +51,13 @@ Rows below are grouped by API family so the matrix stays reviewable. `✅` means
 | Request construction, predicate assignment, sort descriptors, fetch limit, fetch offset, and managed-object execution | ✅ implemented | Existing 0.1.x surface retained. |
 | Entity assignment, entity-name inspection, result type, subentity/property/fault flags, prefetch key paths, pending-change flag, distinct-results flag, batch size, and refetch-refresh flag | ✅ implemented | Added in `src/fetch_request.rs`. |
 | `propertiesToFetch`, grouping/aggregation, asynchronous fetch requests, and expression descriptions | 🟡 partial | Deferred. |
+
+## FetchedResultsController
+
+| API row | Status | Notes |
+| --- | --- | --- |
+| `NSFetchedResultsController` construction, `performFetch`, fetched objects, index-path lookup, section metadata, and cache deletion | ✅ implemented | Added in `src/fetched_results_controller.rs` and bridged through `FetchedResultsController.swift`. |
+| Delegate-driven change tracking callbacks | 🟡 partial | `NSFetchedResultsChangeType` and `NSFetchedResultsSectionInfo` are exposed, but delegate protocol bridging remains deferred. |
 
 ## NSPredicate
 
@@ -74,7 +81,8 @@ Rows below are grouped by API family so the matrix stays reviewable. `✅` means
 | --- | --- | --- |
 | `NSPersistentCloudKitContainerOptions` construction, container identifier, and database scope | ✅ implemented | Added in `src/cloudkit_mirroring.rs`. |
 | CloudKit-backed store-description options plus `NSPersistentCloudKitContainer` construction, model/coordinator access, store-description round-tripping, background/view contexts, load, and schema initialization flags | ✅ implemented | Bridged through `CloudKitMirroring.swift`. |
-| Event streams, CKShare/record metadata workflows, and live iCloud sync callbacks | ⏭️ skipped | Entitlement- and account-dependent; deferred until the crate can exercise them under a provisioned test environment. |
+| `NSPersistentCloudKitContainer.Event` request/result builders, result-type configuration, event metadata wrappers, and named notification/user-info helpers | ✅ implemented | Added in `src/cloudkit_mirroring.rs`; smoke coverage builds requests without requiring live iCloud state. |
+| CKShare/record metadata workflows and live iCloud sync callbacks | ⏭️ skipped | Entitlement- and account-dependent; deferred until the crate can exercise them under a provisioned test environment. |
 
 ## BatchOperation
 
@@ -82,7 +90,21 @@ Rows below are grouped by API family so the matrix stays reviewable. `✅` means
 | --- | --- | --- |
 | `NSBatchDeleteRequest` / `NSBatchDeleteResult` creation, result types, execution, status/count/object-ID inspection | ✅ implemented | Added in `src/batch_operation.rs`. |
 | `NSBatchInsertRequest` / `NSBatchInsertResult` creation from entity-name + JSON rows, result types, execution, status/count/object-ID inspection | ✅ implemented | SQLite-backed smoke coverage included. |
-| `NSBatchUpdateRequest` and dictionary/object result handling beyond insert/delete | 🟡 partial | Not yet exposed. |
+| `NSBatchUpdateRequest` / `NSBatchUpdateResult` creation, predicate/subentity configuration, constant-value property updates, execution, status/count/object-ID inspection | ✅ implemented | SQLite-backed smoke coverage now exercises update requests alongside insert/delete. |
+
+## MergePolicy
+
+| API row | Status | Notes |
+| --- | --- | --- |
+| Merge-policy type helpers, singleton policies, custom `NSMergePolicy` construction, and context merge-policy round-tripping | ✅ implemented | Added in `src/merge_policy.rs` and wired into `NSManagedObjectContext`. |
+| Conflict-object wrappers and custom conflict-resolution entry points | 🟡 partial | `NSMergeConflict` and `NSConstraintConflict` remain deferred. |
+
+## Migration
+
+| API row | Status | Notes |
+| --- | --- | --- |
+| Inferred `NSMappingModel` construction, entity-mapping-name inspection, `NSMigrationManager` construction, source/destination model/context access, migration expression keys, and SQLite store migration execution | ✅ implemented | Added in `src/migration.rs` with a lightweight-migration smoke test and example. |
+| Entity/property mapping objects, migration stages, and staged migration managers | 🟡 partial | Legacy/staged migration expansion remains deferred. |
 
 ## PersistentStoreCoordinator
 
@@ -104,8 +126,6 @@ Rows below are grouped by API family so the matrix stays reviewable. `✅` means
 
 | API row | Status | Reason |
 | --- | --- | --- |
-| `NSPersistentCloudKitContainer.Event` / live mirroring observation APIs | ⏭️ skipped | Requires provisioned iCloud entitlements and live CloudKit state. |
-| CKShare / record-zone convenience APIs attached to Core Data mirroring | ⏭️ skipped | Entitlement- and account-dependent. |
-| `NSBatchUpdateRequest` | ⏭️ skipped | Useful, but separate from the delete/insert subset targeted for v0.2.0. |
-| `NSAsynchronousFetchRequest` and `NSFetchedResultsController` style higher-level fetch orchestration | ⏭️ skipped | Separate higher-level workflow surface not requested for this release. |
-| Incremental stores, mapping models, migration managers, and other legacy/extensibility APIs outside the targeted logical areas | ⏭️ skipped | Large secondary feature set; reserved for a future major expansion. |
+| Live CloudKit sync callbacks and CKShare / record-zone convenience APIs attached to Core Data mirroring | ⏭️ skipped | Entitlement- and account-dependent. |
+| `NSAsynchronousFetchRequest` and delegate-driven fetched-results change tracking | ⏭️ skipped | Higher-level async orchestration and delegate callback bridging remain deferred. |
+| Incremental stores, staged migration managers, and other legacy/extensibility APIs outside the targeted logical areas | ⏭️ skipped | Large secondary feature set; reserved for a future major expansion. |

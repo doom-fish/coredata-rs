@@ -228,3 +228,177 @@ public func cdPersistentCloudKitContainerInitializeSchema(
         return Int32(error.code)
     }
 }
+
+@_cdecl("cd_persistent_cloudkit_event_request_fetch_after_date")
+public func cdPersistentCloudKitEventRequestFetchAfterDate(
+    _ timestamp: Double,
+    _ outRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
+    _: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    outRequest?.pointee = cdRetain(NSPersistentCloudKitContainerEventRequest.fetchEvents(after: Date(timeIntervalSince1970: timestamp)))
+    return CDR_OK
+}
+
+@_cdecl("cd_persistent_cloudkit_event_request_fetch_after_event")
+public func cdPersistentCloudKitEventRequestFetchAfterEvent(
+    _ eventPtr: UnsafeMutableRawPointer?,
+    _ outRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
+    _: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    let event = eventPtr.map { cdBorrow($0) as NSPersistentCloudKitContainer.Event }
+    outRequest?.pointee = cdRetain(NSPersistentCloudKitContainerEventRequest.fetchEvents(after: event))
+    return CDR_OK
+}
+
+@_cdecl("cd_persistent_cloudkit_event_request_fetch_request_for_events")
+public func cdPersistentCloudKitEventRequestFetchRequestForEvents(
+    _ outFetchRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
+    _: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    outFetchRequest?.pointee = cdRetain(NSPersistentCloudKitContainerEventRequest.fetchForEvents())
+    return CDR_OK
+}
+
+@_cdecl("cd_persistent_cloudkit_event_request_get_result_type")
+public func cdPersistentCloudKitEventRequestGetResultType(_ requestPtr: UnsafeMutableRawPointer?) -> Int64 {
+    guard let requestPtr else {
+        return 0
+    }
+    let request: NSPersistentCloudKitContainerEventRequest = cdBorrow(requestPtr)
+    return Int64(request.resultType.rawValue)
+}
+
+@_cdecl("cd_persistent_cloudkit_event_request_set_result_type")
+public func cdPersistentCloudKitEventRequestSetResultType(_ requestPtr: UnsafeMutableRawPointer?, _ resultType: Int64) {
+    guard let requestPtr else {
+        return
+    }
+    let request: NSPersistentCloudKitContainerEventRequest = cdBorrow(requestPtr)
+    request.resultType = NSPersistentCloudKitContainerEventResult.ResultType(rawValue: Int(resultType)) ?? request.resultType
+}
+
+@_cdecl("cd_managed_object_context_execute_persistent_cloudkit_event_request")
+public func cdManagedObjectContextExecutePersistentCloudKitEventRequest(
+    _ contextPtr: UnsafeMutableRawPointer?,
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
+    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    do {
+        guard let contextPtr, let requestPtr else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or CloudKit event request")
+        }
+        let context: NSManagedObjectContext = cdBorrow(contextPtr)
+        let request: NSPersistentCloudKitContainerEventRequest = cdBorrow(requestPtr)
+        let result = try context.execute(request) as? NSPersistentCloudKitContainerEventResult
+        outResult?.pointee = result.map(cdRetain)
+        return CDR_OK
+    } catch let error as NSError {
+        cdWriteError(error, to: outError)
+        return Int32(error.code)
+    }
+}
+
+@_cdecl("cd_persistent_cloudkit_event_result_get_result_type")
+public func cdPersistentCloudKitEventResultGetResultType(_ resultPtr: UnsafeMutableRawPointer?) -> Int64 {
+    guard let resultPtr else {
+        return 0
+    }
+    let result: NSPersistentCloudKitContainerEventResult = cdBorrow(resultPtr)
+    return Int64(result.resultType.rawValue)
+}
+
+@_cdecl("cd_persistent_cloudkit_event_result_get_events")
+public func cdPersistentCloudKitEventResultGetEvents(_ resultPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    guard let resultPtr else {
+        return nil
+    }
+    let result: NSPersistentCloudKitContainerEventResult = cdBorrow(resultPtr)
+    guard let events = result.result as? [NSPersistentCloudKitContainer.Event] else {
+        return nil
+    }
+    return cdRetain(events as NSArray)
+}
+
+@_cdecl("cd_persistent_cloudkit_event_result_get_counts_json")
+public func cdPersistentCloudKitEventResultGetCountsJSON(
+    _ resultPtr: UnsafeMutableRawPointer?,
+    _ outJSON: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?,
+    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    do {
+        guard let resultPtr else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing CloudKit event result")
+        }
+        let result: NSPersistentCloudKitContainerEventResult = cdBorrow(resultPtr)
+        let counts = (result.result as? [NSNumber])?.map(\.uint64Value) ?? []
+        outJSON?.pointee = cdCString(try cdEncodeJSON(counts))
+        return CDR_OK
+    } catch let error as NSError {
+        cdWriteError(error, to: outError)
+        return Int32(error.code)
+    }
+}
+
+@_cdecl("cd_persistent_cloudkit_event_get_identifier")
+public func cdPersistentCloudKitEventGetIdentifier(_ eventPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+    guard let eventPtr else {
+        return nil
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    return cdCString(event.identifier.uuidString)
+}
+
+@_cdecl("cd_persistent_cloudkit_event_get_store_identifier")
+public func cdPersistentCloudKitEventGetStoreIdentifier(_ eventPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+    guard let eventPtr else {
+        return nil
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    return cdCString(event.storeIdentifier)
+}
+
+@_cdecl("cd_persistent_cloudkit_event_get_type")
+public func cdPersistentCloudKitEventGetType(_ eventPtr: UnsafeMutableRawPointer?) -> Int64 {
+    guard let eventPtr else {
+        return 0
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    return Int64(event.type.rawValue)
+}
+
+@_cdecl("cd_persistent_cloudkit_event_get_start_timestamp")
+public func cdPersistentCloudKitEventGetStartTimestamp(_ eventPtr: UnsafeMutableRawPointer?) -> Double {
+    guard let eventPtr else {
+        return 0
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    return event.startDate.timeIntervalSince1970
+}
+
+@_cdecl("cd_persistent_cloudkit_event_get_end_timestamp")
+public func cdPersistentCloudKitEventGetEndTimestamp(_ eventPtr: UnsafeMutableRawPointer?) -> Double {
+    guard let eventPtr else {
+        return 0
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    return event.endDate?.timeIntervalSince1970 ?? 0
+}
+
+@_cdecl("cd_persistent_cloudkit_event_has_end_date")
+public func cdPersistentCloudKitEventHasEndDate(_ eventPtr: UnsafeMutableRawPointer?) -> Int32 {
+    guard let eventPtr else {
+        return 0
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    return event.endDate == nil ? 0 : 1
+}
+
+@_cdecl("cd_persistent_cloudkit_event_get_succeeded")
+public func cdPersistentCloudKitEventGetSucceeded(_ eventPtr: UnsafeMutableRawPointer?) -> Int32 {
+    guard let eventPtr else {
+        return 0
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    return event.succeeded ? 1 : 0
+}

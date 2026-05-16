@@ -2,7 +2,7 @@
 
 Safe Rust bindings for Apple's [Core Data](https://developer.apple.com/documentation/coredata) framework on macOS.
 
-> **Status:** v0.2.0 expands the crate across 12 logical areas: `PersistentContainer`, `ManagedObjectContext`, `ManagedObject`, `EntityDescription`, `FetchRequest`, `NSPredicate`, `History`, `CloudKitMirroring`, `BatchOperation`, `PersistentStoreCoordinator`, `RelationshipDescription`, and `Validation`.
+> **Status:** v0.2.1 expands the crate with fetched-results controllers, batch updates, CloudKit event requests, merge policies, and mapping-model / migration-manager helpers alongside the earlier persistent-container, context, history, and schema surfaces.
 
 ## Quick start
 
@@ -39,20 +39,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Highlights
 
-- persistent-store descriptions, option keys, CloudKit mirroring options, and synchronous store loading
+- persistent-store descriptions, option keys, CloudKit mirroring options, CloudKit event requests, and synchronous store loading
 - richer `NSPersistentStoreCoordinator` administration and `NSPersistentStore` inspection
-- `NSManagedObjectContext` concurrency helpers, parent/merge metadata, and history-request execution
+- `NSManagedObjectContext` concurrency helpers, parent/merge metadata, merge-policy round-tripping, and history-request execution
 - `NSManagedObject` state inspection plus `NSManagedObjectID` wrappers
 - entity, attribute, and relationship metadata including versioning, user info, uniqueness constraints, ordering, and validation rules
-- fetch-request result types, prefetch configuration, batch sizing, and predicate substitution/evaluation
+- fetch-request result types, fetched-results controllers/section info, prefetch configuration, batch sizing, and predicate substitution/evaluation
 - persistent-history request/result/transaction/change wrappers
-- SQLite-backed batch insert/delete requests and results
+- SQLite-backed batch insert/update/delete requests and results
+- inferred mapping models and migration managers for lightweight SQLite store migration workflows
 - validation rule metadata and object-validation entry points
 
 ## Coverage, examples, and tests
 
 - [`COVERAGE.md`](COVERAGE.md) records the audited API families and deferred rows.
-- `examples/01_in_memory_smoke.rs` plus `examples/02_*` through `examples/13_*` cover every logical area.
+- `examples/01_in_memory_smoke.rs` plus `examples/02_*` through `examples/15_*` cover every logical area.
 - `tests/*_tests.rs` provides smoke coverage for each logical area.
 
 Run the full verification suite with:
@@ -65,7 +66,7 @@ for ex in examples/*.rs; do cargo run --example "$(basename "$ex" .rs)"; done
 
 ## Notes
 
-- CloudKit mirroring wrappers are available, but live iCloud sync/event workflows remain environment-dependent.
+- CloudKit mirroring and event-request wrappers are available, but live iCloud sync callbacks remain environment-dependent.
 - Persistent-history request construction and wrappers are covered; end-to-end history replay is documented in `COVERAGE.md` as a deferred deeper runtime workflow.
 - Core Data still enforces queue confinement rules; use `NSManagedObjectContext::perform` or `perform_and_wait` when moving work onto a context-owned queue.
 

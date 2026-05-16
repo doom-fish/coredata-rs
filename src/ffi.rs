@@ -257,12 +257,18 @@ mod cloudkit_mirroring;
 mod entity_description;
 #[path = "ffi/fetch_request.rs"]
 mod fetch_request;
+#[path = "ffi/fetched_results_controller.rs"]
+mod fetched_results_controller;
 #[path = "ffi/history.rs"]
 mod history;
 #[path = "ffi/managed_object.rs"]
 mod managed_object;
 #[path = "ffi/managed_object_context.rs"]
 mod managed_object_context;
+#[path = "ffi/merge_policy.rs"]
+mod merge_policy;
+#[path = "ffi/migration.rs"]
+mod migration;
 #[path = "ffi/ns_predicate.rs"]
 mod ns_predicate;
 #[path = "ffi/persistent_container.rs"]
@@ -278,9 +284,12 @@ pub use batch_operation::*;
 pub use cloudkit_mirroring::*;
 pub use entity_description::*;
 pub use fetch_request::*;
+pub use fetched_results_controller::*;
 pub use history::*;
 pub use managed_object::*;
 pub use managed_object_context::*;
+pub use merge_policy::*;
+pub use migration::*;
 pub use ns_predicate::*;
 pub use persistent_container::*;
 pub use persistent_store_coordinator::*;

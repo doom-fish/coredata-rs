@@ -1,11 +1,15 @@
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use crate::context::NSManagedObjectContext;
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::model::NSManagedObjectModel;
 use crate::persistent_container::NSPersistentStoreDescription;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, take_string,
+    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, parse_json_ptr,
+    take_string,
 };
+use crate::query::NSFetchRequest;
 use crate::store::NSPersistentStoreCoordinator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -280,5 +284,237 @@ impl NSPersistentCloudKitContainer {
             return Err(unsafe { error_from_status(status, out_error) });
         }
         Ok(())
+    }
+}
+
+pub mod event_notification_names {
+    pub const CHANGED: &str = "NSPersistentCloudKitContainerEventChangedNotification";
+}
+
+pub mod event_user_info_keys {
+    pub const EVENT: &str = "NSPersistentCloudKitContainerEventUserInfoKey";
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum NSPersistentCloudKitContainerEventType {
+    Setup,
+    Import,
+    Export,
+    Unknown(i64),
+}
+
+impl NSPersistentCloudKitContainerEventType {
+    const fn from_raw(raw: i64) -> Self {
+        match raw {
+            0 => Self::Setup,
+            1 => Self::Import,
+            2 => Self::Export,
+            other => Self::Unknown(other),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum NSPersistentCloudKitContainerEventResultType {
+    Events,
+    CountEvents,
+    Unknown(i64),
+}
+
+impl NSPersistentCloudKitContainerEventResultType {
+    const fn from_raw(raw: i64) -> Self {
+        match raw {
+            0 => Self::Events,
+            1 => Self::CountEvents,
+            other => Self::Unknown(other),
+        }
+    }
+
+    const fn as_raw(self) -> i64 {
+        match self {
+            Self::Events => 0,
+            Self::CountEvents => 1,
+            Self::Unknown(raw) => raw,
+        }
+    }
+}
+
+impl_object_wrapper!(NSPersistentCloudKitContainerEvent);
+impl_object_wrapper!(NSPersistentCloudKitContainerEventRequest);
+impl_object_wrapper!(NSPersistentCloudKitContainerEventResult);
+
+fn seconds_since_epoch(time: SystemTime) -> Result<f64, CoreDataError> {
+    time.duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs_f64())
+        .map_err(|error| CoreDataError::bridge(-1, format!("invalid CloudKit event timestamp: {error}")))
+}
+
+fn system_time_from_seconds(seconds: f64) -> SystemTime {
+    UNIX_EPOCH + Duration::from_secs_f64(seconds)
+}
+
+impl NSPersistentCloudKitContainerEvent {
+    pub fn identifier(&self) -> Result<String, CoreDataError> {
+        let ptr = unsafe { ffi::cd_persistent_cloudkit_event_get_identifier(self.as_ptr()) };
+        unsafe { take_string(ptr) }
+            .ok_or_else(|| CoreDataError::bridge(-1, "CloudKit event identifier was nil"))
+    }
+
+    pub fn store_identifier(&self) -> Result<String, CoreDataError> {
+        let ptr = unsafe { ffi::cd_persistent_cloudkit_event_get_store_identifier(self.as_ptr()) };
+        unsafe { take_string(ptr) }
+            .ok_or_else(|| CoreDataError::bridge(-1, "CloudKit event store identifier was nil"))
+    }
+
+    pub fn event_type(&self) -> NSPersistentCloudKitContainerEventType {
+        NSPersistentCloudKitContainerEventType::from_raw(unsafe {
+            ffi::cd_persistent_cloudkit_event_get_type(self.as_ptr())
+        })
+    }
+
+    pub fn start_date(&self) -> SystemTime {
+        system_time_from_seconds(unsafe {
+            ffi::cd_persistent_cloudkit_event_get_start_timestamp(self.as_ptr())
+        })
+    }
+
+    pub fn end_date(&self) -> Option<SystemTime> {
+        let has_end_date =
+            unsafe { ffi::cd_persistent_cloudkit_event_has_end_date(self.as_ptr()) != 0 };
+        if !has_end_date {
+            return None;
+        }
+        Some(system_time_from_seconds(unsafe {
+            ffi::cd_persistent_cloudkit_event_get_end_timestamp(self.as_ptr())
+        }))
+    }
+
+    pub fn succeeded(&self) -> bool {
+        unsafe { ffi::cd_persistent_cloudkit_event_get_succeeded(self.as_ptr()) != 0 }
+    }
+}
+
+impl NSPersistentCloudKitContainerEventRequest {
+    pub fn fetch_events_after_date(time: SystemTime) -> Result<Self, CoreDataError> {
+        let timestamp = seconds_since_epoch(time)?;
+        let mut out_request = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_persistent_cloudkit_event_request_fetch_after_date(
+                timestamp,
+                &mut out_request,
+                &mut out_error,
+            )
+        };
+        if status != ffi::status::OK {
+            return Err(unsafe { error_from_status(status, out_error) });
+        }
+        unsafe { Self::from_retained_ptr(out_request, "CloudKit event request") }
+    }
+
+    pub fn fetch_events_after_event(
+        event: Option<&NSPersistentCloudKitContainerEvent>,
+    ) -> Result<Self, CoreDataError> {
+        let mut out_request = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_persistent_cloudkit_event_request_fetch_after_event(
+                event.map_or(core::ptr::null_mut(), NSPersistentCloudKitContainerEvent::as_ptr),
+                &mut out_request,
+                &mut out_error,
+            )
+        };
+        if status != ffi::status::OK {
+            return Err(unsafe { error_from_status(status, out_error) });
+        }
+        unsafe { Self::from_retained_ptr(out_request, "CloudKit event request") }
+    }
+
+    pub fn fetch_request_for_events() -> Result<NSFetchRequest, CoreDataError> {
+        let mut out_fetch_request = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_persistent_cloudkit_event_request_fetch_request_for_events(
+                &mut out_fetch_request,
+                &mut out_error,
+            )
+        };
+        if status != ffi::status::OK {
+            return Err(unsafe { error_from_status(status, out_error) });
+        }
+        unsafe { NSFetchRequest::from_retained_ptr(out_fetch_request, "CloudKit event fetch request") }
+    }
+
+    pub fn result_type(&self) -> NSPersistentCloudKitContainerEventResultType {
+        NSPersistentCloudKitContainerEventResultType::from_raw(unsafe {
+            ffi::cd_persistent_cloudkit_event_request_get_result_type(self.as_ptr())
+        })
+    }
+
+    pub fn set_result_type(&self, result_type: NSPersistentCloudKitContainerEventResultType) {
+        unsafe {
+            ffi::cd_persistent_cloudkit_event_request_set_result_type(
+                self.as_ptr(),
+                result_type.as_raw(),
+            );
+        }
+    }
+
+    pub fn execute(
+        &self,
+        context: &NSManagedObjectContext,
+    ) -> Result<NSPersistentCloudKitContainerEventResult, CoreDataError> {
+        let mut out_result = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_execute_persistent_cloudkit_event_request(
+                context.as_ptr(),
+                self.as_ptr(),
+                &mut out_result,
+                &mut out_error,
+            )
+        };
+        if status != ffi::status::OK {
+            return Err(unsafe { error_from_status(status, out_error) });
+        }
+        unsafe { NSPersistentCloudKitContainerEventResult::from_retained_ptr(out_result, "CloudKit event result") }
+    }
+}
+
+impl NSPersistentCloudKitContainerEventResult {
+    pub fn result_type(&self) -> NSPersistentCloudKitContainerEventResultType {
+        NSPersistentCloudKitContainerEventResultType::from_raw(unsafe {
+            ffi::cd_persistent_cloudkit_event_result_get_result_type(self.as_ptr())
+        })
+    }
+
+    pub fn events(&self) -> Result<Vec<NSPersistentCloudKitContainerEvent>, CoreDataError> {
+        let array_ptr = unsafe { ffi::cd_persistent_cloudkit_event_result_get_events(self.as_ptr()) };
+        collect_array(array_ptr, "CloudKit event result events")
+    }
+
+    pub fn counts(&self) -> Result<Vec<usize>, CoreDataError> {
+        let mut out_json = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_persistent_cloudkit_event_result_get_counts_json(
+                self.as_ptr(),
+                &mut out_json,
+                &mut out_error,
+            )
+        };
+        if status != ffi::status::OK {
+            return Err(unsafe { error_from_status(status, out_error) });
+        }
+        let raw_counts: Vec<u64> = unsafe { parse_json_ptr(out_json, "CloudKit event result counts") }?;
+        raw_counts
+            .into_iter()
+            .map(|count| {
+                usize::try_from(count)
+                    .map_err(|_| CoreDataError::bridge(-1, "CloudKit event count overflow"))
+            })
+            .collect()
     }
 }

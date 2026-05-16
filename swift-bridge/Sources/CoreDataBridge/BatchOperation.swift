@@ -10,6 +10,16 @@ func cdFoundationObjectDictionaries(from json: UnsafePointer<CChar>?) throws -> 
     }
 }
 
+func cdFoundationObjectDictionary(from json: UnsafePointer<CChar>?) throws -> [String: Any]? {
+    guard let json else {
+        return nil
+    }
+    let payload = try cdDecodeJSON(json, as: [String: CDValuePayload].self)
+    return payload.reduce(into: [String: Any]()) { dictionary, entry in
+        dictionary[entry.key] = cdFoundationValue(from: entry.value) ?? NSNull()
+    }
+}
+
 @_cdecl("cd_batch_delete_request_new_with_fetch_request")
 public func cdBatchDeleteRequestNewWithFetchRequest(
     _ fetchRequestPtr: UnsafeMutableRawPointer?,
@@ -242,6 +252,164 @@ public func cdBatchInsertResultGetObjectIDs(_ resultPtr: UnsafeMutableRawPointer
         return nil
     }
     let result: NSBatchInsertResult = cdBorrow(resultPtr)
+    guard let objectIDs = result.result as? [NSManagedObjectID] else {
+        return nil
+    }
+    return cdRetain(objectIDs as NSArray)
+}
+
+@_cdecl("cd_batch_update_request_new_with_entity_name")
+public func cdBatchUpdateRequestNewWithEntityName(
+    _ entityName: UnsafePointer<CChar>?,
+    _ outRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
+    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    do {
+        guard let entityName else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity name")
+        }
+        outRequest?.pointee = cdRetain(NSBatchUpdateRequest(entityName: String(cString: entityName)))
+        return CDR_OK
+    } catch let error as NSError {
+        cdWriteError(error, to: outError)
+        return Int32(error.code)
+    }
+}
+
+@_cdecl("cd_batch_update_request_get_entity_name")
+public func cdBatchUpdateRequestGetEntityName(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+    guard let requestPtr else {
+        return nil
+    }
+    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+    return cdCString(request.entityName)
+}
+
+@_cdecl("cd_batch_update_request_get_includes_subentities")
+public func cdBatchUpdateRequestGetIncludesSubentities(_ requestPtr: UnsafeMutableRawPointer?) -> Int32 {
+    guard let requestPtr else {
+        return 0
+    }
+    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+    return request.includesSubentities ? 1 : 0
+}
+
+@_cdecl("cd_batch_update_request_set_includes_subentities")
+public func cdBatchUpdateRequestSetIncludesSubentities(_ requestPtr: UnsafeMutableRawPointer?, _ includesSubentities: Int32) {
+    guard let requestPtr else {
+        return
+    }
+    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+    request.includesSubentities = includesSubentities != 0
+}
+
+@_cdecl("cd_batch_update_request_get_result_type")
+public func cdBatchUpdateRequestGetResultType(_ requestPtr: UnsafeMutableRawPointer?) -> UInt64 {
+    guard let requestPtr else {
+        return 0
+    }
+    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+    return UInt64(request.resultType.rawValue)
+}
+
+@_cdecl("cd_batch_update_request_set_result_type")
+public func cdBatchUpdateRequestSetResultType(_ requestPtr: UnsafeMutableRawPointer?, _ resultType: UInt64) {
+    guard let requestPtr else {
+        return
+    }
+    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+    request.resultType = NSBatchUpdateRequestResultType(rawValue: UInt(resultType)) ?? request.resultType
+}
+
+@_cdecl("cd_batch_update_request_set_predicate")
+public func cdBatchUpdateRequestSetPredicate(_ requestPtr: UnsafeMutableRawPointer?, _ predicatePtr: UnsafeMutableRawPointer?) {
+    guard let requestPtr else {
+        return
+    }
+    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+    request.predicate = predicatePtr.map { cdBorrow($0) as NSPredicate }
+}
+
+@_cdecl("cd_batch_update_request_set_properties_to_update_json")
+public func cdBatchUpdateRequestSetPropertiesToUpdateJSON(
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ propertiesJSON: UnsafePointer<CChar>?,
+    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    do {
+        guard let requestPtr else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing batch update request")
+        }
+        let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+        request.propertiesToUpdate = try cdFoundationObjectDictionary(from: propertiesJSON)
+        return CDR_OK
+    } catch let error as NSError {
+        cdWriteError(error, to: outError)
+        return Int32(error.code)
+    }
+}
+
+@_cdecl("cd_managed_object_context_execute_batch_update_request")
+public func cdManagedObjectContextExecuteBatchUpdateRequest(
+    _ contextPtr: UnsafeMutableRawPointer?,
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
+    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    do {
+        guard let contextPtr, let requestPtr else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or batch update request")
+        }
+        let context: NSManagedObjectContext = cdBorrow(contextPtr)
+        let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+        let result = try context.execute(request) as? NSBatchUpdateResult
+        outResult?.pointee = result.map(cdRetain)
+        return CDR_OK
+    } catch let error as NSError {
+        cdWriteError(error, to: outError)
+        return Int32(error.code)
+    }
+}
+
+@_cdecl("cd_batch_update_result_get_result_type")
+public func cdBatchUpdateResultGetResultType(_ resultPtr: UnsafeMutableRawPointer?) -> UInt64 {
+    guard let resultPtr else {
+        return 0
+    }
+    let result: NSBatchUpdateResult = cdBorrow(resultPtr)
+    return UInt64(result.resultType.rawValue)
+}
+
+@_cdecl("cd_batch_update_result_get_status")
+public func cdBatchUpdateResultGetStatus(_ resultPtr: UnsafeMutableRawPointer?) -> Int32 {
+    guard let resultPtr else {
+        return 0
+    }
+    let result: NSBatchUpdateResult = cdBorrow(resultPtr)
+    guard let number = result.result as? NSNumber else {
+        return 0
+    }
+    return number.boolValue ? 1 : 0
+}
+
+@_cdecl("cd_batch_update_result_get_count")
+public func cdBatchUpdateResultGetCount(_ resultPtr: UnsafeMutableRawPointer?) -> UInt64 {
+    guard let resultPtr else {
+        return 0
+    }
+    let result: NSBatchUpdateResult = cdBorrow(resultPtr)
+    guard let number = result.result as? NSNumber else {
+        return 0
+    }
+    return number.uint64Value
+}
+
+@_cdecl("cd_batch_update_result_get_object_ids")
+public func cdBatchUpdateResultGetObjectIDs(_ resultPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    guard let resultPtr else {
+        return nil
+    }
+    let result: NSBatchUpdateResult = cdBorrow(resultPtr)
     guard let objectIDs = result.result as? [NSManagedObjectID] else {
         return nil
     }
