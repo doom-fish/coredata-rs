@@ -52,14 +52,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ages = people
             .iter()
             .map(|person| {
-                person
-                    .value("age")?
-                    .as_i64()
-                    .ok_or_else(|| CoreDataError {
-                        domain: COREDATA_BRIDGE_ERROR_DOMAIN.into(),
-                        code: -1,
-                        message: "age was not numeric".into(),
-                    })
+                person.value("age")?.as_i64().ok_or_else(|| CoreDataError {
+                    domain: COREDATA_BRIDGE_ERROR_DOMAIN.into(),
+                    code: -1,
+                    message: "age was not numeric".into(),
+                })
             })
             .collect::<Result<Vec<_>, _>>()?;
         if ages != vec![25, 32, 41] {

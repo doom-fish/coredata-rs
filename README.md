@@ -2,7 +2,7 @@
 
 Safe Rust bindings for Apple's [Core Data](https://developer.apple.com/documentation/coredata) framework on macOS.
 
-> **Status:** v0.1.0 covers the practical managed-object surface for programmatic models, model loading from `.momd`, persistent-store coordinators, persistent containers, managed-object contexts, fetch requests, predicates, schema descriptions, and basic `NSManagedObject` value access.
+> **Status:** v0.2.0 expands the crate across 12 logical areas: `PersistentContainer`, `ManagedObjectContext`, `ManagedObject`, `EntityDescription`, `FetchRequest`, `NSPredicate`, `History`, `CloudKitMirroring`, `BatchOperation`, `PersistentStoreCoordinator`, `RelationshipDescription`, and `Validation`.
 
 ## Quick start
 
@@ -20,12 +20,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     person.add_attribute(&age)?;
     model.add_entity(&person)?;
 
-    let coordinator = NSPersistentStoreCoordinator::new(&model)?;
-    coordinator.add_persistent_store(store_types::IN_MEMORY, None::<&str>, None::<&str>, None)?;
+    let container = NSPersistentContainer::new("Example", &model)?;
+    let description = NSPersistentStoreDescription::new()?;
+    description.set_store_type(store_types::IN_MEMORY)?;
+    description.set_should_add_asynchronously(false);
+    container.set_persistent_store_descriptions(&[&description])?;
+    container.load_persistent_stores()?;
 
-    let context = NSManagedObjectContext::new_main_queue()?;
-    context.set_persistent_store_coordinator(&coordinator)?;
-
+    let context = container.view_context()?;
     let person_object = NSManagedObject::new(&person, None)?;
     context.insert(&person_object)?;
     person_object.set_value("name", "doom-fish")?;
@@ -37,28 +39,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Highlights
 
-- `NSManagedObjectModel::new`, `from_url`, `add_entity`, and schema introspection
-- `NSEntityDescription`, `NSAttributeDescription`, and `NSRelationshipDescription` builders
-- `NSPersistentStoreCoordinator::add_persistent_store` for SQLite, binary, and in-memory stores
-- `NSPersistentContainer::new`, `load_persistent_stores`, `view_context`, and `new_background_context`
-- `NSManagedObjectContext::{perform, perform_and_wait, save, has_changes, insert, delete}`
-- `NSManagedObject::{entity, set_value, value}`
-- `NSFetchRequest` with predicates, sort descriptors, limits, and offsets
-- `NSPredicate::from_format` for basic format-string predicates
+- persistent-store descriptions, option keys, CloudKit mirroring options, and synchronous store loading
+- richer `NSPersistentStoreCoordinator` administration and `NSPersistentStore` inspection
+- `NSManagedObjectContext` concurrency helpers, parent/merge metadata, and history-request execution
+- `NSManagedObject` state inspection plus `NSManagedObjectID` wrappers
+- entity, attribute, and relationship metadata including versioning, user info, uniqueness constraints, ordering, and validation rules
+- fetch-request result types, prefetch configuration, batch sizing, and predicate substitution/evaluation
+- persistent-history request/result/transaction/change wrappers
+- SQLite-backed batch insert/delete requests and results
+- validation rule metadata and object-validation entry points
 
-## Smoke example
+## Coverage, examples, and tests
 
-Run the in-memory Core Data smoke test with:
+- [`COVERAGE.md`](COVERAGE.md) records the audited API families and deferred rows.
+- `examples/01_in_memory_smoke.rs` plus `examples/02_*` through `examples/13_*` cover every logical area.
+- `tests/*_tests.rs` provides smoke coverage for each logical area.
+
+Run the full verification suite with:
 
 ```bash
-cargo run --all-features --example 01_in_memory_smoke
+cargo clippy --all-targets -- -D warnings
+cargo test
+for ex in examples/*.rs; do cargo run --example "$(basename "$ex" .rs)"; done
 ```
 
-It programmatically builds a `Person` model, creates an in-memory store, inserts three rows, fetches them sorted by age, and prints `✅ coredata insert + fetch OK`.
+## Notes
 
-## Threading
-
-Core Data still enforces its normal queue confinement rules. Use `NSManagedObjectContext::perform` or `perform_and_wait` when moving work onto a context-owned queue.
+- CloudKit mirroring wrappers are available, but live iCloud sync/event workflows remain environment-dependent.
+- Persistent-history request construction and wrappers are covered; end-to-end history replay is documented in `COVERAGE.md` as a deferred deeper runtime workflow.
+- Core Data still enforces queue confinement rules; use `NSManagedObjectContext::perform` or `perform_and_wait` when moving work onto a context-owned queue.
 
 ## License
 

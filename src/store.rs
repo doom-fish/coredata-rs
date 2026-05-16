@@ -127,7 +127,9 @@ impl NSPersistentContainer {
 
     pub fn view_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_container_view_context(self.as_ptr()) };
-        unsafe { NSManagedObjectContext::from_retained_ptr(ptr, "persistent container view context") }
+        unsafe {
+            NSManagedObjectContext::from_retained_ptr(ptr, "persistent container view context")
+        }
     }
 
     pub fn new_background_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {

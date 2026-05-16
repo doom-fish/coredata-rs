@@ -34,9 +34,9 @@ impl RetainedObject {
         ptr: *mut c_void,
         context: &str,
     ) -> Result<Self, CoreDataError> {
-        NonNull::new(ptr)
-            .map(Self)
-            .ok_or_else(|| CoreDataError::bridge(-2, format!("missing object pointer for {context}")))
+        NonNull::new(ptr).map(Self).ok_or_else(|| {
+            CoreDataError::bridge(-2, format!("missing object pointer for {context}"))
+        })
     }
 
     pub(crate) fn as_ptr(&self) -> *mut c_void {
@@ -102,7 +102,9 @@ pub(crate) fn optional_cstring_from_str(
     value: Option<&str>,
     context: &str,
 ) -> Result<Option<CString>, CoreDataError> {
-    value.map(|value| cstring_from_str(value, context)).transpose()
+    value
+        .map(|value| cstring_from_str(value, context))
+        .transpose()
 }
 
 pub(crate) fn opt_cstring_ptr(value: &Option<CString>) -> *const c_char {
@@ -197,8 +199,9 @@ pub(crate) fn collect_array<T: FromRetainedPtr>(
 
     let mut items = Vec::with_capacity(count);
     for index in 0..count {
-        let index_i32 = i32::try_from(index)
-            .map_err(|_| CoreDataError::bridge(-1, format!("array index overflow for {context}")))?;
+        let index_i32 = i32::try_from(index).map_err(|_| {
+            CoreDataError::bridge(-1, format!("array index overflow for {context}"))
+        })?;
         let item_ptr = unsafe { ffi::cd_array_get_object(array.as_ptr(), index_i32) };
         let item = unsafe { T::from_retained_ptr(item_ptr, context)? };
         items.push(item);

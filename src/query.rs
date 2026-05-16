@@ -36,10 +36,7 @@ impl NSPredicate {
         arguments: &[Value],
     ) -> Result<Self, CoreDataError> {
         let format = cstring_from_str(format.as_ref(), "predicate format")?;
-        let payload = arguments
-            .iter()
-            .map(ValuePayload::from)
-            .collect::<Vec<_>>();
+        let payload = arguments.iter().map(ValuePayload::from).collect::<Vec<_>>();
         let arguments_json = json_cstring(&payload, "predicate arguments")?;
         let mut out_predicate = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();

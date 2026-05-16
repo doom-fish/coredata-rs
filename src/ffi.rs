@@ -180,10 +180,8 @@ extern "C" {
         out_error: *mut *mut c_char,
     ) -> i32;
     pub fn cd_managed_object_context_has_changes(context: *mut c_void) -> i32;
-    pub fn cd_managed_object_context_save(
-        context: *mut c_void,
-        out_error: *mut *mut c_char,
-    ) -> i32;
+    pub fn cd_managed_object_context_save(context: *mut c_void, out_error: *mut *mut c_char)
+        -> i32;
     pub fn cd_managed_object_context_insert_object(
         context: *mut c_void,
         object: *mut c_void,
@@ -250,6 +248,44 @@ extern "C" {
 }
 
 pub type VoidCallback = unsafe extern "C" fn(refcon: *mut c_void);
+
+#[path = "ffi/batch_operation.rs"]
+mod batch_operation;
+#[path = "ffi/cloudkit_mirroring.rs"]
+mod cloudkit_mirroring;
+#[path = "ffi/entity_description.rs"]
+mod entity_description;
+#[path = "ffi/fetch_request.rs"]
+mod fetch_request;
+#[path = "ffi/history.rs"]
+mod history;
+#[path = "ffi/managed_object.rs"]
+mod managed_object;
+#[path = "ffi/managed_object_context.rs"]
+mod managed_object_context;
+#[path = "ffi/ns_predicate.rs"]
+mod ns_predicate;
+#[path = "ffi/persistent_container.rs"]
+mod persistent_container;
+#[path = "ffi/persistent_store_coordinator.rs"]
+mod persistent_store_coordinator;
+#[path = "ffi/relationship_description.rs"]
+mod relationship_description;
+#[path = "ffi/validation.rs"]
+mod validation;
+
+pub use batch_operation::*;
+pub use cloudkit_mirroring::*;
+pub use entity_description::*;
+pub use fetch_request::*;
+pub use history::*;
+pub use managed_object::*;
+pub use managed_object_context::*;
+pub use ns_predicate::*;
+pub use persistent_container::*;
+pub use persistent_store_coordinator::*;
+pub use relationship_description::*;
+pub use validation::*;
 
 pub mod status {
     pub const OK: i32 = 0;

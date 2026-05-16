@@ -19,21 +19,48 @@
     clippy::use_self
 )]
 
+pub mod batch_operation;
+pub mod cloudkit_mirroring;
 pub mod context;
+pub mod entity_description;
 pub mod error;
+pub mod fetch_request;
 pub mod ffi;
+pub mod history;
+pub mod managed_object;
+pub mod managed_object_context;
 pub mod model;
+pub mod ns_predicate;
+pub mod persistent_container;
+pub mod persistent_store_coordinator;
 mod private;
 pub mod query;
+pub mod relationship_description;
 pub mod schema;
 pub mod store;
+pub mod validation;
 pub mod value;
 
-pub use context::{
-    NSManagedObject, NSManagedObjectContext, NSManagedObjectContextConcurrencyType,
+pub use batch_operation::{
+    BatchDeleteRequestResultType, BatchInsertRequestResultType, NSBatchDeleteRequest,
+    NSBatchDeleteResult, NSBatchInsertRequest, NSBatchInsertResult,
 };
+pub use cloudkit_mirroring::{
+    CloudKitDatabaseScope, CloudKitSchemaInitializationOptions, NSPersistentCloudKitContainer,
+    NSPersistentCloudKitContainerOptions,
+};
+pub use context::{NSManagedObject, NSManagedObjectContext, NSManagedObjectContextConcurrencyType};
 pub use error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
+pub use fetch_request::FetchRequestResultType;
+pub use history::{
+    NSPersistentHistoryChange, NSPersistentHistoryChangeRequest, NSPersistentHistoryResult,
+    NSPersistentHistoryToken, NSPersistentHistoryTransaction, PersistentHistoryChangeType,
+    PersistentHistoryResultType,
+};
+pub use managed_object::NSManagedObjectID;
 pub use model::NSManagedObjectModel;
+pub use persistent_container::{option_keys, NSPersistentStoreDescription};
+pub use persistent_store_coordinator::NSPersistentStore;
 pub use query::{NSFetchRequest, NSPredicate, SortDescriptor};
 pub use schema::{
     AttributeType, DeleteRule, NSAttributeDescription, NSEntityDescription,
@@ -42,15 +69,33 @@ pub use schema::{
 pub use store::{
     store_types, NSPersistentContainer, NSPersistentStoreCoordinator, PersistentStoreOptions,
 };
+pub use validation::{validation_error_codes, ValidationRule};
 pub use value::Value;
 
 /// Common imports.
 pub mod prelude {
+    pub use crate::batch_operation::{
+        BatchDeleteRequestResultType, BatchInsertRequestResultType, NSBatchDeleteRequest,
+        NSBatchDeleteResult, NSBatchInsertRequest, NSBatchInsertResult,
+    };
+    pub use crate::cloudkit_mirroring::{
+        CloudKitDatabaseScope, CloudKitSchemaInitializationOptions, NSPersistentCloudKitContainer,
+        NSPersistentCloudKitContainerOptions,
+    };
     pub use crate::context::{
         NSManagedObject, NSManagedObjectContext, NSManagedObjectContextConcurrencyType,
     };
     pub use crate::error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
+    pub use crate::fetch_request::FetchRequestResultType;
+    pub use crate::history::{
+        NSPersistentHistoryChange, NSPersistentHistoryChangeRequest, NSPersistentHistoryResult,
+        NSPersistentHistoryToken, NSPersistentHistoryTransaction, PersistentHistoryChangeType,
+        PersistentHistoryResultType,
+    };
+    pub use crate::managed_object::NSManagedObjectID;
     pub use crate::model::NSManagedObjectModel;
+    pub use crate::persistent_container::{option_keys, NSPersistentStoreDescription};
+    pub use crate::persistent_store_coordinator::NSPersistentStore;
     pub use crate::query::{NSFetchRequest, NSPredicate, SortDescriptor};
     pub use crate::schema::{
         AttributeType, DeleteRule, NSAttributeDescription, NSEntityDescription,
@@ -59,5 +104,6 @@ pub mod prelude {
     pub use crate::store::{
         store_types, NSPersistentContainer, NSPersistentStoreCoordinator, PersistentStoreOptions,
     };
+    pub use crate::validation::{validation_error_codes, ValidationRule};
     pub use crate::value::Value;
 }

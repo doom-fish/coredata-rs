@@ -60,7 +60,10 @@ where
     F: FnOnce(NSManagedObjectContext) -> R,
 {
     let state = &mut *refcon.cast::<PerformAndWaitState<F, R>>();
-    let callback = state.callback.take().expect("perform_and_wait callback missing");
+    let callback = state
+        .callback
+        .take()
+        .expect("perform_and_wait callback missing");
     state.result = Some(callback(state.context.clone()));
 }
 
@@ -176,7 +179,9 @@ impl NSManagedObjectContext {
                 core::ptr::addr_of_mut!(state).cast(),
             );
         }
-        state.result.expect("perform_and_wait callback did not return a value")
+        state
+            .result
+            .expect("perform_and_wait callback did not return a value")
     }
 
     pub fn fetch(&self, request: &NSFetchRequest) -> Result<Vec<NSManagedObject>, CoreDataError> {

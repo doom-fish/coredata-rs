@@ -1,11 +1,11 @@
 [package]
 name = "coredata"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/doom-fish/coredata-rs"
 repository = "https://github.com/doom-fish/coredata-rs"
-description = "Safe Rust bindings for Apple's CoreData framework — managed-object persistence on macOS"
+description = "Safe Rust bindings for Apple's CoreData framework — containers, contexts, history, CloudKit mirroring, and batch operations on macOS"
 authors = ["Per Johansson <per@doom.fish>"]
 keywords = ["coredata", "macos", "apple", "persistence", "database"]
 categories = ["api-bindings", "os::macos-apis", "database"]
@@ -17,9 +17,11 @@ include = [
     "swift-bridge/Package.swift",
     "swift-bridge/Sources/**/*",
     "examples/**/*",
+    "tests/**/*",
     "build.rs",
     "Cargo.toml",
     "README.md",
+    "COVERAGE.md",
     "LICENSE-*",
     "CHANGELOG.md",
 ]

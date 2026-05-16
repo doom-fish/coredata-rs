@@ -23,6 +23,11 @@ struct CDSortDescriptorPayload: Codable {
     var ascending: Bool
 }
 
+struct CDValidationRulePayload: Codable {
+    var predicateFormat: String
+    var warning: String
+}
+
 func cdEncodeJSON<T: Encodable>(_ value: T) throws -> String {
     let data = try JSONEncoder().encode(value)
     guard let string = String(data: data, encoding: .utf8) else {
@@ -50,33 +55,18 @@ func cdFoundationValue(from payload: CDValuePayload) -> Any? {
     case .string:
         return payload.stringValue
     case .int32:
-        if let value = payload.int32Value {
-            return NSNumber(value: value)
-        }
-        return nil
+        return payload.int32Value.map(NSNumber.init(value:))
     case .int64:
-        if let value = payload.int64Value {
-            return NSNumber(value: value)
-        }
-        return nil
+        return payload.int64Value.map(NSNumber.init(value:))
     case .double:
-        if let value = payload.doubleValue {
-            return NSNumber(value: value)
-        }
-        return nil
+        return payload.doubleValue.map(NSNumber.init(value:))
     case .bool:
-        if let value = payload.boolValue {
-            return NSNumber(value: value)
-        }
-        return nil
+        return payload.boolValue.map(NSNumber.init(value:))
     }
 }
 
 func cdPredicateArgument(from payload: CDValuePayload) -> Any {
-    if let value = cdFoundationValue(from: payload) {
-        return value
-    }
-    return NSNull()
+    cdFoundationValue(from: payload) ?? NSNull()
 }
 
 func cdValuePayload(from value: Any?) throws -> CDValuePayload {
@@ -126,10 +116,60 @@ func cdDictionary(from json: UnsafePointer<CChar>?) throws -> [String: Any]? {
         return nil
     }
     let payload = try cdDecodeJSON(json, as: [String: CDValuePayload].self)
-    var dictionary = [String: Any]()
+    var dictionary: [String: Any] = [:]
     dictionary.reserveCapacity(payload.count)
     for (key, value) in payload {
         dictionary[key] = cdFoundationValue(from: value) ?? NSNull()
     }
     return dictionary
+}
+
+func cdPersistentStoreOptions(from json: UnsafePointer<CChar>?) throws -> [String: Any]? {
+    guard let json else {
+        return nil
+    }
+    let payload = try cdDecodeJSON(json, as: [String: CDValuePayload].self)
+    var dictionary: [String: Any] = [:]
+    dictionary.reserveCapacity(payload.count)
+    for (key, value) in payload {
+        dictionary[cdPersistentStoreOptionKey(key)] = cdFoundationValue(from: value) ?? NSNull()
+    }
+    return dictionary
+}
+
+func cdValuePayloadMap(from dictionary: [String: Any]) throws -> [String: CDValuePayload] {
+    var payloads: [String: CDValuePayload] = [:]
+    payloads.reserveCapacity(dictionary.count)
+    for (key, value) in dictionary {
+        payloads[key] = try cdValuePayload(from: value)
+    }
+    return payloads
+}
+
+func cdStringDictionary(from json: UnsafePointer<CChar>?) throws -> [String: String]? {
+    guard let json else {
+        return nil
+    }
+    return try cdDecodeJSON(json, as: [String: String].self)
+}
+
+func cdStringArray(from json: UnsafePointer<CChar>?) throws -> [String] {
+    guard let json else {
+        return []
+    }
+    return try cdDecodeJSON(json, as: [String].self)
+}
+
+func cdStringMatrix(from json: UnsafePointer<CChar>?) throws -> [[String]] {
+    guard let json else {
+        return []
+    }
+    return try cdDecodeJSON(json, as: [[String]].self)
+}
+
+func cdStringMapPayload(from dictionary: [String: Any]?) -> [String: String] {
+    guard let dictionary else {
+        return [:]
+    }
+    return dictionary.mapValues { String(describing: $0) }
 }
