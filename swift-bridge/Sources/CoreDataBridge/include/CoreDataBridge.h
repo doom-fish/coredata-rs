@@ -1,0 +1,3 @@
+#ifndef COREDATA_BRIDGE_H
+#define COREDATA_BRIDGE_H
+#endif
