@@ -132,6 +132,10 @@ func cdBridgeNSError(code: Int32, message: String) -> NSError {
     NSError(domain: CDR_BRIDGE_ERROR_DOMAIN, code: Int(code), userInfo: [NSLocalizedDescriptionKey: message])
 }
 
+func cdUnavailableFeatureError(_ feature: String) -> NSError {
+    cdBridgeNSError(code: CDR_FAILURE, message: "\(feature) requires macOS 14.0 or newer")
+}
+
 func cdWriteError(_ error: NSError, to outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) {
     guard let outError else {
         return
@@ -152,10 +156,22 @@ func cdPersistentStoreOptionKey(_ key: String) -> String {
         return NSInferMappingModelAutomaticallyOption
     case "NSSQLitePragmasOption":
         return NSSQLitePragmasOption
+    case "NSSQLiteAnalyzeOption":
+        return NSSQLiteAnalyzeOption
+    case "NSSQLiteManualVacuumOption":
+        return NSSQLiteManualVacuumOption
+    case "NSIgnorePersistentStoreVersioningOption":
+        return NSIgnorePersistentStoreVersioningOption
+    case "NSPersistentStoreForceDestroyOption":
+        return NSPersistentStoreForceDestroyOption
+    case "NSPersistentStoreDeferredLightweightMigrationOptionKey":
+        return NSPersistentStoreDeferredLightweightMigrationOptionKey
     case "NSPersistentHistoryTrackingKey":
         return NSPersistentHistoryTrackingKey
     case "NSPersistentStoreRemoteChangeNotificationPostOptionKey":
         return NSPersistentStoreRemoteChangeNotificationPostOptionKey
+    case "NSValidateXMLStoreOption":
+        return NSValidateXMLStoreOption
     default:
         return key
     }

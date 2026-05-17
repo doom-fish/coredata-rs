@@ -13,6 +13,7 @@ use crate::value::{Value, ValuePayload};
 
 pub mod store_types {
     pub const SQLITE: &str = "SQLite";
+    pub const XML: &str = "XML";
     pub const BINARY: &str = "Binary";
     pub const IN_MEMORY: &str = "InMemory";
 }

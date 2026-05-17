@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::context::NSManagedObjectContext;
 use crate::error::CoreDataError;
 use crate::ffi;
@@ -39,6 +41,8 @@ impl MergePolicyType {
 }
 
 impl_object_wrapper!(NSMergePolicy);
+impl_object_wrapper!(NSMergeConflict);
+impl_object_wrapper!(NSConstraintConflict);
 
 impl NSMergePolicy {
     pub fn new(merge_type: MergePolicyType) -> Result<Self, CoreDataError> {

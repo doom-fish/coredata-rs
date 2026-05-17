@@ -10,6 +10,31 @@ use crate::private::{
 use crate::schema::NSEntityDescription;
 use crate::value::{Value, ValuePayload};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct NSSnapshotEventType(u64);
+
+impl NSSnapshotEventType {
+    pub const NONE: Self = Self(0);
+    pub const UNDO_INSERTION: Self = Self(1 << 1);
+    pub const UNDO_DELETION: Self = Self(1 << 2);
+    pub const UNDO_UPDATE: Self = Self(1 << 3);
+    pub const ROLLBACK: Self = Self(1 << 4);
+    pub const REFRESH: Self = Self(1 << 5);
+    pub const MERGE_POLICY: Self = Self(1 << 6);
+
+    pub const fn bits(self) -> u64 {
+        self.0
+    }
+
+    pub const fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
+
+    pub const fn contains(self, other: Self) -> bool {
+        (self.0 & other.0) == other.0
+    }
+}
+
 impl_object_wrapper!(NSManagedObjectID);
 
 fn value_map_from_json_ptr(

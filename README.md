@@ -2,7 +2,7 @@
 
 Safe Rust bindings for Apple's [Core Data](https://developer.apple.com/documentation/coredata) framework on macOS.
 
-> **Status:** v0.2.1 expands the crate with fetched-results controllers, batch updates, CloudKit event requests, merge policies, and mapping-model / migration-manager helpers alongside the earlier persistent-container, context, history, and schema surfaces.
+> **Status:** v0.2.2 closes the remaining top-level Core Data SDK audit gaps, bringing the crate to 100% public-symbol coverage with persistent-store request/result wrappers, query-generation tokens, advanced model metadata, custom-store node helpers, staged-migration types, and named Core Data constants.
 
 ## Quick start
 
@@ -44,15 +44,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - `NSManagedObjectContext` concurrency helpers, parent/merge metadata, merge-policy round-tripping, and history-request execution
 - `NSManagedObject` state inspection plus `NSManagedObjectID` wrappers
 - entity, attribute, and relationship metadata including versioning, user info, uniqueness constraints, ordering, and validation rules
-- fetch-request result types, fetched-results controllers/section info, prefetch configuration, batch sizing, and predicate substitution/evaluation
-- persistent-history request/result/transaction/change wrappers
+- fetch-request result types, persistent-store request/result wrappers, fetched-results controllers/section info, prefetch configuration, batch sizing, and predicate substitution/evaluation
+- persistent-history request/result/transaction/change wrappers plus named Core Data notifications, metadata keys, option keys, and error constants
+- advanced model metadata wrappers including fetched/expression/derived/composite properties and fetch-index descriptions
 - SQLite-backed batch insert/update/delete requests and results
-- inferred mapping models and migration managers for lightweight SQLite store migration workflows
+- inferred mapping models, staged-migration support types, and custom-store node helpers for migration/extensibility workflows
 - validation rule metadata and object-validation entry points
 
 ## Coverage, examples, and tests
 
-- [`COVERAGE.md`](COVERAGE.md) records the audited API families and deferred rows.
+- [`COVERAGE_AUDIT.md`](COVERAGE_AUDIT.md) records the 100% non-exempt public-symbol audit, and [`COVERAGE.md`](COVERAGE.md) tracks family-level depth/deferred rows.
 - `examples/01_in_memory_smoke.rs` plus `examples/02_*` through `examples/15_*` cover every logical area.
 - `tests/*_tests.rs` provides smoke coverage for each logical area.
 

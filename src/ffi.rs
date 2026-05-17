@@ -25,6 +25,7 @@ extern "C" {
         out_error: *mut *mut c_char,
     ) -> i32;
     pub fn cd_managed_object_model_entities(model: *mut c_void) -> *mut c_void;
+    pub fn cd_managed_object_model_get_version_checksum(model: *mut c_void) -> *mut c_char;
 
     pub fn cd_entity_description_new(
         out_entity: *mut *mut c_void,
@@ -253,6 +254,10 @@ pub type VoidCallback = unsafe extern "C" fn(refcon: *mut c_void);
 mod batch_operation;
 #[path = "ffi/cloudkit_mirroring.rs"]
 mod cloudkit_mirroring;
+#[path = "ffi/constants.rs"]
+mod constants;
+#[path = "ffi/custom_store.rs"]
+mod custom_store;
 #[path = "ffi/entity_description.rs"]
 mod entity_description;
 #[path = "ffi/fetch_request.rs"]
@@ -269,12 +274,20 @@ mod managed_object_context;
 mod merge_policy;
 #[path = "ffi/migration.rs"]
 mod migration;
+#[path = "ffi/migration_support.rs"]
+mod migration_support;
+#[path = "ffi/model_metadata.rs"]
+mod model_metadata;
 #[path = "ffi/ns_predicate.rs"]
 mod ns_predicate;
 #[path = "ffi/persistent_container.rs"]
 mod persistent_container;
 #[path = "ffi/persistent_store_coordinator.rs"]
 mod persistent_store_coordinator;
+#[path = "ffi/persistent_store_request.rs"]
+mod persistent_store_request;
+#[path = "ffi/query_generation.rs"]
+mod query_generation;
 #[path = "ffi/relationship_description.rs"]
 mod relationship_description;
 #[path = "ffi/validation.rs"]
@@ -282,6 +295,8 @@ mod validation;
 
 pub use batch_operation::*;
 pub use cloudkit_mirroring::*;
+pub use constants::*;
+pub use custom_store::*;
 pub use entity_description::*;
 pub use fetch_request::*;
 pub use fetched_results_controller::*;
@@ -290,9 +305,13 @@ pub use managed_object::*;
 pub use managed_object_context::*;
 pub use merge_policy::*;
 pub use migration::*;
+pub use migration_support::*;
+pub use model_metadata::*;
 pub use ns_predicate::*;
 pub use persistent_container::*;
 pub use persistent_store_coordinator::*;
+pub use persistent_store_request::*;
+pub use query_generation::*;
 pub use relationship_description::*;
 pub use validation::*;
 

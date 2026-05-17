@@ -13,7 +13,8 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
     let destination_artifact = SqliteStoreArtifact::new("migration-destination")?;
 
     {
-        let source_container = NSPersistentContainer::new("MigrationSource", &fixture.source_model)?;
+        let source_container =
+            NSPersistentContainer::new("MigrationSource", &fixture.source_model)?;
         let source_description = NSPersistentStoreDescription::with_url(&source_artifact.path)?;
         source_description.set_store_type(store_types::SQLITE)?;
         source_description.set_should_add_asynchronously(false);
@@ -25,7 +26,8 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
         source_context.save()?;
     }
 
-    let mapping_model = NSMappingModel::inferred(&fixture.source_model, &fixture.destination_model)?;
+    let mapping_model =
+        NSMappingModel::inferred(&fixture.source_model, &fixture.destination_model)?;
     assert_eq!(mapping_model.entity_mapping_names()?.len(), 1);
 
     let migration_manager =
@@ -46,7 +48,8 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
     {
         let destination_container =
             NSPersistentContainer::new("MigrationDestination", &fixture.destination_model)?;
-        let destination_description = NSPersistentStoreDescription::with_url(&destination_artifact.path)?;
+        let destination_description =
+            NSPersistentStoreDescription::with_url(&destination_artifact.path)?;
         destination_description.set_store_type(store_types::SQLITE)?;
         destination_description.set_should_add_asynchronously(false);
         destination_container.set_persistent_store_descriptions(&[&destination_description])?;

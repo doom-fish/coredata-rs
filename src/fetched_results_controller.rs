@@ -7,6 +7,8 @@ use crate::private::{
 };
 use crate::query::NSFetchRequest;
 
+pub trait NSFetchedResultsControllerDelegate: Send + Sync {}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum NSFetchedResultsChangeType {
@@ -81,7 +83,9 @@ impl NSFetchedResultsController {
 
     pub fn perform_fetch(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_fetched_results_controller_perform_fetch(self.as_ptr(), &mut out_error) };
+        let status = unsafe {
+            ffi::cd_fetched_results_controller_perform_fetch(self.as_ptr(), &mut out_error)
+        };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -90,7 +94,9 @@ impl NSFetchedResultsController {
 
     pub fn fetch_request(&self) -> Result<NSFetchRequest, CoreDataError> {
         let ptr = unsafe { ffi::cd_fetched_results_controller_get_fetch_request(self.as_ptr()) };
-        unsafe { NSFetchRequest::from_retained_ptr(ptr, "fetched results controller fetch request") }
+        unsafe {
+            NSFetchRequest::from_retained_ptr(ptr, "fetched results controller fetch request")
+        }
     }
 
     pub fn managed_object_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
@@ -105,7 +111,8 @@ impl NSFetchedResultsController {
     }
 
     pub fn section_name_key_path(&self) -> Option<String> {
-        let ptr = unsafe { ffi::cd_fetched_results_controller_get_section_name_key_path(self.as_ptr()) };
+        let ptr =
+            unsafe { ffi::cd_fetched_results_controller_get_section_name_key_path(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
@@ -115,7 +122,8 @@ impl NSFetchedResultsController {
     }
 
     pub fn fetched_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
-        let array_ptr = unsafe { ffi::cd_fetched_results_controller_get_fetched_objects(self.as_ptr()) };
+        let array_ptr =
+            unsafe { ffi::cd_fetched_results_controller_get_fetched_objects(self.as_ptr()) };
         collect_array(array_ptr, "fetched results controller objects")
     }
 
@@ -162,7 +170,9 @@ impl NSFetchedResultsController {
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
-        unsafe { NSManagedObject::from_retained_ptr(out_object, "fetched results controller object") }
+        unsafe {
+            NSManagedObject::from_retained_ptr(out_object, "fetched results controller object")
+        }
     }
 
     pub fn index_path_for_object(
@@ -221,7 +231,9 @@ impl NSFetchedResultsSectionInfo {
     }
 
     pub fn number_of_objects(&self) -> usize {
-        unsafe { ffi::cd_fetched_results_section_info_get_number_of_objects(self.as_ptr()) as usize }
+        unsafe {
+            ffi::cd_fetched_results_section_info_get_number_of_objects(self.as_ptr()) as usize
+        }
     }
 
     pub fn objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {

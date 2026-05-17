@@ -31,7 +31,10 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
         assert_eq!(context.count(&request)?, 3);
 
         let batch_update = NSBatchUpdateRequest::new("Person")?;
-        batch_update.set_predicate(Some(&NSPredicate::from_format("name == %@", &["Ada".into()])?));
+        batch_update.set_predicate(Some(&NSPredicate::from_format(
+            "name == %@",
+            &["Ada".into()],
+        )?));
         batch_update.set_properties_to_update(Some(&std::collections::BTreeMap::from([(
             String::from("age"),
             Value::from(33_i32),
@@ -40,7 +43,10 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
         assert_eq!(batch_update.execute(&context)?.count(), 1);
 
         let verification_request = NSFetchRequest::new("Person")?;
-        verification_request.set_predicate(Some(&NSPredicate::from_format("name == %@", &["Ada".into()])?));
+        verification_request.set_predicate(Some(&NSPredicate::from_format(
+            "name == %@",
+            &["Ada".into()],
+        )?));
         let updated = verification_request.execute(&context)?;
         assert_eq!(updated.len(), 1);
         assert_eq!(updated[0].value("age")?.as_i32(), Some(33));

@@ -61,6 +61,18 @@ extern "C" {
         options_raw_value: u64,
         out_error: *mut *mut c_char,
     ) -> i32;
+    pub fn cd_persistent_cloudkit_container_can_update_record_for_managed_object_id(
+        container: *mut c_void,
+        object_id: *mut c_void,
+    ) -> i32;
+    pub fn cd_persistent_cloudkit_container_can_delete_record_for_managed_object_id(
+        container: *mut c_void,
+        object_id: *mut c_void,
+    ) -> i32;
+    pub fn cd_persistent_cloudkit_container_can_modify_managed_objects_in_store(
+        container: *mut c_void,
+        store: *mut c_void,
+    ) -> i32;
 
     pub fn cd_persistent_cloudkit_event_request_fetch_after_date(
         timestamp: f64,
@@ -101,4 +113,5 @@ extern "C" {
     pub fn cd_persistent_cloudkit_event_get_end_timestamp(event: *mut c_void) -> f64;
     pub fn cd_persistent_cloudkit_event_has_end_date(event: *mut c_void) -> i32;
     pub fn cd_persistent_cloudkit_event_get_succeeded(event: *mut c_void) -> i32;
+    pub fn cd_persistent_cloudkit_event_get_error_json(event: *mut c_void) -> *mut c_char;
 }

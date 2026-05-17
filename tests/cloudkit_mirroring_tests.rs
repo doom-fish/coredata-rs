@@ -32,9 +32,8 @@ fn cloudkit_configuration_and_event_requests_round_trip_without_loading_stores(
         CloudKitDatabaseScope::Private
     ));
 
-    let request = NSPersistentCloudKitContainerEventRequest::fetch_events_after_date(
-        std::time::UNIX_EPOCH,
-    )?;
+    let request =
+        NSPersistentCloudKitContainerEventRequest::fetch_events_after_date(std::time::UNIX_EPOCH)?;
     assert!(matches!(
         request.result_type(),
         NSPersistentCloudKitContainerEventResultType::Events
@@ -45,7 +44,8 @@ fn cloudkit_configuration_and_event_requests_round_trip_without_loading_stores(
         NSPersistentCloudKitContainerEventResultType::CountEvents
     ));
 
-    let all_events_request = NSPersistentCloudKitContainerEventRequest::fetch_events_after_event(None)?;
+    let all_events_request =
+        NSPersistentCloudKitContainerEventRequest::fetch_events_after_event(None)?;
     assert!(matches!(
         all_events_request.result_type(),
         NSPersistentCloudKitContainerEventResultType::Events

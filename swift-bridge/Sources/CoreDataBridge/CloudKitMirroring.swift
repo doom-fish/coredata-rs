@@ -229,6 +229,45 @@ public func cdPersistentCloudKitContainerInitializeSchema(
     }
 }
 
+@_cdecl("cd_persistent_cloudkit_container_can_update_record_for_managed_object_id")
+public func cdPersistentCloudKitContainerCanUpdateRecordForManagedObjectID(
+    _ containerPtr: UnsafeMutableRawPointer?,
+    _ objectIDPtr: UnsafeMutableRawPointer?
+) -> Int32 {
+    guard let containerPtr, let objectIDPtr else {
+        return 0
+    }
+    let container: NSPersistentCloudKitContainer = cdBorrow(containerPtr)
+    let objectID: NSManagedObjectID = cdBorrow(objectIDPtr)
+    return container.canUpdateRecord(forManagedObjectWith: objectID) ? 1 : 0
+}
+
+@_cdecl("cd_persistent_cloudkit_container_can_delete_record_for_managed_object_id")
+public func cdPersistentCloudKitContainerCanDeleteRecordForManagedObjectID(
+    _ containerPtr: UnsafeMutableRawPointer?,
+    _ objectIDPtr: UnsafeMutableRawPointer?
+) -> Int32 {
+    guard let containerPtr, let objectIDPtr else {
+        return 0
+    }
+    let container: NSPersistentCloudKitContainer = cdBorrow(containerPtr)
+    let objectID: NSManagedObjectID = cdBorrow(objectIDPtr)
+    return container.canDeleteRecord(forManagedObjectWith: objectID) ? 1 : 0
+}
+
+@_cdecl("cd_persistent_cloudkit_container_can_modify_managed_objects_in_store")
+public func cdPersistentCloudKitContainerCanModifyManagedObjectsInStore(
+    _ containerPtr: UnsafeMutableRawPointer?,
+    _ storePtr: UnsafeMutableRawPointer?
+) -> Int32 {
+    guard let containerPtr, let storePtr else {
+        return 0
+    }
+    let container: NSPersistentCloudKitContainer = cdBorrow(containerPtr)
+    let store: NSPersistentStore = cdBorrow(storePtr)
+    return container.canModifyManagedObjects(in: store) ? 1 : 0
+}
+
 @_cdecl("cd_persistent_cloudkit_event_request_fetch_after_date")
 public func cdPersistentCloudKitEventRequestFetchAfterDate(
     _ timestamp: Double,
@@ -401,4 +440,17 @@ public func cdPersistentCloudKitEventGetSucceeded(_ eventPtr: UnsafeMutableRawPo
     }
     let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
     return event.succeeded ? 1 : 0
+}
+
+@_cdecl("cd_persistent_cloudkit_event_get_error_json")
+public func cdPersistentCloudKitEventGetErrorJSON(_ eventPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+    guard let eventPtr else {
+        return nil
+    }
+    let event: NSPersistentCloudKitContainer.Event = cdBorrow(eventPtr)
+    guard let error = event.error as NSError? else {
+        return nil
+    }
+    let payload = CDErrorPayload(domain: error.domain, code: error.code, message: error.localizedDescription)
+    return (try? cdEncodeJSON(payload)).flatMap(cdCString)
 }

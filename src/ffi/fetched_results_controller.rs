@@ -21,7 +21,9 @@ extern "C" {
         controller: *mut c_void,
     ) -> *mut c_char;
     pub fn cd_fetched_results_controller_get_cache_name(controller: *mut c_void) -> *mut c_char;
-    pub fn cd_fetched_results_controller_get_fetched_objects(controller: *mut c_void) -> *mut c_void;
+    pub fn cd_fetched_results_controller_get_fetched_objects(
+        controller: *mut c_void,
+    ) -> *mut c_void;
     pub fn cd_fetched_results_controller_get_sections(controller: *mut c_void) -> *mut c_void;
     pub fn cd_fetched_results_controller_get_section_index_titles_json(
         controller: *mut c_void,
@@ -45,7 +47,9 @@ extern "C" {
     pub fn cd_fetched_results_controller_delete_cache_with_name(name: *const c_char);
 
     pub fn cd_fetched_results_section_info_get_name(section_info: *mut c_void) -> *mut c_char;
-    pub fn cd_fetched_results_section_info_get_index_title(section_info: *mut c_void) -> *mut c_char;
+    pub fn cd_fetched_results_section_info_get_index_title(
+        section_info: *mut c_void,
+    ) -> *mut c_char;
     pub fn cd_fetched_results_section_info_get_number_of_objects(section_info: *mut c_void) -> u64;
     pub fn cd_fetched_results_section_info_get_objects(section_info: *mut c_void) -> *mut c_void;
 }

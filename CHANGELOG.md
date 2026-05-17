@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2 - 2026-05-17
+
+- Closed the remaining 91 non-exempt Core Data SDK audit gaps and brought `COVERAGE_AUDIT.md` to 100% public-symbol coverage.
+- Added persistent-store request/result wrappers, async fetch wrappers, save-changes requests, fetch-request expressions, and query-generation token support.
+- Added advanced model-metadata wrappers (`NSPropertyDescription`, fetched/expression/derived/composite properties, and fetch-index types), plus custom-store node helpers and conflict/delegate marker types.
+- Added staged-migration support wrappers (`NSEntityMapping`, `NSPropertyMapping`, `NSManagedObjectModelReference`, migration stages, and `NSStagedMigrationManager`) and expanded the named constant surface.
+- Refreshed `README.md`, `COVERAGE.md`, and `COVERAGE_AUDIT.md`, and bumped the crate version to `0.2.2`.
+
 ## 0.2.1 - 2026-05-16
 
 - Added `NSFetchedResultsController` / `NSFetchedResultsSectionInfo` wrappers plus fetched-results smoke coverage and example usage.

@@ -15,7 +15,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let overwrite = NSMergePolicy::overwrite_policy()?;
     private.set_merge_policy(&overwrite)?;
-    assert!(matches!(private.merge_policy()?.merge_type(), MergePolicyType::Overwrite));
+    assert!(matches!(
+        private.merge_policy()?.merge_type(),
+        MergePolicyType::Overwrite
+    ));
 
     println!("✅ managed object context example OK");
     Ok(())

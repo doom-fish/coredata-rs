@@ -64,3 +64,12 @@ public func cdManagedObjectModelEntities(_ modelPtr: UnsafeMutableRawPointer?) -
     let entities = model.entities.sorted { ($0.name ?? "") < ($1.name ?? "") }
     return cdRetain(entities as NSArray)
 }
+
+@_cdecl("cd_managed_object_model_get_version_checksum")
+public func cdManagedObjectModelGetVersionChecksum(_ modelPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+    guard #available(macOS 14.0, *), let modelPtr else {
+        return nil
+    }
+    let model: NSManagedObjectModel = cdBorrow(modelPtr)
+    return cdCString(model.versionChecksum)
+}

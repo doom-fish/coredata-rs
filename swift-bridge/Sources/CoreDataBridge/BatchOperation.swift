@@ -51,6 +51,15 @@ public func cdBatchDeleteRequestNewWithObjectIDs(
     return CDR_OK
 }
 
+@_cdecl("cd_batch_delete_request_get_fetch_request")
+public func cdBatchDeleteRequestGetFetchRequest(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    guard let requestPtr else {
+        return nil
+    }
+    let request: NSBatchDeleteRequest = cdBorrow(requestPtr)
+    return cdRetain(request.fetchRequest)
+}
+
 @_cdecl("cd_batch_delete_request_get_result_type")
 public func cdBatchDeleteRequestGetResultType(_ requestPtr: UnsafeMutableRawPointer?) -> UInt64 {
     guard let requestPtr else {
@@ -160,6 +169,27 @@ public func cdBatchInsertRequestNewWithEntityName(
     }
 }
 
+@_cdecl("cd_batch_insert_request_new_with_entity")
+public func cdBatchInsertRequestNewWithEntity(
+    _ entityPtr: UnsafeMutableRawPointer?,
+    _ objectsJSON: UnsafePointer<CChar>?,
+    _ outRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
+    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    do {
+        guard let entityPtr else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity")
+        }
+        let entity: NSEntityDescription = cdBorrow(entityPtr)
+        let dictionaries = try cdFoundationObjectDictionaries(from: objectsJSON)
+        outRequest?.pointee = cdRetain(NSBatchInsertRequest(entity: entity, objects: dictionaries))
+        return CDR_OK
+    } catch let error as NSError {
+        cdWriteError(error, to: outError)
+        return Int32(error.code)
+    }
+}
+
 @_cdecl("cd_batch_insert_request_get_entity_name")
 public func cdBatchInsertRequestGetEntityName(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     guard let requestPtr else {
@@ -167,6 +197,15 @@ public func cdBatchInsertRequestGetEntityName(_ requestPtr: UnsafeMutableRawPoin
     }
     let request: NSBatchInsertRequest = cdBorrow(requestPtr)
     return cdCString(request.entityName)
+}
+
+@_cdecl("cd_batch_insert_request_get_entity")
+public func cdBatchInsertRequestGetEntity(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    guard let requestPtr else {
+        return nil
+    }
+    let request: NSBatchInsertRequest = cdBorrow(requestPtr)
+    return request.entity.map(cdRetain)
 }
 
 @_cdecl("cd_batch_insert_request_get_result_type")
@@ -283,6 +322,15 @@ public func cdBatchUpdateRequestGetEntityName(_ requestPtr: UnsafeMutableRawPoin
     }
     let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
     return cdCString(request.entityName)
+}
+
+@_cdecl("cd_batch_update_request_get_entity")
+public func cdBatchUpdateRequestGetEntity(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    guard let requestPtr else {
+        return nil
+    }
+    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
+    return cdRetain(request.entity)
 }
 
 @_cdecl("cd_batch_update_request_get_includes_subentities")

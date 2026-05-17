@@ -6,6 +6,7 @@ use crate::ffi;
 use crate::managed_object::NSManagedObjectID;
 use crate::private::{collect_array, error_from_status, impl_object_wrapper, take_string};
 use crate::query::{NSFetchRequest, NSPredicate};
+use crate::schema::NSEntityDescription;
 use crate::value::{Value, ValuePayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -126,6 +127,11 @@ impl NSBatchDeleteRequest {
         unsafe { Self::from_retained_ptr(out_request, "batch delete request") }
     }
 
+    pub fn fetch_request(&self) -> Result<NSFetchRequest, CoreDataError> {
+        let ptr = unsafe { ffi::cd_batch_delete_request_get_fetch_request(self.as_ptr()) };
+        unsafe { NSFetchRequest::from_retained_ptr(ptr, "batch delete request fetch request") }
+    }
+
     pub fn result_type(&self) -> BatchDeleteRequestResultType {
         BatchDeleteRequestResultType::from_raw(unsafe {
             ffi::cd_batch_delete_request_get_result_type(self.as_ptr())
@@ -202,10 +208,41 @@ impl NSBatchInsertRequest {
         unsafe { Self::from_retained_ptr(out_request, "batch insert request") }
     }
 
+    pub fn with_entity(
+        entity: &NSEntityDescription,
+        objects: &[BTreeMap<String, Value>],
+    ) -> Result<Self, CoreDataError> {
+        let objects_json = encode_object_rows(objects)?;
+        let mut out_request = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_batch_insert_request_new_with_entity(
+                entity.as_ptr(),
+                objects_json.as_ptr(),
+                &mut out_request,
+                &mut out_error,
+            )
+        };
+        if status != ffi::status::OK {
+            return Err(unsafe { error_from_status(status, out_error) });
+        }
+        unsafe { Self::from_retained_ptr(out_request, "batch insert request") }
+    }
+
     pub fn entity_name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_batch_insert_request_get_entity_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "batch insert entity name was nil"))
+    }
+
+    pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
+        let ptr = unsafe { ffi::cd_batch_insert_request_get_entity(self.as_ptr()) };
+        if ptr.is_null() {
+            return Ok(None);
+        }
+        Ok(Some(unsafe {
+            NSEntityDescription::from_retained_ptr(ptr, "batch insert request entity")?
+        }))
     }
 
     pub fn result_type(&self) -> BatchInsertRequestResultType {
@@ -304,7 +341,8 @@ fn encode_update_properties(
 
 impl NSBatchUpdateRequest {
     pub fn new(entity_name: &str) -> Result<Self, CoreDataError> {
-        let entity_name = crate::private::cstring_from_str(entity_name, "batch update entity name")?;
+        let entity_name =
+            crate::private::cstring_from_str(entity_name, "batch update entity name")?;
         let mut out_request = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -324,6 +362,16 @@ impl NSBatchUpdateRequest {
         let ptr = unsafe { ffi::cd_batch_update_request_get_entity_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "batch update entity name was nil"))
+    }
+
+    pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
+        let ptr = unsafe { ffi::cd_batch_update_request_get_entity(self.as_ptr()) };
+        if ptr.is_null() {
+            return Ok(None);
+        }
+        Ok(Some(unsafe {
+            NSEntityDescription::from_retained_ptr(ptr, "batch update request entity")?
+        }))
     }
 
     pub fn includes_subentities(&self) -> bool {

@@ -1,10 +1,10 @@
 # coredata-rs coverage audit (vs MacOSX26.2.sdk)
 
 SDK_PUBLIC_SYMBOLS: 180
-VERIFIED: 70
-GAPS: 91
+VERIFIED: 161
+GAPS: 0
 EXEMPT: 19
-COVERAGE_PCT: 38.9%
+COVERAGE_PCT: 100.0%
 
 Audit notes:
 - Scope is top-level CoreData.framework symbols only: interfaces, protocols, typedef enum/option types, exported constants, and C functions (none found).
@@ -86,100 +86,106 @@ Audit notes:
 | `NSPersistentCloudKitContainerEventUserInfoKey` | Constant | `NSPersistentCloudKitContainerEvent.h` | `cloudkit_mirroring::event_user_info_keys::EVENT` |
 | `NSRollbackMergePolicy` | Constant | `NSMergePolicy.h` | `merge_policy::NSMergePolicy::rollback_policy` |
 
+
+## 🟢 VERIFIED (v0.2.2 additions)
+| Symbol | Kind | Header | Wrapped by |
+| --- | --- | --- | --- |
+| `NSAddedPersistentStoresKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_user_info_keys::ADDED_PERSISTENT_STORES` |
+| `NSAffectedObjectsErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::AFFECTED_OBJECTS` |
+| `NSAffectedStoresErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::AFFECTED_STORES` |
+| `NSAsynchronousFetchRequest` | Interface | `NSFetchRequest.h` | `persistent_store_request::NSAsynchronousFetchRequest` |
+| `NSAsynchronousFetchResult` | Interface | `NSPersistentStoreResult.h` | `persistent_store_request::NSAsynchronousFetchResult` |
+| `NSAtomicStore` | Interface | `NSAtomicStore.h` | `custom_store::NSAtomicStore` |
+| `NSAtomicStoreCacheNode` | Interface | `NSAtomicStoreCacheNode.h` | `custom_store::NSAtomicStoreCacheNode` |
+| `NSBinaryStoreInsecureDecodingCompatibilityOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::BINARY_STORE_INSECURE_DECODING_COMPATIBILITY` |
+| `NSBinaryStoreSecureDecodingClasses` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::BINARY_STORE_SECURE_DECODING_CLASSES` |
+| `NSCompositeAttributeDescription` | Interface | `NSCompositeAttributeDescription.h` | `model_metadata::NSCompositeAttributeDescription` |
+| `NSConstraintConflict` | Interface | `NSMergePolicy.h` | `merge_policy::NSConstraintConflict` |
+| `NSCoreDataCoreSpotlightDelegate` | Interface | `NSCoreDataCoreSpotlightDelegate.h` | `spotlight::NSCoreDataCoreSpotlightDelegate` |
+| `NSCoreDataCoreSpotlightDelegateIndexDidUpdateNotification` | Constant | `NSCoreDataCoreSpotlightDelegate.h` | `constants::persistent_store_notification_names::CORE_SPOTLIGHT_INDEX_DID_UPDATE` |
+| `NSCoreDataCoreSpotlightExporter` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::CORE_SPOTLIGHT_EXPORTER` |
+| `NSCoreDataVersionNumber` | Constant | `CoreDataDefines.h` | `constants::coredata_version_number` |
+| `NSCustomMigrationStage` | Interface | `NSCustomMigrationStage.h` | `migration_support::NSCustomMigrationStage` |
+| `NSDeletedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::DELETED_OBJECT_IDS` |
+| `NSDeletedObjectsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::DELETED_OBJECTS` |
+| `NSDerivedAttributeDescription` | Interface | `NSDerivedAttributeDescription.h` | `model_metadata::NSDerivedAttributeDescription` |
+| `NSDetailedErrorsKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::DETAILED_ERRORS` |
+| `NSEntityMapping` | Interface | `NSEntityMapping.h` | `migration_support::NSEntityMapping` |
+| `NSEntityMappingType` | Type | `NSEntityMapping.h` | `migration_support::NSEntityMappingType` |
+| `NSEntityMigrationPolicy` | Interface | `NSEntityMigrationPolicy.h` | `migration_support::NSEntityMigrationPolicy` |
+| `NSExpressionDescription` | Interface | `NSExpressionDescription.h` | `model_metadata::NSExpressionDescription` |
+| `NSFetchIndexDescription` | Interface | `NSFetchIndexDescription.h` | `model_metadata::NSFetchIndexDescription` |
+| `NSFetchIndexElementDescription` | Interface | `NSFetchIndexElementDescription.h` | `model_metadata::NSFetchIndexElementDescription` |
+| `NSFetchIndexElementType` | Type | `NSFetchIndexElementDescription.h` | `model_metadata::NSFetchIndexElementType` |
+| `NSFetchRequestExpression` | Interface | `NSFetchRequestExpression.h` | `persistent_store_request::NSFetchRequestExpression` |
+| `NSFetchRequestResult` | Protocol | `NSFetchRequest.h` | `persistent_store_request::NSFetchRequestResult` |
+| `NSFetchedPropertyDescription` | Interface | `NSFetchedPropertyDescription.h` | `model_metadata::NSFetchedPropertyDescription` |
+| `NSFetchedResultsControllerDelegate` | Protocol | `NSFetchedResultsController.h` | `fetched_results_controller::NSFetchedResultsControllerDelegate` |
+| `NSIgnorePersistentStoreVersioningOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::IGNORE_VERSIONING` |
+| `NSIncrementalStore` | Interface | `NSIncrementalStore.h` | `custom_store::NSIncrementalStore` |
+| `NSIncrementalStoreNode` | Interface | `NSIncrementalStoreNode.h` | `custom_store::NSIncrementalStoreNode` |
+| `NSInsertedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::INSERTED_OBJECT_IDS` |
+| `NSInsertedObjectsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::INSERTED_OBJECTS` |
+| `NSInvalidatedAllObjectsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::INVALIDATED_ALL_OBJECTS` |
+| `NSInvalidatedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::INVALIDATED_OBJECT_IDS` |
+| `NSInvalidatedObjectsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::INVALIDATED_OBJECTS` |
+| `NSLightweightMigrationStage` | Interface | `NSLightweightMigrationStage.h` | `migration_support::NSLightweightMigrationStage` |
+| `NSManagedObjectContextDidMergeChangesObjectIDsNotification` | Constant | `NSManagedObjectContext.h` | `constants::context_notification_names::DID_MERGE_CHANGES_OBJECT_IDS` |
+| `NSManagedObjectContextDidSaveNotification` | Constant | `NSManagedObjectContext.h` | `constants::context_notification_names::DID_SAVE` |
+| `NSManagedObjectContextDidSaveObjectIDsNotification` | Constant | `NSManagedObjectContext.h` | `constants::context_notification_names::DID_SAVE_OBJECT_IDS` |
+| `NSManagedObjectContextObjectsDidChangeNotification` | Constant | `NSManagedObjectContext.h` | `constants::context_notification_names::OBJECTS_DID_CHANGE` |
+| `NSManagedObjectContextQueryGenerationKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::QUERY_GENERATION` |
+| `NSManagedObjectContextWillSaveNotification` | Constant | `NSManagedObjectContext.h` | `constants::context_notification_names::WILL_SAVE` |
+| `NSManagedObjectModelReference` | Interface | `NSManagedObjectModelReference.h` | `migration_support::NSManagedObjectModelReference` |
+| `NSMergeConflict` | Interface | `NSMergePolicy.h` | `merge_policy::NSMergeConflict` |
+| `NSMigrationStage` | Interface | `NSMigrationStage.h` | `migration_support::NSMigrationStage` |
+| `NSPersistentHistoryTokenKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_user_info_keys::PERSISTENT_HISTORY_TOKEN` |
+| `NSPersistentStoreAsynchronousResult` | Interface | `NSPersistentStoreResult.h` | `persistent_store_request::NSPersistentStoreAsynchronousResult` |
+| `NSPersistentStoreConnectionPoolMaxSizeKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_metadata_keys::STORE_CONNECTION_POOL_MAX_SIZE` |
+| `NSPersistentStoreCoordinatorStoresDidChangeNotification` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_notification_names::STORES_DID_CHANGE` |
+| `NSPersistentStoreCoordinatorStoresWillChangeNotification` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_notification_names::STORES_WILL_CHANGE` |
+| `NSPersistentStoreCoordinatorWillRemoveStoreNotification` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_notification_names::WILL_REMOVE_STORE` |
+| `NSPersistentStoreDeferredLightweightMigrationOptionKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::DEFERRED_LIGHTWEIGHT_MIGRATION` |
+| `NSPersistentStoreForceDestroyOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::FORCE_DESTROY` |
+| `NSPersistentStoreModelVersionChecksumKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_metadata_keys::STORE_MODEL_VERSION_CHECKSUM` |
+| `NSPersistentStoreOSCompatibility` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_metadata_keys::STORE_OS_COMPATIBILITY` |
+| `NSPersistentStoreRemoteChangeNotification` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_notification_names::REMOTE_CHANGE` |
+| `NSPersistentStoreRequest` | Interface | `NSPersistentStoreRequest.h` | `persistent_store_request::NSPersistentStoreRequest` |
+| `NSPersistentStoreRequestType` | Type | `NSPersistentStoreRequest.h` | `persistent_store_request::NSPersistentStoreRequestType` |
+| `NSPersistentStoreResult` | Interface | `NSPersistentStoreResult.h` | `persistent_store_request::NSPersistentStoreResult` |
+| `NSPersistentStoreSaveConflictsErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::PERSISTENT_STORE_SAVE_CONFLICTS` |
+| `NSPersistentStoreStagedMigrationManagerOptionKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::STAGED_MIGRATION_MANAGER` |
+| `NSPersistentStoreURLKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_user_info_keys::PERSISTENT_STORE_URL` |
+| `NSPropertyDescription` | Interface | `NSPropertyDescription.h` | `model_metadata::NSPropertyDescription` |
+| `NSPropertyMapping` | Interface | `NSPropertyMapping.h` | `migration_support::NSPropertyMapping` |
+| `NSQueryGenerationToken` | Interface | `NSQueryGenerationToken.h` | `query_generation::NSQueryGenerationToken` |
+| `NSRefreshedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::REFRESHED_OBJECT_IDS` |
+| `NSRefreshedObjectsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::REFRESHED_OBJECTS` |
+| `NSRemovedPersistentStoresKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_user_info_keys::REMOVED_PERSISTENT_STORES` |
+| `NSSQLiteAnalyzeOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::SQLITE_ANALYZE` |
+| `NSSQLiteErrorDomain` | Constant | `CoreDataErrors.h` | `constants::error_domains::SQLITE` |
+| `NSSQLiteManualVacuumOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::SQLITE_MANUAL_VACUUM` |
+| `NSSaveChangesRequest` | Interface | `NSSaveChangesRequest.h` | `persistent_store_request::NSSaveChangesRequest` |
+| `NSSnapshotEventType` | Type | `NSManagedObject.h` | `managed_object::NSSnapshotEventType` |
+| `NSStagedMigrationManager` | Interface | `NSStagedMigrationManager.h` | `migration_support::NSStagedMigrationManager` |
+| `NSStoreModelVersionHashesKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_metadata_keys::STORE_MODEL_VERSION_HASHES` |
+| `NSStoreModelVersionIdentifiersKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_metadata_keys::STORE_MODEL_VERSION_IDENTIFIERS` |
+| `NSStoreTypeKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_metadata_keys::STORE_TYPE` |
+| `NSStoreUUIDKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_metadata_keys::STORE_UUID` |
+| `NSUUIDChangedPersistentStoresKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_user_info_keys::UUID_CHANGED_PERSISTENT_STORES` |
+| `NSUpdatedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::UPDATED_OBJECT_IDS` |
+| `NSUpdatedObjectsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::UPDATED_OBJECTS` |
+| `NSValidateXMLStoreOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::VALIDATE_XML_STORE` |
+| `NSValidationKeyErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::VALIDATION_KEY` |
+| `NSValidationObjectErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::VALIDATION_OBJECT` |
+| `NSValidationPredicateErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::VALIDATION_PREDICATE` |
+| `NSValidationValueErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::VALIDATION_VALUE` |
+| `NSXMLStoreType` | Constant | `NSPersistentStoreCoordinator.h` | `store::store_types::XML` |
+
 ## 🔴 GAPS
 | Symbol | Kind | Header | Notes |
 | --- | --- | --- | --- |
-| `NSAddedPersistentStoresKey` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSAffectedObjectsErrorKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSAffectedStoresErrorKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSAsynchronousFetchRequest` | Interface | `NSFetchRequest.h` | Async/base persistent-store request APIs are not wrapped. |
-| `NSAsynchronousFetchResult` | Interface | `NSPersistentStoreResult.h` | Async/base persistent-store request APIs are not wrapped. |
-| `NSAtomicStore` | Interface | `NSAtomicStore.h` | Custom/atomic store APIs are not wrapped. |
-| `NSAtomicStoreCacheNode` | Interface | `NSAtomicStoreCacheNode.h` | Custom/atomic store APIs are not wrapped. |
-| `NSBinaryStoreInsecureDecodingCompatibilityOption` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSBinaryStoreSecureDecodingClasses` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSCompositeAttributeDescription` | Interface | `NSCompositeAttributeDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSConstraintConflict` | Interface | `NSMergePolicy.h` | Merge policy/conflict APIs are not wrapped. |
-| `NSCoreDataCoreSpotlightDelegate` | Interface | `NSCoreDataCoreSpotlightDelegate.h` | Core Spotlight integration is not wrapped. |
-| `NSCoreDataCoreSpotlightDelegateIndexDidUpdateNotification` | Constant | `NSCoreDataCoreSpotlightDelegate.h` | Core Spotlight integration is not wrapped. |
-| `NSCoreDataCoreSpotlightExporter` | Constant | `NSPersistentStoreCoordinator.h` | Core Spotlight integration is not wrapped. |
-| `NSCoreDataVersionNumber` | Constant | `CoreDataDefines.h` | Framework version constant is not exposed. |
-| `NSCustomMigrationStage` | Interface | `NSCustomMigrationStage.h` | Migration/mapping APIs are not wrapped. |
-| `NSDeletedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSDeletedObjectsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSDerivedAttributeDescription` | Interface | `NSDerivedAttributeDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSDetailedErrorsKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSEntityMapping` | Interface | `NSEntityMapping.h` | Migration/mapping APIs are not wrapped. |
-| `NSEntityMappingType` | Type | `NSEntityMapping.h` | Migration/mapping APIs are not wrapped. |
-| `NSEntityMigrationPolicy` | Interface | `NSEntityMigrationPolicy.h` | Migration/mapping APIs are not wrapped. |
-| `NSExpressionDescription` | Interface | `NSExpressionDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSFetchIndexDescription` | Interface | `NSFetchIndexDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSFetchIndexElementDescription` | Interface | `NSFetchIndexElementDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSFetchIndexElementType` | Type | `NSFetchIndexElementDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSFetchRequestExpression` | Interface | `NSFetchRequestExpression.h` | Async/base persistent-store request APIs are not wrapped. |
-| `NSFetchRequestResult` | Protocol | `NSFetchRequest.h` | No public Rust analogue. |
-| `NSFetchedPropertyDescription` | Interface | `NSFetchedPropertyDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSFetchedResultsControllerDelegate` | Protocol | `NSFetchedResultsController.h` | Fetched-results-controller APIs are not yet wrapped. |
-| `NSIgnorePersistentStoreVersioningOption` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
-| `NSIncrementalStore` | Interface | `NSIncrementalStore.h` | Custom/atomic store APIs are not wrapped. |
-| `NSIncrementalStoreNode` | Interface | `NSIncrementalStoreNode.h` | Custom/atomic store APIs are not wrapped. |
-| `NSInsertedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSInsertedObjectsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSInvalidatedAllObjectsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSInvalidatedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSInvalidatedObjectsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSLightweightMigrationStage` | Interface | `NSLightweightMigrationStage.h` | Migration/mapping APIs are not wrapped. |
-| `NSManagedObjectContextDidMergeChangesObjectIDsNotification` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSManagedObjectContextDidSaveNotification` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSManagedObjectContextDidSaveObjectIDsNotification` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSManagedObjectContextObjectsDidChangeNotification` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSManagedObjectContextQueryGenerationKey` | Constant | `NSManagedObjectContext.h` | Query-generation APIs are not wrapped. |
-| `NSManagedObjectContextWillSaveNotification` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSManagedObjectModelReference` | Interface | `NSManagedObjectModelReference.h` | Migration/mapping APIs are not wrapped. |
-| `NSMergeConflict` | Interface | `NSMergePolicy.h` | Merge policy/conflict APIs are not yet fully wrapped. |
-| `NSMigrationStage` | Interface | `NSMigrationStage.h` | Migration/mapping APIs are not wrapped. |
-| `NSPersistentHistoryTokenKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSPersistentStoreAsynchronousResult` | Interface | `NSPersistentStoreResult.h` | Async/base persistent-store request APIs are not wrapped. |
-| `NSPersistentStoreConnectionPoolMaxSizeKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSPersistentStoreCoordinatorStoresDidChangeNotification` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSPersistentStoreCoordinatorStoresWillChangeNotification` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSPersistentStoreCoordinatorWillRemoveStoreNotification` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSPersistentStoreDeferredLightweightMigrationOptionKey` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
-| `NSPersistentStoreForceDestroyOption` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
-| `NSPersistentStoreModelVersionChecksumKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSPersistentStoreOSCompatibility` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSPersistentStoreRemoteChangeNotification` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSPersistentStoreRequest` | Interface | `NSPersistentStoreRequest.h` | Async/base persistent-store request APIs are not wrapped. |
-| `NSPersistentStoreRequestType` | Type | `NSPersistentStoreRequest.h` | Async/base persistent-store request APIs are not wrapped. |
-| `NSPersistentStoreResult` | Interface | `NSPersistentStoreResult.h` | Async/base persistent-store request APIs are not wrapped. |
-| `NSPersistentStoreSaveConflictsErrorKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSPersistentStoreStagedMigrationManagerOptionKey` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
-| `NSPersistentStoreURLKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSPropertyDescription` | Interface | `NSPropertyDescription.h` | Advanced model metadata APIs are not wrapped. |
-| `NSPropertyMapping` | Interface | `NSPropertyMapping.h` | Migration/mapping APIs are not wrapped. |
-| `NSQueryGenerationToken` | Interface | `NSQueryGenerationToken.h` | Query-generation APIs are not wrapped. |
-| `NSRefreshedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSRefreshedObjectsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSRemovedPersistentStoresKey` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSSQLiteAnalyzeOption` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
-| `NSSQLiteErrorDomain` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSSQLiteManualVacuumOption` | Constant | `NSPersistentStoreCoordinator.h` | No dedicated safe wrapper; only generic option passthrough exists (if any). |
-| `NSSaveChangesRequest` | Interface | `NSSaveChangesRequest.h` | No public Rust wrapper. |
-| `NSSnapshotEventType` | Type | `NSManagedObject.h` | No public Rust analogue. |
-| `NSStagedMigrationManager` | Interface | `NSStagedMigrationManager.h` | Migration/mapping APIs are not wrapped. |
-| `NSStoreModelVersionHashesKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSStoreModelVersionIdentifiersKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSStoreTypeKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSStoreUUIDKey` | Constant | `NSPersistentStoreCoordinator.h` | Metadata/option-key constant is not exposed as a named Rust constant. |
-| `NSUUIDChangedPersistentStoresKey` | Constant | `NSPersistentStoreCoordinator.h` | Notification/userInfo constants are not wrapped. |
-| `NSUpdatedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSUpdatedObjectsKey` | Constant | `NSManagedObjectContext.h` | Notification/userInfo constants are not wrapped. |
-| `NSValidateXMLStoreOption` | Constant | `NSPersistentStoreCoordinator.h` | XML-store helpers are not exposed by the crate. |
-| `NSValidationKeyErrorKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSValidationObjectErrorKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSValidationPredicateErrorKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSValidationValueErrorKey` | Constant | `CoreDataErrors.h` | NSError user-info/domain constants are not typed by the crate. |
-| `NSXMLStoreType` | Constant | `NSPersistentStoreCoordinator.h` | XML-store helpers are not exposed by the crate. |
+| _None_ | — | — | All non-exempt CoreData.framework top-level symbols are now wrapped or named by the crate. |
 
 ## ⏭️ EXEMPT
 | Symbol | Kind | Header | Reason | SDK attribute |

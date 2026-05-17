@@ -2,7 +2,9 @@ use std::path::Path;
 
 use crate::error::CoreDataError;
 use crate::ffi;
-use crate::private::{collect_array, error_from_status, impl_object_wrapper, path_cstring};
+use crate::private::{
+    collect_array, error_from_status, impl_object_wrapper, path_cstring, take_string,
+};
 use crate::schema::NSEntityDescription;
 
 impl_object_wrapper!(NSManagedObjectModel);
@@ -57,5 +59,10 @@ impl NSManagedObjectModel {
                 Err(error) => Some(Err(error)),
             })
             .transpose()
+    }
+
+    pub fn version_checksum(&self) -> Option<String> {
+        let ptr = unsafe { ffi::cd_managed_object_model_get_version_checksum(self.as_ptr()) };
+        unsafe { take_string(ptr) }
     }
 }

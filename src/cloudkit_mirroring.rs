@@ -5,9 +5,10 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::model::NSManagedObjectModel;
 use crate::persistent_container::NSPersistentStoreDescription;
+use crate::persistent_store_coordinator::NSPersistentStore;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, parse_json_ptr,
-    take_string,
+    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, parse_error_ptr,
+    parse_json_ptr, take_string,
 };
 use crate::query::NSFetchRequest;
 use crate::store::NSPersistentStoreCoordinator;
@@ -285,6 +286,39 @@ impl NSPersistentCloudKitContainer {
         }
         Ok(())
     }
+
+    pub fn can_update_record_for_managed_object_with_id(
+        &self,
+        object_id: &crate::managed_object::NSManagedObjectID,
+    ) -> bool {
+        unsafe {
+            ffi::cd_persistent_cloudkit_container_can_update_record_for_managed_object_id(
+                self.as_ptr(),
+                object_id.as_ptr(),
+            ) != 0
+        }
+    }
+
+    pub fn can_delete_record_for_managed_object_with_id(
+        &self,
+        object_id: &crate::managed_object::NSManagedObjectID,
+    ) -> bool {
+        unsafe {
+            ffi::cd_persistent_cloudkit_container_can_delete_record_for_managed_object_id(
+                self.as_ptr(),
+                object_id.as_ptr(),
+            ) != 0
+        }
+    }
+
+    pub fn can_modify_managed_objects_in_store(&self, store: &NSPersistentStore) -> bool {
+        unsafe {
+            ffi::cd_persistent_cloudkit_container_can_modify_managed_objects_in_store(
+                self.as_ptr(),
+                store.as_ptr(),
+            ) != 0
+        }
+    }
 }
 
 pub mod event_notification_names {
@@ -348,7 +382,9 @@ impl_object_wrapper!(NSPersistentCloudKitContainerEventResult);
 fn seconds_since_epoch(time: SystemTime) -> Result<f64, CoreDataError> {
     time.duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs_f64())
-        .map_err(|error| CoreDataError::bridge(-1, format!("invalid CloudKit event timestamp: {error}")))
+        .map_err(|error| {
+            CoreDataError::bridge(-1, format!("invalid CloudKit event timestamp: {error}"))
+        })
 }
 
 fn system_time_from_seconds(seconds: f64) -> SystemTime {
@@ -394,6 +430,14 @@ impl NSPersistentCloudKitContainerEvent {
     pub fn succeeded(&self) -> bool {
         unsafe { ffi::cd_persistent_cloudkit_event_get_succeeded(self.as_ptr()) != 0 }
     }
+
+    pub fn error(&self) -> Option<CoreDataError> {
+        let ptr = unsafe { ffi::cd_persistent_cloudkit_event_get_error_json(self.as_ptr()) };
+        if ptr.is_null() {
+            return None;
+        }
+        Some(unsafe { parse_error_ptr(ptr) })
+    }
 }
 
 impl NSPersistentCloudKitContainerEventRequest {
@@ -421,7 +465,10 @@ impl NSPersistentCloudKitContainerEventRequest {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_persistent_cloudkit_event_request_fetch_after_event(
-                event.map_or(core::ptr::null_mut(), NSPersistentCloudKitContainerEvent::as_ptr),
+                event.map_or(
+                    core::ptr::null_mut(),
+                    NSPersistentCloudKitContainerEvent::as_ptr,
+                ),
                 &mut out_request,
                 &mut out_error,
             )
@@ -444,7 +491,9 @@ impl NSPersistentCloudKitContainerEventRequest {
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
-        unsafe { NSFetchRequest::from_retained_ptr(out_fetch_request, "CloudKit event fetch request") }
+        unsafe {
+            NSFetchRequest::from_retained_ptr(out_fetch_request, "CloudKit event fetch request")
+        }
     }
 
     pub fn result_type(&self) -> NSPersistentCloudKitContainerEventResultType {
@@ -479,7 +528,12 @@ impl NSPersistentCloudKitContainerEventRequest {
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
-        unsafe { NSPersistentCloudKitContainerEventResult::from_retained_ptr(out_result, "CloudKit event result") }
+        unsafe {
+            NSPersistentCloudKitContainerEventResult::from_retained_ptr(
+                out_result,
+                "CloudKit event result",
+            )
+        }
     }
 }
 
@@ -491,7 +545,8 @@ impl NSPersistentCloudKitContainerEventResult {
     }
 
     pub fn events(&self) -> Result<Vec<NSPersistentCloudKitContainerEvent>, CoreDataError> {
-        let array_ptr = unsafe { ffi::cd_persistent_cloudkit_event_result_get_events(self.as_ptr()) };
+        let array_ptr =
+            unsafe { ffi::cd_persistent_cloudkit_event_result_get_events(self.as_ptr()) };
         collect_array(array_ptr, "CloudKit event result events")
     }
 
@@ -508,7 +563,8 @@ impl NSPersistentCloudKitContainerEventResult {
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
-        let raw_counts: Vec<u64> = unsafe { parse_json_ptr(out_json, "CloudKit event result counts") }?;
+        let raw_counts: Vec<u64> =
+            unsafe { parse_json_ptr(out_json, "CloudKit event result counts") }?;
         raw_counts
             .into_iter()
             .map(|count| {

@@ -7,7 +7,7 @@ use crate::ffi;
 use crate::model::NSManagedObjectModel;
 use crate::private::{
     cstring_from_str, error_from_status, impl_object_wrapper, json_cstring, opt_cstring_ptr,
-    path_cstring, parse_json_ptr,
+    parse_json_ptr, path_cstring,
 };
 use crate::store::PersistentStoreOptions;
 use crate::value::ValuePayload;
@@ -139,15 +139,14 @@ impl NSMigrationManager {
     pub fn destination_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
         let ptr = unsafe { ffi::cd_migration_manager_get_destination_context(self.as_ptr()) };
         unsafe {
-            NSManagedObjectContext::from_retained_ptr(
-                ptr,
-                "migration manager destination context",
-            )
+            NSManagedObjectContext::from_retained_ptr(ptr, "migration manager destination context")
         }
     }
 
     pub fn uses_store_specific_migration_manager(&self) -> bool {
-        unsafe { ffi::cd_migration_manager_get_uses_store_specific_migration_manager(self.as_ptr()) != 0 }
+        unsafe {
+            ffi::cd_migration_manager_get_uses_store_specific_migration_manager(self.as_ptr()) != 0
+        }
     }
 
     pub fn set_uses_store_specific_migration_manager(

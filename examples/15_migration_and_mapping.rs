@@ -11,7 +11,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let destination_artifact = SqliteStoreArtifact::new("migration-example-destination")?;
 
     {
-        let source_container = NSPersistentContainer::new("MigrationExampleSource", &fixture.source_model)?;
+        let source_container =
+            NSPersistentContainer::new("MigrationExampleSource", &fixture.source_model)?;
         let source_description = NSPersistentStoreDescription::with_url(&source_artifact.path)?;
         source_description.set_store_type(store_types::SQLITE)?;
         source_description.set_should_add_asynchronously(false);
@@ -23,8 +24,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         source_context.save()?;
     }
 
-    let mapping_model = NSMappingModel::inferred(&fixture.source_model, &fixture.destination_model)?;
-    let migration_manager = NSMigrationManager::new(&fixture.source_model, &fixture.destination_model)?;
+    let mapping_model =
+        NSMappingModel::inferred(&fixture.source_model, &fixture.destination_model)?;
+    let migration_manager =
+        NSMigrationManager::new(&fixture.source_model, &fixture.destination_model)?;
     migration_manager.set_uses_store_specific_migration_manager(false);
     migration_manager.migrate_store(
         &source_artifact.path,
@@ -37,11 +40,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     {
-        let destination_container = NSPersistentContainer::new(
-            "MigrationExampleDestination",
-            &fixture.destination_model,
-        )?;
-        let destination_description = NSPersistentStoreDescription::with_url(&destination_artifact.path)?;
+        let destination_container =
+            NSPersistentContainer::new("MigrationExampleDestination", &fixture.destination_model)?;
+        let destination_description =
+            NSPersistentStoreDescription::with_url(&destination_artifact.path)?;
         destination_description.set_store_type(store_types::SQLITE)?;
         destination_description.set_should_add_asynchronously(false);
         destination_container.set_persistent_store_descriptions(&[&destination_description])?;
