@@ -10,6 +10,7 @@ use crate::query::NSFetchRequest;
 use crate::schema::NSEntityDescription;
 use crate::store::NSPersistentStoreCoordinator;
 use crate::value::{Value, ValuePayload};
+use doom_fish_utils::panic_safe::catch_user_panic;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -49,22 +50,34 @@ where
 }
 
 unsafe extern "C" fn perform_trampoline(refcon: *mut c_void) {
-    let mut state: Box<PerformState> = Box::from_raw(refcon.cast());
-    if let Some(callback) = state.callback.take() {
-        callback(state.context.clone());
-    }
+    catch_user_panic("perform_trampoline", || {
+        // SAFETY: refcon was produced by Box::into_raw in NSManagedObjectContext::perform()
+        // and this trampoline is invoked exactly once, so we can take back ownership.
+        let mut state: Box<PerformState> = unsafe { Box::from_raw(refcon.cast()) };
+        if let Some(callback) = state.callback.take() {
+            callback(state.context.clone());
+        }
+    });
 }
 
 unsafe extern "C" fn perform_and_wait_trampoline<F, R>(refcon: *mut c_void)
 where
     F: FnOnce(NSManagedObjectContext) -> R,
 {
-    let state = &mut *refcon.cast::<PerformAndWaitState<F, R>>();
-    let callback = state
-        .callback
-        .take()
-        .expect("perform_and_wait callback missing");
-    state.result = Some(callback(state.context.clone()));
+    catch_user_panic("perform_and_wait_trampoline", || {
+        // SAFETY: refcon is addr_of_mut!(state) cast to *mut c_void from perform_and_wait().
+        // perform_and_wait() blocks synchronously until this trampoline returns, so the
+        // stack frame — and therefore state — is alive for the full duration of this call.
+        let state = unsafe { &mut *refcon.cast::<PerformAndWaitState<F, R>>() };
+        let callback = state
+            .callback
+            .take()
+            .expect("perform_and_wait callback missing");
+        state.result = Some(callback(state.context.clone()));
+    });
+    // If the callback panicked, catch_user_panic swallowed it; state.result will be None,
+    // and perform_and_wait() will panic with "callback did not return a value" on the
+    // Rust side rather than allowing UB from unwinding across the FFI boundary.
 }
 
 impl NSManagedObjectContext {

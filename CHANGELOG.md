@@ -1,6 +1,25 @@
 # Changelog
 
-## 0.3.0 - 2026-05-25
+## 0.3.1 - 2026-05-25
+
+### Fixed: quality pass — async/unsafe/hygiene audit
+
+- **Panic safety (UB fix):** all `extern "C"` callbacks in `src/async_api.rs`
+  (`load_stores_cb`, `init_schema_cb`, `perform_save_cb`, `fetch_history_cb`,
+  `batch_insert_cb`, `batch_update_cb`) now wrap their bodies in
+  `doom_fish_utils::panic_safe::catch_user_panic`. Previously a panic inside any
+  callback would unwind across the FFI boundary into Swift — undefined behaviour.
+- **Panic safety (UB fix):** `perform_trampoline` and `perform_and_wait_trampoline`
+  in `src/context.rs` now wrap user-closure calls in `catch_user_panic` for the same
+  reason.
+- **SAFETY comments:** added `// SAFETY:` annotations to every previously bare
+  `unsafe {}` block in `src/async_api.rs` and `src/context.rs`, documenting the
+  pointer-validity and single-fire callback contracts that make each call sound.
+- **Cargo.toml:** tightened `doom-fish-utils` version spec from `"0.1"` to
+  `">=0.1, <0.3"` to admit the next minor release without accidentally pulling in a
+  potentially breaking 0.3 release.
+
+
 
 ### Added: `async_api` module (Tier-1 async)
 
