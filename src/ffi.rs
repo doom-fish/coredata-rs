@@ -250,6 +250,10 @@ extern "C" {
 
 pub type VoidCallback = unsafe extern "C" fn(refcon: *mut c_void);
 
+#[cfg(feature = "async")]
+#[path = "ffi/async_api.rs"]
+pub mod async_api;
+
 #[path = "ffi/batch_operation.rs"]
 mod batch_operation;
 #[path = "ffi/cloudkit_mirroring.rs"]

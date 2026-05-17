@@ -20,6 +20,9 @@
 )]
 
 pub mod batch_operation;
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub mod async_api;
 pub mod cloudkit_mirroring;
 pub mod constants;
 pub mod context;

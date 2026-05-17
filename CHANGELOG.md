@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.3.0 - 2026-05-25
+
+### Added: `async_api` module (Tier-1 async)
+
+Gated behind the `async` Cargo feature. Wraps CoreData completion-handler and
+expensive-synchronous Apple APIs as executor-agnostic Rust `Future`s backed by
+`doom-fish-utils` `AsyncCompletion`.
+
+| Future type | Apple API | Notes |
+|---|---|---|
+| `LoadStoresFuture` / `AsyncPersistentContainer` | `NSPersistentContainer.loadPersistentStores(completionHandler:)` | Aggregates all store-description callbacks |
+| `InitializeCloudKitSchemaFuture` / `AsyncPersistentCloudKitContainer` | `NSPersistentCloudKitContainer.initializeCloudKitSchema(options:)` | Offloaded to background queue |
+| `ContextPerformSaveFuture` / `AsyncManagedObjectContext` | `NSManagedObjectContext.perform { save() }` | Uses context's private queue |
+| `FetchHistoryFuture` / `AsyncHistory` | `NSPersistentHistoryChangeRequest` execute | Via `context.perform` |
+| `BatchInsertFuture` / `BatchUpdateFuture` / `AsyncBatchOperation` | `NSBatchInsertRequest` / `NSBatchUpdateRequest` | Via `context.perform`; requires SQLite store |
+
+`NSPersistentStoreCoordinator.performAndWait` and `NSManagedObjectContext.performAndWait`
+are synchronous and are not Future candidates. `NSFetchedResultsController` delegate
+and CloudKit event notifications are multi-fire observer patterns; those are deferred
+to Tier-2 Stream wrappers.
+
+New dependencies: `doom-fish-utils` (workspace sibling), `pollster = "0.3"` (dev).
+
+New files: `src/async_api.rs`, `src/ffi/async_api.rs`,
+`swift-bridge/Sources/CoreDataBridge/Async.swift`,
+`examples/16_async_api.rs`, `tests/async_api_tests.rs`.
+
 ## 0.2.2 - 2026-05-17
 
 - Closed the remaining 91 non-exempt Core Data SDK audit gaps and brought `COVERAGE_AUDIT.md` to 100% public-symbol coverage.

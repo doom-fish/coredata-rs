@@ -2,7 +2,47 @@
 
 Safe Rust bindings for Apple's [Core Data](https://developer.apple.com/documentation/coredata) framework on macOS.
 
-> **Status:** v0.2.2 closes the remaining top-level Core Data SDK audit gaps, bringing the crate to 100% public-symbol coverage with persistent-store request/result wrappers, query-generation tokens, advanced model metadata, custom-store node helpers, staged-migration types, and named Core Data constants.
+> **Status:** v0.3.0 adds a Tier-1 `async_api` module (gated behind the `async` feature) wrapping CoreData completion-handler and expensive-sync APIs as executor-agnostic Rust Futures.
+
+## Async API
+
+Enable the `async` feature to access the `async_api` module:
+
+```toml
+[dependencies]
+coredata = { version = "0.3", features = ["async"] }
+```
+
+The async API is **executor-agnostic** — it works with Tokio, async-std, smol, pollster, or any other `std::future::Future`-compatible runtime.
+
+```rust,no_run
+use coredata::async_api::{AsyncPersistentContainer, AsyncManagedObjectContext};
+use coredata::{NSPersistentContainer, NSManagedObjectModel};
+
+async fn load_and_save(container: &NSPersistentContainer) -> Result<(), Box<dyn std::error::Error>> {
+    // Async store loading
+    AsyncPersistentContainer(container).load_persistent_stores().await?;
+
+    // Async save on a background context
+    let ctx = container.new_background_context()?;
+    AsyncManagedObjectContext(&ctx).perform_save().await?;
+    Ok(())
+}
+```
+
+### Available async types
+
+| Type | Apple API |
+|------|-----------|
+| `AsyncPersistentContainer` | `NSPersistentContainer.loadPersistentStores(completionHandler:)` |
+| `AsyncPersistentCloudKitContainer` | `NSPersistentCloudKitContainer.initializeCloudKitSchema(options:)` |
+| `AsyncManagedObjectContext` | `NSManagedObjectContext.perform { save() }` |
+| `AsyncHistory` | `NSPersistentHistoryChangeRequest` execute |
+| `AsyncBatchOperation` | `NSBatchInsertRequest` / `NSBatchUpdateRequest` |
+
+> **Note:** `performAndWait`-style sync APIs and multi-fire observer patterns (e.g.
+> `NSFetchedResultsController` delegate, CloudKit event notifications) are not
+> covered here — those belong to a Tier-2 Stream wrapper.
 
 ## Quick start
 
