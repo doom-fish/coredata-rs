@@ -100,6 +100,7 @@ impl Future for LoadStoresFuture {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct AsyncPersistentContainer<'a>(pub &'a crate::store::NSPersistentContainer);
 
 impl AsyncPersistentContainer<'_> {
@@ -116,13 +117,6 @@ impl AsyncPersistentContainer<'_> {
             );
         }
         LoadStoresFuture { inner: future }
-    }
-}
-
-impl std::fmt::Debug for AsyncPersistentContainer<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AsyncPersistentContainer")
-            .finish_non_exhaustive()
     }
 }
 
@@ -179,6 +173,7 @@ impl Future for InitializeCloudKitSchemaFuture {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct AsyncPersistentCloudKitContainer<'a>(
     pub &'a crate::cloudkit_mirroring::NSPersistentCloudKitContainer,
 );
@@ -201,13 +196,6 @@ impl AsyncPersistentCloudKitContainer<'_> {
             );
         }
         InitializeCloudKitSchemaFuture { inner: future }
-    }
-}
-
-impl std::fmt::Debug for AsyncPersistentCloudKitContainer<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AsyncPersistentCloudKitContainer")
-            .finish_non_exhaustive()
     }
 }
 
@@ -264,6 +252,7 @@ impl Future for ContextPerformSaveFuture {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct AsyncManagedObjectContext<'a>(pub &'a crate::context::NSManagedObjectContext);
 
 impl AsyncManagedObjectContext<'_> {
@@ -281,13 +270,6 @@ impl AsyncManagedObjectContext<'_> {
             );
         }
         ContextPerformSaveFuture { inner: future }
-    }
-}
-
-impl std::fmt::Debug for AsyncManagedObjectContext<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AsyncManagedObjectContext")
-            .finish_non_exhaustive()
     }
 }
 
@@ -362,6 +344,7 @@ impl Future for FetchHistoryFuture {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct AsyncHistory;
 
 impl AsyncHistory {
@@ -516,6 +499,7 @@ impl Future for BatchUpdateFuture {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct AsyncBatchOperation;
 
 impl AsyncBatchOperation {

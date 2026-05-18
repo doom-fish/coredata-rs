@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 - 2026-05-25
+
+- Added `#[derive(Debug)]` to the public async adapter and marker structs that can derive it directly: `AsyncPersistentContainer`, `AsyncPersistentCloudKitContainer`, `AsyncManagedObjectContext`, `AsyncHistory`, and `AsyncBatchOperation`.
+- Kept the manual `Debug` impls on async future wrappers whose internal completion state does not currently support a derived implementation.
+
 ## 0.3.1 - 2026-05-25
 
 ### Fixed: quality pass — async/unsafe/hygiene audit
