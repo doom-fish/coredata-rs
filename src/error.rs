@@ -2,12 +2,17 @@ use core::fmt;
 
 use serde::{Deserialize, Serialize};
 
+/// Mirrors `CoreDataBridge`.
 pub const COREDATA_BRIDGE_ERROR_DOMAIN: &str = "CoreDataBridge";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Wraps `CoreDataError`.
 pub struct CoreDataError {
+    /// Mirrors `CoreDataError.domain`.
     pub domain: String,
+    /// Mirrors `CoreDataError.code`.
     pub code: i64,
+    /// Mirrors `CoreDataError.message`.
     pub message: String,
 }
 

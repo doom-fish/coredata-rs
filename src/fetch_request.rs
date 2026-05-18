@@ -8,11 +8,17 @@ use crate::schema::NSEntityDescription;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `FetchRequestResultType` value.
 pub enum FetchRequestResultType {
+    /// Mirrors `FetchRequestResultType::ManagedObject`.
     ManagedObject,
+    /// Mirrors `FetchRequestResultType::ManagedObjectId`.
     ManagedObjectId,
+    /// Mirrors `FetchRequestResultType::Dictionary`.
     Dictionary,
+    /// Mirrors `FetchRequestResultType::Count`.
     Count,
+    /// Mirrors `FetchRequestResultType::Unknown`.
     Unknown(u64),
 }
 
@@ -39,6 +45,7 @@ impl FetchRequestResultType {
 }
 
 impl NSFetchRequest {
+    /// Wraps `NSFetchRequest.entity(...)`.
     pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
         let ptr = unsafe { ffi::cd_fetch_request_get_entity(self.as_ptr()) };
         if ptr.is_null() {
@@ -49,6 +56,7 @@ impl NSFetchRequest {
         }))
     }
 
+    /// Mirrors `NSFetchRequest.entity`.
     pub fn set_entity(&self, entity: Option<&NSEntityDescription>) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -64,17 +72,20 @@ impl NSFetchRequest {
         Ok(())
     }
 
+    /// Wraps `NSFetchRequest.entity_name(...)`.
     pub fn entity_name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_fetch_request_get_entity_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Wraps `NSFetchRequest.result_type(...)`.
     pub fn result_type(&self) -> FetchRequestResultType {
         FetchRequestResultType::from_raw(unsafe {
             ffi::cd_fetch_request_get_result_type(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSFetchRequest.result_type`.
     pub fn set_result_type(
         &self,
         result_type: FetchRequestResultType,
@@ -93,10 +104,12 @@ impl NSFetchRequest {
         Ok(())
     }
 
+    /// Wraps `NSFetchRequest.includes_subentities(...)`.
     pub fn includes_subentities(&self) -> bool {
         unsafe { ffi::cd_fetch_request_get_includes_subentities(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSFetchRequest.includes_subentities`.
     pub fn set_includes_subentities(&self, includes_subentities: bool) {
         unsafe {
             ffi::cd_fetch_request_set_includes_subentities(
@@ -106,10 +119,12 @@ impl NSFetchRequest {
         }
     }
 
+    /// Wraps `NSFetchRequest.includes_property_values(...)`.
     pub fn includes_property_values(&self) -> bool {
         unsafe { ffi::cd_fetch_request_get_includes_property_values(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSFetchRequest.includes_property_values`.
     pub fn set_includes_property_values(&self, includes_property_values: bool) {
         unsafe {
             ffi::cd_fetch_request_set_includes_property_values(
@@ -119,10 +134,12 @@ impl NSFetchRequest {
         }
     }
 
+    /// Wraps `NSFetchRequest.returns_objects_as_faults(...)`.
     pub fn returns_objects_as_faults(&self) -> bool {
         unsafe { ffi::cd_fetch_request_get_returns_objects_as_faults(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSFetchRequest.returns_objects_as_faults`.
     pub fn set_returns_objects_as_faults(&self, returns_objects_as_faults: bool) {
         unsafe {
             ffi::cd_fetch_request_set_returns_objects_as_faults(
@@ -132,6 +149,7 @@ impl NSFetchRequest {
         }
     }
 
+    /// Wraps `NSFetchRequest.relationship_key_paths_for_prefetching(...)`.
     pub fn relationship_key_paths_for_prefetching(&self) -> Result<Vec<String>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -148,6 +166,7 @@ impl NSFetchRequest {
         unsafe { parse_json_ptr(out_json, "fetch request relationship key paths") }
     }
 
+    /// Mirrors `NSFetchRequest.relationship_key_paths_for_prefetching`.
     pub fn set_relationship_key_paths_for_prefetching(
         &self,
         key_paths: &[impl AsRef<str>],
@@ -171,10 +190,12 @@ impl NSFetchRequest {
         Ok(())
     }
 
+    /// Wraps `NSFetchRequest.includes_pending_changes(...)`.
     pub fn includes_pending_changes(&self) -> bool {
         unsafe { ffi::cd_fetch_request_get_includes_pending_changes(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSFetchRequest.includes_pending_changes`.
     pub fn set_includes_pending_changes(&self, includes_pending_changes: bool) {
         unsafe {
             ffi::cd_fetch_request_set_includes_pending_changes(
@@ -184,10 +205,12 @@ impl NSFetchRequest {
         }
     }
 
+    /// Wraps `NSFetchRequest.returns_distinct_results(...)`.
     pub fn returns_distinct_results(&self) -> bool {
         unsafe { ffi::cd_fetch_request_get_returns_distinct_results(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSFetchRequest.returns_distinct_results`.
     pub fn set_returns_distinct_results(&self, returns_distinct_results: bool) {
         unsafe {
             ffi::cd_fetch_request_set_returns_distinct_results(
@@ -197,10 +220,12 @@ impl NSFetchRequest {
         }
     }
 
+    /// Wraps `NSFetchRequest.fetch_batch_size(...)`.
     pub fn fetch_batch_size(&self) -> usize {
         unsafe { ffi::cd_fetch_request_get_fetch_batch_size(self.as_ptr()) as usize }
     }
 
+    /// Mirrors `NSFetchRequest.fetch_batch_size`.
     pub fn set_fetch_batch_size(&self, fetch_batch_size: usize) -> Result<(), CoreDataError> {
         let fetch_batch_size = u64::try_from(fetch_batch_size)
             .map_err(|_| CoreDataError::bridge(-1, "fetch batch size overflow"))?;
@@ -208,10 +233,12 @@ impl NSFetchRequest {
         Ok(())
     }
 
+    /// Wraps `NSFetchRequest.should_refresh_refetched_objects(...)`.
     pub fn should_refresh_refetched_objects(&self) -> bool {
         unsafe { ffi::cd_fetch_request_get_should_refresh_refetched_objects(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSFetchRequest.should_refresh_refetched_objects`.
     pub fn set_should_refresh_refetched_objects(&self, should_refresh: bool) {
         unsafe {
             ffi::cd_fetch_request_set_should_refresh_refetched_objects(
@@ -221,6 +248,7 @@ impl NSFetchRequest {
         }
     }
 
+    /// Wraps `NSFetchRequest.execute_object_ids(...)`.
     pub fn execute_object_ids(
         &self,
         context: &NSManagedObjectContext,

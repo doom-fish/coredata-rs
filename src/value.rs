@@ -2,16 +2,24 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `Value` value.
 pub enum Value {
+    /// Mirrors `Value::Null`.
     Null,
+    /// Mirrors `Value::String`.
     String(String),
+    /// Mirrors `Value::Int32`.
     Int32(i32),
+    /// Mirrors `Value::Int64`.
     Int64(i64),
+    /// Mirrors `Value::Double`.
     Double(f64),
+    /// Mirrors `Value::Bool`.
     Bool(bool),
 }
 
 impl Value {
+    /// Wraps `Value.as_str(...)`.
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::String(value) => Some(value.as_str()),
@@ -19,6 +27,7 @@ impl Value {
         }
     }
 
+    /// Wraps `Value.as_i32(...)`.
     pub fn as_i32(&self) -> Option<i32> {
         match self {
             Self::Int32(value) => Some(*value),
@@ -27,6 +36,7 @@ impl Value {
         }
     }
 
+    /// Wraps `Value.as_i64(...)`.
     pub fn as_i64(&self) -> Option<i64> {
         match self {
             Self::Int32(value) => Some(i64::from(*value)),
@@ -35,6 +45,7 @@ impl Value {
         }
     }
 
+    /// Wraps `Value.as_f64(...)`.
     pub fn as_f64(&self) -> Option<f64> {
         match self {
             Self::Double(value) => Some(*value),
@@ -44,6 +55,7 @@ impl Value {
         }
     }
 
+    /// Wraps `Value.as_bool(...)`.
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Self::Bool(value) => Some(*value),

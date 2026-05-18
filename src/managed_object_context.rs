@@ -19,11 +19,13 @@ impl NSManagedObjectContextConcurrencyType {
 }
 
 impl NSManagedObjectContext {
+    /// Wraps `NSManagedObjectContext.name(...)`.
     pub fn name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_managed_object_context_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Mirrors `NSManagedObjectContext.name`.
     pub fn set_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "managed object context name"))
@@ -43,6 +45,7 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.parent_context(...)`.
     pub fn parent_context(&self) -> Result<Option<Self>, CoreDataError> {
         let ptr = unsafe { ffi::cd_managed_object_context_get_parent_context(self.as_ptr()) };
         if ptr.is_null() {
@@ -53,6 +56,7 @@ impl NSManagedObjectContext {
         }))
     }
 
+    /// Mirrors `NSManagedObjectContext.parent_context`.
     pub fn set_parent_context(&self, parent_context: Option<&Self>) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -68,36 +72,42 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.concurrency_type(...)`.
     pub fn concurrency_type(&self) -> NSManagedObjectContextConcurrencyType {
         NSManagedObjectContextConcurrencyType::from_raw(unsafe {
             ffi::cd_managed_object_context_get_concurrency_type(self.as_ptr())
         })
     }
 
+    /// Wraps `NSManagedObjectContext.inserted_objects(...)`.
     pub fn inserted_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_managed_object_context_get_inserted_objects(self.as_ptr()) };
         collect_array(array_ptr, "managed object context inserted objects")
     }
 
+    /// Wraps `NSManagedObjectContext.updated_objects(...)`.
     pub fn updated_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_managed_object_context_get_updated_objects(self.as_ptr()) };
         collect_array(array_ptr, "managed object context updated objects")
     }
 
+    /// Wraps `NSManagedObjectContext.deleted_objects(...)`.
     pub fn deleted_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_managed_object_context_get_deleted_objects(self.as_ptr()) };
         collect_array(array_ptr, "managed object context deleted objects")
     }
 
+    /// Wraps `NSManagedObjectContext.registered_objects(...)`.
     pub fn registered_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_managed_object_context_get_registered_objects(self.as_ptr()) };
         collect_array(array_ptr, "managed object context registered objects")
     }
 
+    /// Wraps `NSManagedObjectContext.object_registered_for_id(...)`.
     pub fn object_registered_for_id(
         &self,
         object_id: &NSManagedObjectID,
@@ -116,6 +126,7 @@ impl NSManagedObjectContext {
         }))
     }
 
+    /// Wraps `NSManagedObjectContext.object_with_id(...)`.
     pub fn object_with_id(
         &self,
         object_id: &NSManagedObjectID,
@@ -126,6 +137,7 @@ impl NSManagedObjectContext {
         unsafe { NSManagedObject::from_retained_ptr(ptr, "managed object context object") }
     }
 
+    /// Wraps `NSManagedObjectContext.existing_object(...)`.
     pub fn existing_object(
         &self,
         object_id: &NSManagedObjectID,
@@ -151,6 +163,7 @@ impl NSManagedObjectContext {
         }))
     }
 
+    /// Wraps `NSManagedObjectContext.count(...)`.
     pub fn count(&self, request: &NSFetchRequest) -> Result<usize, CoreDataError> {
         let mut out_count = 0_u64;
         let mut out_error = core::ptr::null_mut();
@@ -169,6 +182,7 @@ impl NSManagedObjectContext {
             .map_err(|_| CoreDataError::bridge(-1, "managed object context count overflow"))
     }
 
+    /// Wraps `NSManagedObjectContext.refresh_object(...)`.
     pub fn refresh_object(&self, object: &NSManagedObject, merge_changes: bool) {
         unsafe {
             ffi::cd_managed_object_context_refresh_object(
@@ -179,22 +193,27 @@ impl NSManagedObjectContext {
         }
     }
 
+    /// Wraps `NSManagedObjectContext.process_pending_changes(...)`.
     pub fn process_pending_changes(&self) {
         unsafe { ffi::cd_managed_object_context_process_pending_changes(self.as_ptr()) }
     }
 
+    /// Wraps `NSManagedObjectContext.reset(...)`.
     pub fn reset(&self) {
         unsafe { ffi::cd_managed_object_context_reset(self.as_ptr()) }
     }
 
+    /// Wraps `NSManagedObjectContext.rollback(...)`.
     pub fn rollback(&self) {
         unsafe { ffi::cd_managed_object_context_rollback(self.as_ptr()) }
     }
 
+    /// Wraps `NSManagedObjectContext.refresh_all_objects(...)`.
     pub fn refresh_all_objects(&self) {
         unsafe { ffi::cd_managed_object_context_refresh_all_objects(self.as_ptr()) }
     }
 
+    /// Wraps `NSManagedObjectContext.automatically_merges_changes_from_parent(...)`.
     pub fn automatically_merges_changes_from_parent(&self) -> bool {
         unsafe {
             ffi::cd_managed_object_context_get_automatically_merges_changes_from_parent(
@@ -203,6 +222,7 @@ impl NSManagedObjectContext {
         }
     }
 
+    /// Mirrors `NSManagedObjectContext.automatically_merges_changes_from_parent`.
     pub fn set_automatically_merges_changes_from_parent(
         &self,
         automatically_merges: bool,
@@ -221,11 +241,13 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.transaction_author(...)`.
     pub fn transaction_author(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_managed_object_context_get_transaction_author(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Mirrors `NSManagedObjectContext.transaction_author`.
     pub fn set_transaction_author(&self, author: Option<&str>) -> Result<(), CoreDataError> {
         let author = author
             .map(|value| cstring_from_str(value, "managed object context transaction author"))
@@ -246,6 +268,7 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.obtain_permanent_ids(...)`.
     pub fn obtain_permanent_ids(&self, objects: &[&NSManagedObject]) -> Result<(), CoreDataError> {
         let raw_objects = objects
             .iter()
@@ -268,6 +291,7 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.merge_changes_from_history_transaction(...)`.
     pub fn merge_changes_from_history_transaction(
         &self,
         transaction: &NSPersistentHistoryTransaction,

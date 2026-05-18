@@ -6,12 +6,16 @@ use crate::value::{Value, ValuePayload};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Wraps `SortDescriptor`.
 pub struct SortDescriptor {
+    /// Mirrors `SortDescriptor.key`.
     pub key: String,
+    /// Mirrors `SortDescriptor.ascending`.
     pub ascending: bool,
 }
 
 impl SortDescriptor {
+    /// Wraps `SortDescriptor.ascending(...)`.
     pub fn ascending(key: impl Into<String>) -> Self {
         Self {
             key: key.into(),
@@ -19,6 +23,7 @@ impl SortDescriptor {
         }
     }
 
+    /// Wraps `SortDescriptor.descending(...)`.
     pub fn descending(key: impl Into<String>) -> Self {
         Self {
             key: key.into(),
@@ -31,6 +36,7 @@ impl_object_wrapper!(NSPredicate);
 impl_object_wrapper!(NSFetchRequest);
 
 impl NSPredicate {
+    /// Wraps `NSPredicate.init(...)`.
     pub fn from_format(
         format: impl AsRef<str>,
         arguments: &[Value],
@@ -56,6 +62,7 @@ impl NSPredicate {
 }
 
 impl NSFetchRequest {
+    /// Wraps `NSFetchRequest.init(...)`.
     pub fn new(entity_name: impl AsRef<str>) -> Result<Self, CoreDataError> {
         let entity_name = cstring_from_str(entity_name.as_ref(), "fetch request entity name")?;
         let mut out_request = core::ptr::null_mut();
@@ -69,6 +76,7 @@ impl NSFetchRequest {
         unsafe { Self::from_retained_ptr(out_request, "fetch request") }
     }
 
+    /// Mirrors `NSFetchRequest.predicate`.
     pub fn set_predicate(&self, predicate: Option<&NSPredicate>) {
         unsafe {
             ffi::cd_fetch_request_set_predicate(
@@ -78,6 +86,7 @@ impl NSFetchRequest {
         }
     }
 
+    /// Mirrors `NSFetchRequest.sort_descriptors`.
     pub fn set_sort_descriptors(
         &self,
         descriptors: &[SortDescriptor],
@@ -97,6 +106,7 @@ impl NSFetchRequest {
         Ok(())
     }
 
+    /// Mirrors `NSFetchRequest.fetch_limit`.
     pub fn set_fetch_limit(&self, fetch_limit: usize) -> Result<(), CoreDataError> {
         let fetch_limit = u64::try_from(fetch_limit)
             .map_err(|_| CoreDataError::bridge(-1, "fetch limit overflow"))?;
@@ -106,6 +116,7 @@ impl NSFetchRequest {
         Ok(())
     }
 
+    /// Mirrors `NSFetchRequest.fetch_offset`.
     pub fn set_fetch_offset(&self, fetch_offset: usize) -> Result<(), CoreDataError> {
         let fetch_offset = u64::try_from(fetch_offset)
             .map_err(|_| CoreDataError::bridge(-1, "fetch offset overflow"))?;
@@ -115,6 +126,7 @@ impl NSFetchRequest {
         Ok(())
     }
 
+    /// Wraps `NSFetchRequest.execute(...)`.
     pub fn execute(
         &self,
         context: &NSManagedObjectContext,

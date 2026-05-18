@@ -19,39 +19,70 @@
     clippy::use_self
 )]
 
+/// Core Data batch-operation wrappers mirroring `NSBatchDeleteRequest`, `NSBatchInsertRequest`, and `NSBatchUpdateRequest`.
 pub mod batch_operation;
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+/// Async wrappers for Core Data completion-handler APIs.
 pub mod async_api;
+/// Core Data CloudKit mirroring wrappers.
 pub mod cloudkit_mirroring;
+/// Named Core Data constants and notification keys.
 pub mod constants;
+/// Core Data managed object and context wrappers.
 pub mod context;
+/// Core Data custom store wrappers.
 pub mod custom_store;
+/// Extensions for `NSEntityDescription`.
 pub mod entity_description;
+/// Error types for Core Data bridge failures.
 pub mod error;
+/// Fetch-request result-type helpers for Core Data.
 pub mod fetch_request;
+/// Fetched results controller wrappers.
 pub mod fetched_results_controller;
+/// Raw Core Data bridge symbols.
 pub mod ffi;
+/// Persistent history tracking wrappers.
 pub mod history;
+/// Managed-object identifier and snapshot wrappers.
 pub mod managed_object;
+/// Additional `NSManagedObjectContext` APIs.
 pub mod managed_object_context;
+/// Merge policy and conflict wrappers.
 pub mod merge_policy;
+/// Mapping-model and migration-manager wrappers.
 pub mod migration;
+/// Staged migration support wrappers.
 pub mod migration_support;
+/// Managed object model wrappers.
 pub mod model;
+/// Property and fetch-index metadata wrappers.
 pub mod model_metadata;
+/// Predicate helpers mirroring `NSPredicate`.
 pub mod ns_predicate;
+/// Persistent store description extensions and option keys.
 pub mod persistent_container;
+/// Persistent store wrappers and coordinator extensions.
 pub mod persistent_store_coordinator;
+/// Persistent store request and result wrappers.
 pub mod persistent_store_request;
 mod private;
+/// Fetch-request, predicate, and sort-descriptor wrappers.
 pub mod query;
+/// Query-generation token wrappers.
 pub mod query_generation;
+/// Extensions for `NSRelationshipDescription`.
 pub mod relationship_description;
+/// Schema wrappers for entities, attributes, and relationships.
 pub mod schema;
+/// Core Spotlight integration wrappers for Core Data.
 pub mod spotlight;
+/// Persistent container and coordinator wrappers.
 pub mod store;
+/// Validation rule and error-code helpers.
 pub mod validation;
+/// Value conversions used with Core Data attribute payloads.
 pub mod value;
 
 pub use batch_operation::{

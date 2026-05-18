@@ -14,9 +14,13 @@ use doom_fish_utils::panic_safe::catch_user_panic;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `NSManagedObjectContextConcurrencyType` value.
 pub enum NSManagedObjectContextConcurrencyType {
+    /// Mirrors `NSManagedObjectContextConcurrencyType::PrivateQueue`.
     PrivateQueue,
+    /// Mirrors `NSManagedObjectContextConcurrencyType::MainQueue`.
     MainQueue,
+    /// Mirrors `NSManagedObjectContextConcurrencyType::Unknown`.
     Unknown(i32),
 }
 
@@ -81,6 +85,7 @@ where
 }
 
 impl NSManagedObjectContext {
+    /// Wraps `NSManagedObjectContext.init(...)`.
     pub fn new(
         concurrency_type: NSManagedObjectContextConcurrencyType,
     ) -> Result<Self, CoreDataError> {
@@ -99,14 +104,17 @@ impl NSManagedObjectContext {
         unsafe { Self::from_retained_ptr(out_context, "managed object context") }
     }
 
+    /// Wraps `NSManagedObjectContext.init(...)`.
     pub fn new_main_queue() -> Result<Self, CoreDataError> {
         Self::new(NSManagedObjectContextConcurrencyType::MainQueue)
     }
 
+    /// Wraps `NSManagedObjectContext.init(...)`.
     pub fn new_private_queue() -> Result<Self, CoreDataError> {
         Self::new(NSManagedObjectContextConcurrencyType::PrivateQueue)
     }
 
+    /// Mirrors `NSManagedObjectContext.persistent_store_coordinator`.
     pub fn set_persistent_store_coordinator(
         &self,
         coordinator: &NSPersistentStoreCoordinator,
@@ -125,10 +133,12 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.has_changes(...)`.
     pub fn has_changes(&self) -> bool {
         unsafe { ffi::cd_managed_object_context_has_changes(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObjectContext.save(...)`.
     pub fn save(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe { ffi::cd_managed_object_context_save(self.as_ptr(), &mut out_error) };
@@ -138,6 +148,7 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.insert(...)`.
     pub fn insert(&self, object: &NSManagedObject) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -153,12 +164,14 @@ impl NSManagedObjectContext {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectContext.delete(...)`.
     pub fn delete(&self, object: &NSManagedObject) {
         unsafe {
             ffi::cd_managed_object_context_delete_object(self.as_ptr(), object.as_ptr());
         }
     }
 
+    /// Wraps `NSManagedObjectContext.perform(...)`.
     pub fn perform<F>(&self, callback: F)
     where
         F: FnOnce(NSManagedObjectContext) + Send + 'static,
@@ -176,6 +189,7 @@ impl NSManagedObjectContext {
         }
     }
 
+    /// Wraps `NSManagedObjectContext.perform_and_wait(...)`.
     pub fn perform_and_wait<F, R>(&self, callback: F) -> R
     where
         F: FnOnce(NSManagedObjectContext) -> R,
@@ -197,6 +211,7 @@ impl NSManagedObjectContext {
             .expect("perform_and_wait callback did not return a value")
     }
 
+    /// Wraps `NSManagedObjectContext.fetch(...)`.
     pub fn fetch(&self, request: &NSFetchRequest) -> Result<Vec<NSManagedObject>, CoreDataError> {
         let mut out_array = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -216,6 +231,7 @@ impl NSManagedObjectContext {
 }
 
 impl NSManagedObject {
+    /// Wraps `NSManagedObject.init(...)`.
     pub fn new(
         entity: &NSEntityDescription,
         context: Option<&NSManagedObjectContext>,
@@ -236,11 +252,13 @@ impl NSManagedObject {
         unsafe { Self::from_retained_ptr(out_object, "managed object") }
     }
 
+    /// Wraps `NSManagedObject.entity(...)`.
     pub fn entity(&self) -> Result<NSEntityDescription, CoreDataError> {
         let ptr = unsafe { ffi::cd_managed_object_entity(self.as_ptr()) };
         unsafe { NSEntityDescription::from_retained_ptr(ptr, "managed object entity") }
     }
 
+    /// Mirrors `NSManagedObject.value`.
     pub fn set_value(&self, key: &str, value: impl Into<Value>) -> Result<(), CoreDataError> {
         let key = cstring_from_str(key, "managed object value key")?;
         let value = ValuePayload::from(value.into());
@@ -260,6 +278,7 @@ impl NSManagedObject {
         Ok(())
     }
 
+    /// Wraps `NSManagedObject.value(...)`.
     pub fn value(&self, key: &str) -> Result<Value, CoreDataError> {
         let key = cstring_from_str(key, "managed object value key")?;
         let mut out_json = core::ptr::null_mut();

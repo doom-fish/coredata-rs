@@ -11,25 +11,36 @@ use crate::schema::NSEntityDescription;
 use crate::value::{Value, ValuePayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+/// Wraps `NSSnapshotEventType`.
 pub struct NSSnapshotEventType(u64);
 
 impl NSSnapshotEventType {
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const NONE: Self = Self(0);
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const UNDO_INSERTION: Self = Self(1 << 1);
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const UNDO_DELETION: Self = Self(1 << 2);
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const UNDO_UPDATE: Self = Self(1 << 3);
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const ROLLBACK: Self = Self(1 << 4);
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const REFRESH: Self = Self(1 << 5);
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const MERGE_POLICY: Self = Self(1 << 6);
 
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const fn bits(self) -> u64 {
         self.0
     }
 
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const fn union(self, other: Self) -> Self {
         Self(self.0 | other.0)
     }
 
+    /// Mirrors the corresponding `NSSnapshotEventType` constant.
     pub const fn contains(self, other: Self) -> bool {
         (self.0 & other.0) == other.0
     }
@@ -49,6 +60,7 @@ fn value_map_from_json_ptr(
 }
 
 impl NSManagedObject {
+    /// Wraps `NSManagedObject.managed_object_context(...)`.
     pub fn managed_object_context(&self) -> Result<Option<NSManagedObjectContext>, CoreDataError> {
         let ptr = unsafe { ffi::cd_managed_object_get_managed_object_context(self.as_ptr()) };
         if ptr.is_null() {
@@ -59,35 +71,43 @@ impl NSManagedObject {
         }))
     }
 
+    /// Wraps `NSManagedObject.object_id(...)`.
     pub fn object_id(&self) -> Result<NSManagedObjectID, CoreDataError> {
         let ptr = unsafe { ffi::cd_managed_object_get_object_id(self.as_ptr()) };
         unsafe { NSManagedObjectID::from_retained_ptr(ptr, "managed object object ID") }
     }
 
+    /// Wraps `NSManagedObject.is_inserted(...)`.
     pub fn is_inserted(&self) -> bool {
         unsafe { ffi::cd_managed_object_get_inserted(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObject.is_updated(...)`.
     pub fn is_updated(&self) -> bool {
         unsafe { ffi::cd_managed_object_get_updated(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObject.is_deleted(...)`.
     pub fn is_deleted(&self) -> bool {
         unsafe { ffi::cd_managed_object_get_deleted(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObject.has_changes(...)`.
     pub fn has_changes(&self) -> bool {
         unsafe { ffi::cd_managed_object_get_has_changes(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObject.has_persistent_changed_values(...)`.
     pub fn has_persistent_changed_values(&self) -> bool {
         unsafe { ffi::cd_managed_object_get_has_persistent_changed_values(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObject.is_fault(...)`.
     pub fn is_fault(&self) -> bool {
         unsafe { ffi::cd_managed_object_get_fault(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObject.has_fault_for_relationship_named(...)`.
     pub fn has_fault_for_relationship_named(
         &self,
         relationship_name: &str,
@@ -101,6 +121,7 @@ impl NSManagedObject {
         })
     }
 
+    /// Wraps `NSManagedObject.object_ids_for_relationship_named(...)`.
     pub fn object_ids_for_relationship_named(
         &self,
         relationship_name: &str,
@@ -115,6 +136,7 @@ impl NSManagedObject {
         collect_array(array_ptr, "managed object relationship object IDs")
     }
 
+    /// Wraps `NSManagedObject.committed_values(...)`.
     pub fn committed_values(
         &self,
         keys: Option<&[&str]>,
@@ -146,6 +168,7 @@ impl NSManagedObject {
         value_map_from_json_ptr(out_json, "managed object committed values")
     }
 
+    /// Wraps `NSManagedObject.changed_values(...)`.
     pub fn changed_values(&self) -> Result<BTreeMap<String, Value>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -158,6 +181,7 @@ impl NSManagedObject {
         value_map_from_json_ptr(out_json, "managed object changed values")
     }
 
+    /// Wraps `NSManagedObject.changed_values_for_current_event(...)`.
     pub fn changed_values_for_current_event(
         &self,
     ) -> Result<BTreeMap<String, Value>, CoreDataError> {
@@ -178,15 +202,18 @@ impl NSManagedObject {
 }
 
 impl NSManagedObjectID {
+    /// Wraps `NSManagedObjectID.entity(...)`.
     pub fn entity(&self) -> Result<NSEntityDescription, CoreDataError> {
         let ptr = unsafe { ffi::cd_managed_object_id_get_entity(self.as_ptr()) };
         unsafe { NSEntityDescription::from_retained_ptr(ptr, "managed object ID entity") }
     }
 
+    /// Wraps `NSManagedObjectID.is_temporary(...)`.
     pub fn is_temporary(&self) -> bool {
         unsafe { ffi::cd_managed_object_id_get_temporary(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSManagedObjectID.uri_representation(...)`.
     pub fn uri_representation(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_managed_object_id_get_uri(self.as_ptr()) };
         unsafe { take_string(ptr) }

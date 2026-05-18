@@ -12,12 +12,18 @@ use crate::store::NSPersistentContainer;
 use crate::store::NSPersistentStoreCoordinator;
 use crate::value::{Value, ValuePayload};
 
+/// Core Data items for option keys.
 pub mod option_keys {
+    /// Mirrors `NSReadOnlyPersistentStoreOption`.
     pub const READ_ONLY: &str = "NSReadOnlyPersistentStoreOption";
+    /// Mirrors the corresponding Core Data constant.
     pub const MIGRATE_PERSISTENT_STORES_AUTOMATICALLY: &str =
         "NSMigratePersistentStoresAutomaticallyOption";
+    /// Mirrors `NSInferMappingModelAutomaticallyOption`.
     pub const INFER_MAPPING_MODEL_AUTOMATICALLY: &str = "NSInferMappingModelAutomaticallyOption";
+    /// Mirrors `NSPersistentHistoryTrackingKey`.
     pub const PERSISTENT_HISTORY_TRACKING: &str = "NSPersistentHistoryTrackingKey";
+    /// Mirrors the corresponding Core Data constant.
     pub const REMOTE_CHANGE_NOTIFICATION_POST: &str =
         "NSPersistentStoreRemoteChangeNotificationPostOptionKey";
 }
@@ -25,6 +31,7 @@ pub mod option_keys {
 impl_object_wrapper!(NSPersistentStoreDescription);
 
 impl NSPersistentStoreDescription {
+    /// Wraps `NSPersistentStoreDescription.init(...)`.
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_description = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -41,6 +48,7 @@ impl NSPersistentStoreDescription {
         unsafe { Self::from_retained_ptr(out_description, "persistent store description") }
     }
 
+    /// Wraps `NSPersistentStoreDescription.init(...)`.
     pub fn with_url(path: impl AsRef<Path>) -> Result<Self, CoreDataError> {
         let path = path_cstring(path.as_ref(), "persistent store description URL")?;
         let mut out_description = core::ptr::null_mut();
@@ -58,12 +66,14 @@ impl NSPersistentStoreDescription {
         unsafe { Self::from_retained_ptr(out_description, "persistent store description") }
     }
 
+    /// Wraps `NSPersistentStoreDescription.store_type(...)`.
     pub fn store_type(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_store_description_get_type(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "persistent store description type was nil"))
     }
 
+    /// Mirrors `NSPersistentStoreDescription.store_type`.
     pub fn set_store_type(&self, store_type: &str) -> Result<(), CoreDataError> {
         let store_type = cstring_from_str(store_type, "persistent store description type")?;
         let mut out_error = core::ptr::null_mut();
@@ -80,11 +90,13 @@ impl NSPersistentStoreDescription {
         Ok(())
     }
 
+    /// Wraps `NSPersistentStoreDescription.configuration(...)`.
     pub fn configuration(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_persistent_store_description_get_configuration(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.configuration`.
     pub fn set_configuration(&self, configuration: Option<&str>) -> Result<(), CoreDataError> {
         let configuration = configuration
             .map(|value| cstring_from_str(value, "persistent store configuration"))
@@ -103,11 +115,13 @@ impl NSPersistentStoreDescription {
         Ok(())
     }
 
+    /// Wraps `NSPersistentStoreDescription.url(...)`.
     pub fn url(&self) -> Option<PathBuf> {
         let ptr = unsafe { ffi::cd_persistent_store_description_get_url(self.as_ptr()) };
         unsafe { take_string(ptr) }.map(PathBuf::from)
     }
 
+    /// Mirrors `NSPersistentStoreDescription.url`.
     pub fn set_url(&self, path: impl AsRef<Path>) -> Result<(), CoreDataError> {
         let path = path_cstring(path.as_ref(), "persistent store description URL")?;
         let mut out_error = core::ptr::null_mut();
@@ -124,6 +138,7 @@ impl NSPersistentStoreDescription {
         Ok(())
     }
 
+    /// Wraps `NSPersistentStoreDescription.clear_url(...)`.
     pub fn clear_url(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -139,10 +154,12 @@ impl NSPersistentStoreDescription {
         Ok(())
     }
 
+    /// Wraps `NSPersistentStoreDescription.is_read_only(...)`.
     pub fn is_read_only(&self) -> bool {
         unsafe { ffi::cd_persistent_store_description_get_read_only(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.read_only`.
     pub fn set_read_only(&self, read_only: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -158,10 +175,12 @@ impl NSPersistentStoreDescription {
         Ok(())
     }
 
+    /// Wraps `NSPersistentStoreDescription.timeout(...)`.
     pub fn timeout(&self) -> f64 {
         unsafe { ffi::cd_persistent_store_description_get_timeout(self.as_ptr()) }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.timeout`.
     pub fn set_timeout(&self, timeout: f64) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -173,6 +192,7 @@ impl NSPersistentStoreDescription {
         Ok(())
     }
 
+    /// Wraps `NSPersistentStoreDescription.sqlite_pragmas(...)`.
     pub fn sqlite_pragmas(&self) -> Result<BTreeMap<String, String>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -189,6 +209,7 @@ impl NSPersistentStoreDescription {
         unsafe { parse_json_ptr(out_json, "persistent store sqlite pragmas") }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.sqlite_pragma`.
     pub fn set_sqlite_pragma(&self, name: &str, value: Option<&str>) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name, "persistent store sqlite pragma name")?;
         let value = value
@@ -209,12 +230,14 @@ impl NSPersistentStoreDescription {
         Ok(())
     }
 
+    /// Wraps `NSPersistentStoreDescription.should_add_asynchronously(...)`.
     pub fn should_add_asynchronously(&self) -> bool {
         unsafe {
             ffi::cd_persistent_store_description_get_should_add_asynchronously(self.as_ptr()) != 0
         }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.should_add_asynchronously`.
     pub fn set_should_add_asynchronously(&self, asynchronous: bool) {
         unsafe {
             ffi::cd_persistent_store_description_set_should_add_asynchronously(
@@ -224,6 +247,7 @@ impl NSPersistentStoreDescription {
         }
     }
 
+    /// Wraps `NSPersistentStoreDescription.should_migrate_automatically(...)`.
     pub fn should_migrate_automatically(&self) -> bool {
         unsafe {
             ffi::cd_persistent_store_description_get_should_migrate_automatically(self.as_ptr())
@@ -231,6 +255,7 @@ impl NSPersistentStoreDescription {
         }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.should_migrate_automatically`.
     pub fn set_should_migrate_automatically(&self, automatically_migrate: bool) {
         unsafe {
             ffi::cd_persistent_store_description_set_should_migrate_automatically(
@@ -240,6 +265,7 @@ impl NSPersistentStoreDescription {
         }
     }
 
+    /// Wraps `NSPersistentStoreDescription.should_infer_mapping_model_automatically(...)`.
     pub fn should_infer_mapping_model_automatically(&self) -> bool {
         unsafe {
             ffi::cd_persistent_store_description_get_should_infer_mapping_model_automatically(
@@ -248,6 +274,7 @@ impl NSPersistentStoreDescription {
         }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.should_infer_mapping_model_automatically`.
     pub fn set_should_infer_mapping_model_automatically(&self, automatically_infer: bool) {
         unsafe {
             ffi::cd_persistent_store_description_set_should_infer_mapping_model_automatically(
@@ -257,6 +284,7 @@ impl NSPersistentStoreDescription {
         }
     }
 
+    /// Mirrors `NSPersistentStoreDescription.option`.
     pub fn set_option(&self, key: &str, value: Option<Value>) -> Result<(), CoreDataError> {
         let key = cstring_from_str(key, "persistent store option key")?;
         let value_json = value
@@ -281,6 +309,7 @@ impl NSPersistentStoreDescription {
 }
 
 impl NSPersistentContainer {
+    /// Wraps `NSPersistentContainer.default_directory(...)`.
     pub fn default_directory() -> Result<PathBuf, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_container_default_directory() };
         unsafe { take_string(ptr) }
@@ -290,17 +319,20 @@ impl NSPersistentContainer {
             })
     }
 
+    /// Wraps `NSPersistentContainer.name(...)`.
     pub fn name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_container_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "persistent container name was nil"))
     }
 
+    /// Wraps `NSPersistentContainer.managed_object_model(...)`.
     pub fn managed_object_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_container_managed_object_model(self.as_ptr()) };
         unsafe { NSManagedObjectModel::from_retained_ptr(ptr, "persistent container model") }
     }
 
+    /// Wraps `NSPersistentContainer.persistent_store_coordinator(...)`.
     pub fn persistent_store_coordinator(
         &self,
     ) -> Result<NSPersistentStoreCoordinator, CoreDataError> {
@@ -314,6 +346,7 @@ impl NSPersistentContainer {
         }
     }
 
+    /// Wraps `NSPersistentContainer.persistent_store_descriptions(...)`.
     pub fn persistent_store_descriptions(
         &self,
     ) -> Result<Vec<NSPersistentStoreDescription>, CoreDataError> {
@@ -325,6 +358,7 @@ impl NSPersistentContainer {
         )
     }
 
+    /// Mirrors `NSPersistentContainer.persistent_store_descriptions`.
     pub fn set_persistent_store_descriptions(
         &self,
         descriptions: &[&NSPersistentStoreDescription],

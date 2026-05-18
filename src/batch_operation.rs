@@ -11,10 +11,15 @@ use crate::value::{Value, ValuePayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `BatchDeleteRequestResultType` value.
 pub enum BatchDeleteRequestResultType {
+    /// Mirrors `BatchDeleteRequestResultType::StatusOnly`.
     StatusOnly,
+    /// Mirrors `BatchDeleteRequestResultType::ObjectIds`.
     ObjectIds,
+    /// Mirrors `BatchDeleteRequestResultType::Count`.
     Count,
+    /// Mirrors `BatchDeleteRequestResultType::Unknown`.
     Unknown(u64),
 }
 
@@ -40,10 +45,15 @@ impl BatchDeleteRequestResultType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `BatchInsertRequestResultType` value.
 pub enum BatchInsertRequestResultType {
+    /// Mirrors `BatchInsertRequestResultType::StatusOnly`.
     StatusOnly,
+    /// Mirrors `BatchInsertRequestResultType::ObjectIds`.
     ObjectIds,
+    /// Mirrors `BatchInsertRequestResultType::Count`.
     Count,
+    /// Mirrors `BatchInsertRequestResultType::Unknown`.
     Unknown(u64),
 }
 
@@ -88,6 +98,7 @@ fn encode_object_rows(
 }
 
 impl NSBatchDeleteRequest {
+    /// Wraps `NSBatchDeleteRequest.init(...)`.
     pub fn from_fetch_request(fetch_request: &NSFetchRequest) -> Result<Self, CoreDataError> {
         let mut out_request = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -104,6 +115,7 @@ impl NSBatchDeleteRequest {
         unsafe { Self::from_retained_ptr(out_request, "batch delete request") }
     }
 
+    /// Wraps `NSBatchDeleteRequest.init(...)`.
     pub fn from_object_ids(object_ids: &[&NSManagedObjectID]) -> Result<Self, CoreDataError> {
         let raw_object_ids = object_ids
             .iter()
@@ -127,21 +139,25 @@ impl NSBatchDeleteRequest {
         unsafe { Self::from_retained_ptr(out_request, "batch delete request") }
     }
 
+    /// Wraps `NSBatchDeleteRequest.fetch_request(...)`.
     pub fn fetch_request(&self) -> Result<NSFetchRequest, CoreDataError> {
         let ptr = unsafe { ffi::cd_batch_delete_request_get_fetch_request(self.as_ptr()) };
         unsafe { NSFetchRequest::from_retained_ptr(ptr, "batch delete request fetch request") }
     }
 
+    /// Wraps `NSBatchDeleteRequest.result_type(...)`.
     pub fn result_type(&self) -> BatchDeleteRequestResultType {
         BatchDeleteRequestResultType::from_raw(unsafe {
             ffi::cd_batch_delete_request_get_result_type(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSBatchDeleteRequest.result_type`.
     pub fn set_result_type(&self, result_type: BatchDeleteRequestResultType) {
         unsafe { ffi::cd_batch_delete_request_set_result_type(self.as_ptr(), result_type.as_raw()) }
     }
 
+    /// Wraps `NSBatchDeleteRequest.execute(...)`.
     pub fn execute(
         &self,
         context: &NSManagedObjectContext,
@@ -164,20 +180,24 @@ impl NSBatchDeleteRequest {
 }
 
 impl NSBatchDeleteResult {
+    /// Wraps `NSBatchDeleteResult.result_type(...)`.
     pub fn result_type(&self) -> BatchDeleteRequestResultType {
         BatchDeleteRequestResultType::from_raw(unsafe {
             ffi::cd_batch_delete_result_get_result_type(self.as_ptr())
         })
     }
 
+    /// Wraps `NSBatchDeleteResult.status(...)`.
     pub fn status(&self) -> bool {
         unsafe { ffi::cd_batch_delete_result_get_status(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSBatchDeleteResult.count(...)`.
     pub fn count(&self) -> usize {
         unsafe { ffi::cd_batch_delete_result_get_count(self.as_ptr()) as usize }
     }
 
+    /// Wraps `NSBatchDeleteResult.object_ids(...)`.
     pub fn object_ids(&self) -> Result<Vec<NSManagedObjectID>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_batch_delete_result_get_object_ids(self.as_ptr()) };
         collect_array(array_ptr, "batch delete result object IDs")
@@ -185,6 +205,7 @@ impl NSBatchDeleteResult {
 }
 
 impl NSBatchInsertRequest {
+    /// Wraps `NSBatchInsertRequest.init(...)`.
     pub fn new(
         entity_name: &str,
         objects: &[BTreeMap<String, Value>],
@@ -208,6 +229,7 @@ impl NSBatchInsertRequest {
         unsafe { Self::from_retained_ptr(out_request, "batch insert request") }
     }
 
+    /// Wraps `NSBatchInsertRequest.init(...)`.
     pub fn with_entity(
         entity: &NSEntityDescription,
         objects: &[BTreeMap<String, Value>],
@@ -229,12 +251,14 @@ impl NSBatchInsertRequest {
         unsafe { Self::from_retained_ptr(out_request, "batch insert request") }
     }
 
+    /// Wraps `NSBatchInsertRequest.entity_name(...)`.
     pub fn entity_name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_batch_insert_request_get_entity_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "batch insert entity name was nil"))
     }
 
+    /// Wraps `NSBatchInsertRequest.entity(...)`.
     pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
         let ptr = unsafe { ffi::cd_batch_insert_request_get_entity(self.as_ptr()) };
         if ptr.is_null() {
@@ -245,16 +269,19 @@ impl NSBatchInsertRequest {
         }))
     }
 
+    /// Wraps `NSBatchInsertRequest.result_type(...)`.
     pub fn result_type(&self) -> BatchInsertRequestResultType {
         BatchInsertRequestResultType::from_raw(unsafe {
             ffi::cd_batch_insert_request_get_result_type(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSBatchInsertRequest.result_type`.
     pub fn set_result_type(&self, result_type: BatchInsertRequestResultType) {
         unsafe { ffi::cd_batch_insert_request_set_result_type(self.as_ptr(), result_type.as_raw()) }
     }
 
+    /// Wraps `NSBatchInsertRequest.execute(...)`.
     pub fn execute(
         &self,
         context: &NSManagedObjectContext,
@@ -277,20 +304,24 @@ impl NSBatchInsertRequest {
 }
 
 impl NSBatchInsertResult {
+    /// Wraps `NSBatchInsertResult.result_type(...)`.
     pub fn result_type(&self) -> BatchInsertRequestResultType {
         BatchInsertRequestResultType::from_raw(unsafe {
             ffi::cd_batch_insert_result_get_result_type(self.as_ptr())
         })
     }
 
+    /// Wraps `NSBatchInsertResult.status(...)`.
     pub fn status(&self) -> bool {
         unsafe { ffi::cd_batch_insert_result_get_status(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSBatchInsertResult.count(...)`.
     pub fn count(&self) -> usize {
         unsafe { ffi::cd_batch_insert_result_get_count(self.as_ptr()) as usize }
     }
 
+    /// Wraps `NSBatchInsertResult.object_ids(...)`.
     pub fn object_ids(&self) -> Result<Vec<NSManagedObjectID>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_batch_insert_result_get_object_ids(self.as_ptr()) };
         collect_array(array_ptr, "batch insert result object IDs")
@@ -299,10 +330,15 @@ impl NSBatchInsertResult {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `BatchUpdateRequestResultType` value.
 pub enum BatchUpdateRequestResultType {
+    /// Mirrors `BatchUpdateRequestResultType::StatusOnly`.
     StatusOnly,
+    /// Mirrors `BatchUpdateRequestResultType::ObjectIds`.
     ObjectIds,
+    /// Mirrors `BatchUpdateRequestResultType::Count`.
     Count,
+    /// Mirrors `BatchUpdateRequestResultType::Unknown`.
     Unknown(u64),
 }
 
@@ -340,6 +376,7 @@ fn encode_update_properties(
 }
 
 impl NSBatchUpdateRequest {
+    /// Wraps `NSBatchUpdateRequest.init(...)`.
     pub fn new(entity_name: &str) -> Result<Self, CoreDataError> {
         let entity_name =
             crate::private::cstring_from_str(entity_name, "batch update entity name")?;
@@ -358,12 +395,14 @@ impl NSBatchUpdateRequest {
         unsafe { Self::from_retained_ptr(out_request, "batch update request") }
     }
 
+    /// Wraps `NSBatchUpdateRequest.entity_name(...)`.
     pub fn entity_name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_batch_update_request_get_entity_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "batch update entity name was nil"))
     }
 
+    /// Wraps `NSBatchUpdateRequest.entity(...)`.
     pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
         let ptr = unsafe { ffi::cd_batch_update_request_get_entity(self.as_ptr()) };
         if ptr.is_null() {
@@ -374,10 +413,12 @@ impl NSBatchUpdateRequest {
         }))
     }
 
+    /// Wraps `NSBatchUpdateRequest.includes_subentities(...)`.
     pub fn includes_subentities(&self) -> bool {
         unsafe { ffi::cd_batch_update_request_get_includes_subentities(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSBatchUpdateRequest.includes_subentities`.
     pub fn set_includes_subentities(&self, includes_subentities: bool) {
         unsafe {
             ffi::cd_batch_update_request_set_includes_subentities(
@@ -387,16 +428,19 @@ impl NSBatchUpdateRequest {
         }
     }
 
+    /// Wraps `NSBatchUpdateRequest.result_type(...)`.
     pub fn result_type(&self) -> BatchUpdateRequestResultType {
         BatchUpdateRequestResultType::from_raw(unsafe {
             ffi::cd_batch_update_request_get_result_type(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSBatchUpdateRequest.result_type`.
     pub fn set_result_type(&self, result_type: BatchUpdateRequestResultType) {
         unsafe { ffi::cd_batch_update_request_set_result_type(self.as_ptr(), result_type.as_raw()) }
     }
 
+    /// Mirrors `NSBatchUpdateRequest.predicate`.
     pub fn set_predicate(&self, predicate: Option<&NSPredicate>) {
         unsafe {
             ffi::cd_batch_update_request_set_predicate(
@@ -406,6 +450,7 @@ impl NSBatchUpdateRequest {
         }
     }
 
+    /// Mirrors `NSBatchUpdateRequest.properties_to_update`.
     pub fn set_properties_to_update(
         &self,
         properties_to_update: Option<&BTreeMap<String, Value>>,
@@ -429,6 +474,7 @@ impl NSBatchUpdateRequest {
         Ok(())
     }
 
+    /// Wraps `NSBatchUpdateRequest.execute(...)`.
     pub fn execute(
         &self,
         context: &NSManagedObjectContext,
@@ -451,20 +497,24 @@ impl NSBatchUpdateRequest {
 }
 
 impl NSBatchUpdateResult {
+    /// Wraps `NSBatchUpdateResult.result_type(...)`.
     pub fn result_type(&self) -> BatchUpdateRequestResultType {
         BatchUpdateRequestResultType::from_raw(unsafe {
             ffi::cd_batch_update_result_get_result_type(self.as_ptr())
         })
     }
 
+    /// Wraps `NSBatchUpdateResult.status(...)`.
     pub fn status(&self) -> bool {
         unsafe { ffi::cd_batch_update_result_get_status(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSBatchUpdateResult.count(...)`.
     pub fn count(&self) -> usize {
         unsafe { ffi::cd_batch_update_result_get_count(self.as_ptr()) as usize }
     }
 
+    /// Wraps `NSBatchUpdateResult.object_ids(...)`.
     pub fn object_ids(&self) -> Result<Vec<NSManagedObjectID>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_batch_update_result_get_object_ids(self.as_ptr()) };
         collect_array(array_ptr, "batch update result object IDs")

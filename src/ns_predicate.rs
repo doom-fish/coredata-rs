@@ -15,6 +15,7 @@ fn encode_value_map(values: &BTreeMap<String, Value>) -> Result<std::ffi::CStrin
 }
 
 impl NSPredicate {
+    /// Wraps `NSPredicate.init(...)`.
     pub fn from_value(value: bool) -> Result<Self, CoreDataError> {
         let mut out_predicate = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -27,12 +28,14 @@ impl NSPredicate {
         unsafe { Self::from_retained_ptr(out_predicate, "predicate") }
     }
 
+    /// Wraps `NSPredicate.format(...)`.
     pub fn format(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_predicate_get_format(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "predicate format was nil"))
     }
 
+    /// Wraps `NSPredicate.init(...)`.
     pub fn with_substitution_variables(
         &self,
         variables: &BTreeMap<String, Value>,
@@ -54,6 +57,7 @@ impl NSPredicate {
         unsafe { Self::from_retained_ptr(out_predicate, "predicate with substitution variables") }
     }
 
+    /// Wraps `NSPredicate.evaluate_with_object(...)`.
     pub fn evaluate_with_object(
         &self,
         object: Option<&BTreeMap<String, Value>>,

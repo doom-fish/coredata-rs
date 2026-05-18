@@ -7,19 +7,27 @@ use crate::private::{
 };
 use crate::query::NSFetchRequest;
 
+/// Mirrors `NSFetchedResultsControllerDelegate`.
 pub trait NSFetchedResultsControllerDelegate: Send + Sync {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `NSFetchedResultsChangeType` value.
 pub enum NSFetchedResultsChangeType {
+    /// Mirrors `NSFetchedResultsChangeType::Insert`.
     Insert,
+    /// Mirrors `NSFetchedResultsChangeType::Delete`.
     Delete,
+    /// Mirrors `NSFetchedResultsChangeType::Move`.
     Move,
+    /// Mirrors `NSFetchedResultsChangeType::Update`.
     Update,
+    /// Mirrors `NSFetchedResultsChangeType::Unknown`.
     Unknown(u64),
 }
 
 impl NSFetchedResultsChangeType {
+    /// Mirrors the corresponding `NSFetchedResultsChangeType` constant.
     pub const fn from_raw(raw: u64) -> Self {
         match raw {
             1 => Self::Insert,
@@ -32,12 +40,16 @@ impl NSFetchedResultsChangeType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Wraps `FetchedResultsIndexPath`.
 pub struct FetchedResultsIndexPath {
+    /// Mirrors `FetchedResultsIndexPath.section`.
     pub section: usize,
+    /// Mirrors `FetchedResultsIndexPath.item`.
     pub item: usize,
 }
 
 impl FetchedResultsIndexPath {
+    /// Mirrors the corresponding `FetchedResultsIndexPath` constant.
     pub const fn new(section: usize, item: usize) -> Self {
         Self { section, item }
     }
@@ -47,6 +59,7 @@ impl_object_wrapper!(NSFetchedResultsController);
 impl_object_wrapper!(NSFetchedResultsSectionInfo);
 
 impl NSFetchedResultsController {
+    /// Wraps `NSFetchedResultsController.init(...)`.
     pub fn new(
         fetch_request: &NSFetchRequest,
         managed_object_context: &NSManagedObjectContext,
@@ -81,6 +94,7 @@ impl NSFetchedResultsController {
         unsafe { Self::from_retained_ptr(out_controller, "fetched results controller") }
     }
 
+    /// Wraps `NSFetchedResultsController.perform_fetch(...)`.
     pub fn perform_fetch(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -92,6 +106,7 @@ impl NSFetchedResultsController {
         Ok(())
     }
 
+    /// Wraps `NSFetchedResultsController.fetch_request(...)`.
     pub fn fetch_request(&self) -> Result<NSFetchRequest, CoreDataError> {
         let ptr = unsafe { ffi::cd_fetched_results_controller_get_fetch_request(self.as_ptr()) };
         unsafe {
@@ -99,6 +114,7 @@ impl NSFetchedResultsController {
         }
     }
 
+    /// Wraps `NSFetchedResultsController.managed_object_context(...)`.
     pub fn managed_object_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_fetched_results_controller_get_managed_object_context(self.as_ptr()) };
@@ -110,28 +126,33 @@ impl NSFetchedResultsController {
         }
     }
 
+    /// Wraps `NSFetchedResultsController.section_name_key_path(...)`.
     pub fn section_name_key_path(&self) -> Option<String> {
         let ptr =
             unsafe { ffi::cd_fetched_results_controller_get_section_name_key_path(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Wraps `NSFetchedResultsController.cache_name(...)`.
     pub fn cache_name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_fetched_results_controller_get_cache_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Wraps `NSFetchedResultsController.fetched_objects(...)`.
     pub fn fetched_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_fetched_results_controller_get_fetched_objects(self.as_ptr()) };
         collect_array(array_ptr, "fetched results controller objects")
     }
 
+    /// Wraps `NSFetchedResultsController.sections(...)`.
     pub fn sections(&self) -> Result<Vec<NSFetchedResultsSectionInfo>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_fetched_results_controller_get_sections(self.as_ptr()) };
         collect_array(array_ptr, "fetched results controller sections")
     }
 
+    /// Wraps `NSFetchedResultsController.section_index_titles(...)`.
     pub fn section_index_titles(&self) -> Result<Vec<String>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -148,6 +169,7 @@ impl NSFetchedResultsController {
         unsafe { parse_json_ptr(out_json, "fetched results controller section index titles") }
     }
 
+    /// Wraps `NSFetchedResultsController.object_at_index_path(...)`.
     pub fn object_at_index_path(
         &self,
         index_path: FetchedResultsIndexPath,
@@ -175,6 +197,7 @@ impl NSFetchedResultsController {
         }
     }
 
+    /// Wraps `NSFetchedResultsController.index_path_for_object(...)`.
     pub fn index_path_for_object(
         &self,
         object: &NSManagedObject,
@@ -204,6 +227,7 @@ impl NSFetchedResultsController {
         Ok(Some(FetchedResultsIndexPath::new(section, item)))
     }
 
+    /// Wraps `NSFetchedResultsController.delete_cache_with_name(...)`.
     pub fn delete_cache_with_name(name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "fetched results cache name"))
@@ -219,23 +243,27 @@ impl NSFetchedResultsController {
 }
 
 impl NSFetchedResultsSectionInfo {
+    /// Wraps `NSFetchedResultsSectionInfo.name(...)`.
     pub fn name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_fetched_results_section_info_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "fetched results section name was nil"))
     }
 
+    /// Wraps `NSFetchedResultsSectionInfo.index_title(...)`.
     pub fn index_title(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_fetched_results_section_info_get_index_title(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Wraps `NSFetchedResultsSectionInfo.number_of_objects(...)`.
     pub fn number_of_objects(&self) -> usize {
         unsafe {
             ffi::cd_fetched_results_section_info_get_number_of_objects(self.as_ptr()) as usize
         }
     }
 
+    /// Wraps `NSFetchedResultsSectionInfo.objects(...)`.
     pub fn objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_fetched_results_section_info_get_objects(self.as_ptr()) };
         collect_array(array_ptr, "fetched results section objects")

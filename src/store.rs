@@ -11,19 +11,26 @@ use crate::private::{
 };
 use crate::value::{Value, ValuePayload};
 
+/// Core Data items for store types.
 pub mod store_types {
+    /// Mirrors `SQLite`.
     pub const SQLITE: &str = "SQLite";
+    /// Mirrors `XML`.
     pub const XML: &str = "XML";
+    /// Mirrors `Binary`.
     pub const BINARY: &str = "Binary";
+    /// Mirrors `InMemory`.
     pub const IN_MEMORY: &str = "InMemory";
 }
 
+/// Rust map alias for persistent-store options passed to `NSPersistentStoreCoordinator.addPersistentStore(...)`.
 pub type PersistentStoreOptions = BTreeMap<String, Value>;
 
 impl_object_wrapper!(NSPersistentStoreCoordinator);
 impl_object_wrapper!(NSPersistentContainer);
 
 impl NSPersistentStoreCoordinator {
+    /// Wraps `NSPersistentStoreCoordinator.init(...)`.
     pub fn new(model: &NSManagedObjectModel) -> Result<Self, CoreDataError> {
         let mut out_coordinator = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -40,6 +47,7 @@ impl NSPersistentStoreCoordinator {
         unsafe { Self::from_retained_ptr(out_coordinator, "persistent store coordinator") }
     }
 
+    /// Wraps `NSPersistentStoreCoordinator.add_persistent_store(...)`.
     pub fn add_persistent_store<P>(
         &self,
         store_type: &str,
@@ -86,6 +94,7 @@ impl NSPersistentStoreCoordinator {
 }
 
 impl NSPersistentContainer {
+    /// Wraps `NSPersistentContainer.init(...)`.
     pub fn new(name: impl AsRef<str>, model: &NSManagedObjectModel) -> Result<Self, CoreDataError> {
         let name = cstring_from_str(name.as_ref(), "persistent container name")?;
         let mut out_container = core::ptr::null_mut();
@@ -104,10 +113,12 @@ impl NSPersistentContainer {
         unsafe { Self::from_retained_ptr(out_container, "persistent container") }
     }
 
+    /// Wraps `NSPersistentContainer.load_persistent_stores(...)`.
     pub fn load_persistent_stores(&self) -> Result<(), CoreDataError> {
         self.load_persistent_stores_with_timeout(30)
     }
 
+    /// Wraps `NSPersistentContainer.load_persistent_stores_with_timeout(...)`.
     pub fn load_persistent_stores_with_timeout(
         &self,
         timeout_seconds: i32,
@@ -126,6 +137,7 @@ impl NSPersistentContainer {
         Ok(())
     }
 
+    /// Wraps `NSPersistentContainer.view_context(...)`.
     pub fn view_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_container_view_context(self.as_ptr()) };
         unsafe {
@@ -133,6 +145,7 @@ impl NSPersistentContainer {
         }
     }
 
+    /// Wraps `NSPersistentContainer.new_background_context(...)`.
     pub fn new_background_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_container_new_background_context(self.as_ptr()) };
         unsafe {

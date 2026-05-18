@@ -1,17 +1,17 @@
 //! Async API for CoreData
 //!
 //! Wraps Apple completion-handler and expensive-sync CoreData APIs as executor-agnostic
-//! Rust [`Future`]s. Requires the **`async`** Cargo feature.
+//! Rust [`Future`](std::future::Future)s. Requires the **`async`** Cargo feature.
 //!
 //! ## Available Types
 //!
 //! | Type | Apple API | Description |
 //! |------|-----------|-------------|
-//! | [`AsyncPersistentContainer`] | `NSPersistentContainer.loadPersistentStores` | Async store loading |
-//! | [`AsyncPersistentCloudKitContainer`] | `NSPersistentCloudKitContainer.initializeCloudKitSchema` | Async CloudKit schema init |
-//! | [`AsyncManagedObjectContext`] | `NSManagedObjectContext.perform { save() }` | Async save on context queue |
-//! | [`AsyncHistory`] | `NSPersistentHistoryChangeRequest` execute | Async history fetch |
-//! | [`AsyncBatchOperation`] | `NSBatchInsertRequest` / `NSBatchUpdateRequest` | Async batch insert/update |
+//! | [`AsyncPersistentContainer`](crate::async_api::AsyncPersistentContainer) | `NSPersistentContainer.loadPersistentStores` | Async store loading |
+//! | [`AsyncPersistentCloudKitContainer`](crate::async_api::AsyncPersistentCloudKitContainer) | `NSPersistentCloudKitContainer.initializeCloudKitSchema` | Async CloudKit schema init |
+//! | [`AsyncManagedObjectContext`](crate::async_api::AsyncManagedObjectContext) | `NSManagedObjectContext.perform { save() }` | Async save on context queue |
+//! | [`AsyncHistory`](crate::async_api::AsyncHistory) | `NSPersistentHistoryChangeRequest` execute | Async history fetch |
+//! | [`AsyncBatchOperation`](crate::async_api::AsyncBatchOperation) | `NSBatchInsertRequest` / `NSBatchUpdateRequest` | Async batch insert/update |
 //!
 //! ## Note on Tier-2 APIs
 //!
@@ -277,24 +277,25 @@ impl AsyncManagedObjectContext<'_> {
 // FetchHistoryFuture — NSPersistentHistoryChangeRequest execute
 // ============================================================================
 
-extern "C" fn fetch_history_cb(
-    result: *mut c_void,
-    error: *const i8,
-    ctx: *mut c_void,
-) {
+extern "C" fn fetch_history_cb(result: *mut c_void, error: *const i8, ctx: *mut c_void) {
     catch_user_panic("fetch_history_cb", || {
         if !error.is_null() {
             // SAFETY: error is a non-null, valid null-terminated C string per the FFI contract.
             let msg = unsafe { error_from_cstr(error) };
             // SAFETY: ctx is a valid SyncCompletionPtr from AsyncCompletion::create();
             // the bridge fires this callback exactly once.
-            unsafe { AsyncCompletion::<crate::history::NSPersistentHistoryResult>::complete_err(ctx, msg) };
+            unsafe {
+                AsyncCompletion::<crate::history::NSPersistentHistoryResult>::complete_err(ctx, msg);
+            };
         } else if !result.is_null() {
             // SAFETY: result is a non-null, retained NSPersistentHistoryResult pointer
             // handed to us by the bridge; from_retained_ptr takes ownership.
             let history_result = unsafe {
-                crate::history::NSPersistentHistoryResult::from_retained_ptr(result, "history result")
-                    .expect("history result ptr valid")
+                crate::history::NSPersistentHistoryResult::from_retained_ptr(
+                    result,
+                    "history result",
+                )
+                .expect("history result ptr valid")
             };
             // SAFETY: same ctx contract as the error branch above.
             unsafe { AsyncCompletion::complete_ok(ctx, history_result) };
@@ -373,24 +374,27 @@ impl AsyncHistory {
 // BatchInsertFuture — NSBatchInsertRequest async
 // ============================================================================
 
-extern "C" fn batch_insert_cb(
-    result: *mut c_void,
-    error: *const i8,
-    ctx: *mut c_void,
-) {
+extern "C" fn batch_insert_cb(result: *mut c_void, error: *const i8, ctx: *mut c_void) {
     catch_user_panic("batch_insert_cb", || {
         if !error.is_null() {
             // SAFETY: error is a non-null, valid null-terminated C string per the FFI contract.
             let msg = unsafe { error_from_cstr(error) };
             // SAFETY: ctx is a valid SyncCompletionPtr from AsyncCompletion::create();
             // the bridge fires this callback exactly once.
-            unsafe { AsyncCompletion::<crate::batch_operation::NSBatchInsertResult>::complete_err(ctx, msg) };
+            unsafe {
+                AsyncCompletion::<crate::batch_operation::NSBatchInsertResult>::complete_err(
+                    ctx, msg,
+                );
+            };
         } else if !result.is_null() {
             // SAFETY: result is a non-null, retained NSBatchInsertResult pointer handed to us
             // by the bridge; from_retained_ptr takes ownership.
             let insert_result = unsafe {
-                crate::batch_operation::NSBatchInsertResult::from_retained_ptr(result, "batch insert result")
-                    .expect("batch insert result ptr valid")
+                crate::batch_operation::NSBatchInsertResult::from_retained_ptr(
+                    result,
+                    "batch insert result",
+                )
+                .expect("batch insert result ptr valid")
             };
             // SAFETY: same ctx contract as the error branch above.
             unsafe { AsyncCompletion::complete_ok(ctx, insert_result) };
@@ -432,24 +436,27 @@ impl Future for BatchInsertFuture {
 // BatchUpdateFuture — NSBatchUpdateRequest async
 // ============================================================================
 
-extern "C" fn batch_update_cb(
-    result: *mut c_void,
-    error: *const i8,
-    ctx: *mut c_void,
-) {
+extern "C" fn batch_update_cb(result: *mut c_void, error: *const i8, ctx: *mut c_void) {
     catch_user_panic("batch_update_cb", || {
         if !error.is_null() {
             // SAFETY: error is a non-null, valid null-terminated C string per the FFI contract.
             let msg = unsafe { error_from_cstr(error) };
             // SAFETY: ctx is a valid SyncCompletionPtr from AsyncCompletion::create();
             // the bridge fires this callback exactly once.
-            unsafe { AsyncCompletion::<crate::batch_operation::NSBatchUpdateResult>::complete_err(ctx, msg) };
+            unsafe {
+                AsyncCompletion::<crate::batch_operation::NSBatchUpdateResult>::complete_err(
+                    ctx, msg,
+                );
+            };
         } else if !result.is_null() {
             // SAFETY: result is a non-null, retained NSBatchUpdateResult pointer handed to us
             // by the bridge; from_retained_ptr takes ownership.
             let update_result = unsafe {
-                crate::batch_operation::NSBatchUpdateResult::from_retained_ptr(result, "batch update result")
-                    .expect("batch update result ptr valid")
+                crate::batch_operation::NSBatchUpdateResult::from_retained_ptr(
+                    result,
+                    "batch update result",
+                )
+                .expect("batch update result ptr valid")
             };
             // SAFETY: same ctx contract as the error branch above.
             unsafe { AsyncCompletion::complete_ok(ctx, update_result) };

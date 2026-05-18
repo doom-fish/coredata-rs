@@ -12,13 +12,21 @@ use crate::value::{Value, ValuePayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `PersistentHistoryResultType` value.
 pub enum PersistentHistoryResultType {
+    /// Mirrors `PersistentHistoryResultType::StatusOnly`.
     StatusOnly,
+    /// Mirrors `PersistentHistoryResultType::ObjectIds`.
     ObjectIds,
+    /// Mirrors `PersistentHistoryResultType::Count`.
     Count,
+    /// Mirrors `PersistentHistoryResultType::TransactionsOnly`.
     TransactionsOnly,
+    /// Mirrors `PersistentHistoryResultType::ChangesOnly`.
     ChangesOnly,
+    /// Mirrors `PersistentHistoryResultType::TransactionsAndChanges`.
     TransactionsAndChanges,
+    /// Mirrors `PersistentHistoryResultType::Unknown`.
     Unknown(i64),
 }
 
@@ -50,10 +58,15 @@ impl PersistentHistoryResultType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `PersistentHistoryChangeType` value.
 pub enum PersistentHistoryChangeType {
+    /// Mirrors `PersistentHistoryChangeType::Insert`.
     Insert,
+    /// Mirrors `PersistentHistoryChangeType::Update`.
     Update,
+    /// Mirrors `PersistentHistoryChangeType::Delete`.
     Delete,
+    /// Mirrors `PersistentHistoryChangeType::Unknown`.
     Unknown(i64),
 }
 
@@ -96,6 +109,7 @@ fn value_map_from_json_ptr(
 }
 
 impl NSPersistentHistoryChangeRequest {
+    /// Wraps `NSPersistentHistoryChangeRequest.fetch_history_after_token(...)`.
     pub fn fetch_history_after_token(
         token: Option<&NSPersistentHistoryToken>,
     ) -> Result<Self, CoreDataError> {
@@ -114,6 +128,7 @@ impl NSPersistentHistoryChangeRequest {
         unsafe { Self::from_retained_ptr(out_request, "persistent history change request") }
     }
 
+    /// Wraps `NSPersistentHistoryChangeRequest.fetch_history_after_date(...)`.
     pub fn fetch_history_after_date(time: SystemTime) -> Result<Self, CoreDataError> {
         let timestamp = seconds_since_epoch(time)?;
         let mut out_request = core::ptr::null_mut();
@@ -131,6 +146,7 @@ impl NSPersistentHistoryChangeRequest {
         unsafe { Self::from_retained_ptr(out_request, "persistent history change request") }
     }
 
+    /// Wraps `NSPersistentHistoryChangeRequest.fetch_history_after_transaction(...)`.
     pub fn fetch_history_after_transaction(
         transaction: Option<&NSPersistentHistoryTransaction>,
     ) -> Result<Self, CoreDataError> {
@@ -152,6 +168,7 @@ impl NSPersistentHistoryChangeRequest {
         unsafe { Self::from_retained_ptr(out_request, "persistent history change request") }
     }
 
+    /// Wraps `NSPersistentHistoryChangeRequest.delete_history_before_token(...)`.
     pub fn delete_history_before_token(
         token: Option<&NSPersistentHistoryToken>,
     ) -> Result<Self, CoreDataError> {
@@ -170,6 +187,7 @@ impl NSPersistentHistoryChangeRequest {
         unsafe { Self::from_retained_ptr(out_request, "persistent history delete request") }
     }
 
+    /// Wraps `NSPersistentHistoryChangeRequest.delete_history_before_date(...)`.
     pub fn delete_history_before_date(time: SystemTime) -> Result<Self, CoreDataError> {
         let timestamp = seconds_since_epoch(time)?;
         let mut out_request = core::ptr::null_mut();
@@ -187,6 +205,7 @@ impl NSPersistentHistoryChangeRequest {
         unsafe { Self::from_retained_ptr(out_request, "persistent history delete request") }
     }
 
+    /// Wraps `NSPersistentHistoryChangeRequest.delete_history_before_transaction(...)`.
     pub fn delete_history_before_transaction(
         transaction: Option<&NSPersistentHistoryTransaction>,
     ) -> Result<Self, CoreDataError> {
@@ -208,12 +227,14 @@ impl NSPersistentHistoryChangeRequest {
         unsafe { Self::from_retained_ptr(out_request, "persistent history delete request") }
     }
 
+    /// Wraps `NSPersistentHistoryChangeRequest.result_type(...)`.
     pub fn result_type(&self) -> PersistentHistoryResultType {
         PersistentHistoryResultType::from_raw(unsafe {
             ffi::cd_persistent_history_change_request_get_result_type(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSPersistentHistoryChangeRequest.result_type`.
     pub fn set_result_type(&self, result_type: PersistentHistoryResultType) {
         unsafe {
             ffi::cd_persistent_history_change_request_set_result_type(
@@ -223,6 +244,7 @@ impl NSPersistentHistoryChangeRequest {
         }
     }
 
+    /// Wraps `NSPersistentHistoryChangeRequest.execute(...)`.
     pub fn execute(
         &self,
         context: &NSManagedObjectContext,
@@ -247,31 +269,37 @@ impl NSPersistentHistoryChangeRequest {
 }
 
 impl NSPersistentHistoryResult {
+    /// Wraps `NSPersistentHistoryResult.result_type(...)`.
     pub fn result_type(&self) -> PersistentHistoryResultType {
         PersistentHistoryResultType::from_raw(unsafe {
             ffi::cd_persistent_history_result_get_result_type(self.as_ptr())
         })
     }
 
+    /// Wraps `NSPersistentHistoryResult.status(...)`.
     pub fn status(&self) -> bool {
         unsafe { ffi::cd_persistent_history_result_get_status(self.as_ptr()) != 0 }
     }
 
+    /// Wraps `NSPersistentHistoryResult.count(...)`.
     pub fn count(&self) -> usize {
         unsafe { ffi::cd_persistent_history_result_get_count(self.as_ptr()) as usize }
     }
 
+    /// Wraps `NSPersistentHistoryResult.object_ids(...)`.
     pub fn object_ids(&self) -> Result<Vec<NSManagedObjectID>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_persistent_history_result_get_object_ids(self.as_ptr()) };
         collect_array(array_ptr, "persistent history result object IDs")
     }
 
+    /// Wraps `NSPersistentHistoryResult.transactions(...)`.
     pub fn transactions(&self) -> Result<Vec<NSPersistentHistoryTransaction>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_persistent_history_result_get_transactions(self.as_ptr()) };
         collect_array(array_ptr, "persistent history transactions")
     }
 
+    /// Wraps `NSPersistentHistoryResult.changes(...)`.
     pub fn changes(&self) -> Result<Vec<NSPersistentHistoryChange>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_persistent_history_result_get_changes(self.as_ptr()) };
         collect_array(array_ptr, "persistent history changes")
@@ -279,22 +307,26 @@ impl NSPersistentHistoryResult {
 }
 
 impl NSPersistentHistoryTransaction {
+    /// Wraps `NSPersistentHistoryTransaction.timestamp(...)`.
     pub fn timestamp(&self) -> SystemTime {
         system_time_from_seconds(unsafe {
             ffi::cd_persistent_history_transaction_get_timestamp(self.as_ptr())
         })
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.changes(...)`.
     pub fn changes(&self) -> Result<Vec<NSPersistentHistoryChange>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_persistent_history_transaction_get_changes(self.as_ptr()) };
         collect_array(array_ptr, "persistent history transaction changes")
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.transaction_number(...)`.
     pub fn transaction_number(&self) -> i64 {
         unsafe { ffi::cd_persistent_history_transaction_get_transaction_number(self.as_ptr()) }
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.store_id(...)`.
     pub fn store_id(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_history_transaction_get_store_id(self.as_ptr()) };
         unsafe { take_string(ptr) }.ok_or_else(|| {
@@ -302,6 +334,7 @@ impl NSPersistentHistoryTransaction {
         })
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.bundle_id(...)`.
     pub fn bundle_id(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_history_transaction_get_bundle_id(self.as_ptr()) };
         unsafe { take_string(ptr) }.ok_or_else(|| {
@@ -309,6 +342,7 @@ impl NSPersistentHistoryTransaction {
         })
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.process_id(...)`.
     pub fn process_id(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_history_transaction_get_process_id(self.as_ptr()) };
         unsafe { take_string(ptr) }.ok_or_else(|| {
@@ -316,16 +350,19 @@ impl NSPersistentHistoryTransaction {
         })
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.context_name(...)`.
     pub fn context_name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_persistent_history_transaction_get_context_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.author(...)`.
     pub fn author(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_persistent_history_transaction_get_author(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Wraps `NSPersistentHistoryTransaction.token(...)`.
     pub fn token(&self) -> Result<NSPersistentHistoryToken, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_history_transaction_get_token(self.as_ptr()) };
         unsafe { NSPersistentHistoryToken::from_retained_ptr(ptr, "persistent history token") }
@@ -333,21 +370,25 @@ impl NSPersistentHistoryTransaction {
 }
 
 impl NSPersistentHistoryChange {
+    /// Wraps `NSPersistentHistoryChange.change_id(...)`.
     pub fn change_id(&self) -> i64 {
         unsafe { ffi::cd_persistent_history_change_get_change_id(self.as_ptr()) }
     }
 
+    /// Wraps `NSPersistentHistoryChange.change_type(...)`.
     pub fn change_type(&self) -> PersistentHistoryChangeType {
         PersistentHistoryChangeType::from_raw(unsafe {
             ffi::cd_persistent_history_change_get_change_type(self.as_ptr())
         })
     }
 
+    /// Wraps `NSPersistentHistoryChange.changed_object_id(...)`.
     pub fn changed_object_id(&self) -> Result<NSManagedObjectID, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_history_change_get_changed_object_id(self.as_ptr()) };
         unsafe { NSManagedObjectID::from_retained_ptr(ptr, "persistent history changed object ID") }
     }
 
+    /// Wraps `NSPersistentHistoryChange.tombstone(...)`.
     pub fn tombstone(&self) -> Result<BTreeMap<String, Value>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -364,6 +405,7 @@ impl NSPersistentHistoryChange {
         value_map_from_json_ptr(out_json, "persistent history tombstone")
     }
 
+    /// Wraps `NSPersistentHistoryChange.updated_properties(...)`.
     pub fn updated_properties(&self) -> Result<Vec<String>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -380,6 +422,7 @@ impl NSPersistentHistoryChange {
         unsafe { parse_json_ptr(out_json, "persistent history updated properties") }
     }
 
+    /// Wraps `NSPersistentHistoryChange.transaction(...)`.
     pub fn transaction(&self) -> Result<Option<NSPersistentHistoryTransaction>, CoreDataError> {
         let ptr = unsafe { ffi::cd_persistent_history_change_get_transaction(self.as_ptr()) };
         if ptr.is_null() {

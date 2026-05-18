@@ -25,6 +25,7 @@ fn encode_value_dictionary(
 }
 
 impl NSAtomicStoreCacheNode {
+    /// Wraps `NSAtomicStoreCacheNode.init(...)`.
     pub fn new(object_id: &NSManagedObjectID) -> Result<Self, CoreDataError> {
         let mut out_node = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -37,6 +38,7 @@ impl NSAtomicStoreCacheNode {
         unsafe { Self::from_retained_ptr(out_node, "atomic store cache node") }
     }
 
+    /// Wraps `NSAtomicStoreCacheNode.object_id(...)`.
     pub fn object_id(&self) -> Result<NSManagedObjectID, CoreDataError> {
         let ptr = unsafe { ffi::cd_atomic_store_cache_node_get_object_id(self.as_ptr()) };
         unsafe { NSManagedObjectID::from_retained_ptr(ptr, "atomic store cache node object ID") }
@@ -44,6 +46,7 @@ impl NSAtomicStoreCacheNode {
 }
 
 impl NSIncrementalStoreNode {
+    /// Wraps `NSIncrementalStoreNode.init(...)`.
     pub fn new(
         object_id: &NSManagedObjectID,
         values: &BTreeMap<String, Value>,
@@ -67,15 +70,18 @@ impl NSIncrementalStoreNode {
         unsafe { Self::from_retained_ptr(out_node, "incremental store node") }
     }
 
+    /// Wraps `NSIncrementalStoreNode.object_id(...)`.
     pub fn object_id(&self) -> Result<NSManagedObjectID, CoreDataError> {
         let ptr = unsafe { ffi::cd_incremental_store_node_get_object_id(self.as_ptr()) };
         unsafe { NSManagedObjectID::from_retained_ptr(ptr, "incremental store node object ID") }
     }
 
+    /// Wraps `NSIncrementalStoreNode.version(...)`.
     pub fn version(&self) -> u64 {
         unsafe { ffi::cd_incremental_store_node_get_version(self.as_ptr()) }
     }
 
+    /// Wraps `NSIncrementalStoreNode.update(...)`.
     pub fn update(
         &self,
         values: &BTreeMap<String, Value>,

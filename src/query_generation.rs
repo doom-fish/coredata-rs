@@ -6,6 +6,7 @@ use crate::private::{error_from_status, impl_object_wrapper};
 impl_object_wrapper!(NSQueryGenerationToken);
 
 impl NSQueryGenerationToken {
+    /// Wraps `NSQueryGenerationToken.current(...)`.
     pub fn current() -> Result<Self, CoreDataError> {
         let ptr = unsafe { ffi::cd_query_generation_token_current() };
         unsafe { Self::from_retained_ptr(ptr, "current query generation token") }
@@ -13,6 +14,7 @@ impl NSQueryGenerationToken {
 }
 
 impl NSManagedObjectContext {
+    /// Wraps `NSManagedObjectContext.query_generation_token(...)`.
     pub fn query_generation_token(&self) -> Result<Option<NSQueryGenerationToken>, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_managed_object_context_get_query_generation_token(self.as_ptr()) };
@@ -27,6 +29,7 @@ impl NSManagedObjectContext {
         }))
     }
 
+    /// Mirrors `NSManagedObjectContext.query_generation_from_token`.
     pub fn set_query_generation_from_token(
         &self,
         token: Option<&NSQueryGenerationToken>,

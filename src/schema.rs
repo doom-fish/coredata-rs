@@ -6,22 +6,39 @@ use crate::private::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `AttributeType` value.
 pub enum AttributeType {
+    /// Mirrors `AttributeType::Undefined`.
     Undefined,
+    /// Mirrors `AttributeType::Integer16`.
     Integer16,
+    /// Mirrors `AttributeType::Integer32`.
     Integer32,
+    /// Mirrors `AttributeType::Integer64`.
     Integer64,
+    /// Mirrors `AttributeType::Decimal`.
     Decimal,
+    /// Mirrors `AttributeType::Double`.
     Double,
+    /// Mirrors `AttributeType::Float`.
     Float,
+    /// Mirrors `AttributeType::String`.
     String,
+    /// Mirrors `AttributeType::Boolean`.
     Boolean,
+    /// Mirrors `AttributeType::Date`.
     Date,
+    /// Mirrors `AttributeType::BinaryData`.
     BinaryData,
+    /// Mirrors `AttributeType::Uuid`.
     Uuid,
+    /// Mirrors `AttributeType::Uri`.
     Uri,
+    /// Mirrors `AttributeType::Transformable`.
     Transformable,
+    /// Mirrors `AttributeType::ObjectId`.
     ObjectId,
+    /// Mirrors `AttributeType::Unknown`.
     Unknown(u64),
 }
 
@@ -71,11 +88,17 @@ impl AttributeType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `DeleteRule` value.
 pub enum DeleteRule {
+    /// Mirrors `DeleteRule::NoAction`.
     NoAction,
+    /// Mirrors `DeleteRule::Nullify`.
     Nullify,
+    /// Mirrors `DeleteRule::Cascade`.
     Cascade,
+    /// Mirrors `DeleteRule::Deny`.
     Deny,
+    /// Mirrors `DeleteRule::Unknown`.
     Unknown(u64),
 }
 
@@ -106,6 +129,7 @@ impl_object_wrapper!(NSAttributeDescription);
 impl_object_wrapper!(NSRelationshipDescription);
 
 impl NSEntityDescription {
+    /// Wraps `NSEntityDescription.init(...)`.
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_entity = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -116,18 +140,21 @@ impl NSEntityDescription {
         unsafe { Self::from_retained_ptr(out_entity, "entity description") }
     }
 
+    /// Wraps `NSEntityDescription.named(...)`.
     pub fn named(name: impl AsRef<str>) -> Result<Self, CoreDataError> {
         let entity = Self::new()?;
         entity.set_name(name)?;
         Ok(entity)
     }
 
+    /// Wraps `NSEntityDescription.name(...)`.
     pub fn name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_entity_description_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "entity description name was nil"))
     }
 
+    /// Mirrors `NSEntityDescription.name`.
     pub fn set_name(&self, name: impl AsRef<str>) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name.as_ref(), "entity name")?;
         let mut out_error = core::ptr::null_mut();
@@ -140,6 +167,7 @@ impl NSEntityDescription {
         Ok(())
     }
 
+    /// Wraps `NSEntityDescription.managed_object_class_name(...)`.
     pub fn managed_object_class_name(&self) -> Result<String, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_entity_description_get_managed_object_class_name(self.as_ptr()) };
@@ -147,6 +175,7 @@ impl NSEntityDescription {
             .ok_or_else(|| CoreDataError::bridge(-1, "managed object class name was nil"))
     }
 
+    /// Mirrors `NSEntityDescription.managed_object_class_name`.
     pub fn set_managed_object_class_name(
         &self,
         name: impl AsRef<str>,
@@ -166,6 +195,7 @@ impl NSEntityDescription {
         Ok(())
     }
 
+    /// Wraps `NSEntityDescription.add_attribute(...)`.
     pub fn add_attribute(&self, attribute: &NSAttributeDescription) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -181,6 +211,7 @@ impl NSEntityDescription {
         Ok(())
     }
 
+    /// Wraps `NSEntityDescription.add_relationship(...)`.
     pub fn add_relationship(
         &self,
         relationship: &NSRelationshipDescription,
@@ -199,11 +230,13 @@ impl NSEntityDescription {
         Ok(())
     }
 
+    /// Wraps `NSEntityDescription.attributes(...)`.
     pub fn attributes(&self) -> Result<Vec<NSAttributeDescription>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_entity_description_attributes(self.as_ptr()) };
         collect_array(array_ptr, "entity attributes")
     }
 
+    /// Wraps `NSEntityDescription.relationships(...)`.
     pub fn relationships(&self) -> Result<Vec<NSRelationshipDescription>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_entity_description_relationships(self.as_ptr()) };
         collect_array(array_ptr, "entity relationships")
@@ -211,6 +244,7 @@ impl NSEntityDescription {
 }
 
 impl NSAttributeDescription {
+    /// Wraps `NSAttributeDescription.init(...)`.
     pub fn new(
         name: impl AsRef<str>,
         attribute_type: AttributeType,
@@ -228,12 +262,14 @@ impl NSAttributeDescription {
         Ok(attribute)
     }
 
+    /// Wraps `NSAttributeDescription.name(...)`.
     pub fn name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_attribute_description_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "attribute description name was nil"))
     }
 
+    /// Mirrors `NSAttributeDescription.name`.
     pub fn set_name(&self, name: impl AsRef<str>) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name.as_ref(), "attribute name")?;
         let mut out_error = core::ptr::null_mut();
@@ -246,10 +282,12 @@ impl NSAttributeDescription {
         Ok(())
     }
 
+    /// Wraps `NSAttributeDescription.is_optional(...)`.
     pub fn is_optional(&self) -> bool {
         unsafe { ffi::cd_attribute_description_get_optional(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSAttributeDescription.optional`.
     pub fn set_optional(&self, optional: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -265,10 +303,12 @@ impl NSAttributeDescription {
         Ok(())
     }
 
+    /// Wraps `NSAttributeDescription.is_transient(...)`.
     pub fn is_transient(&self) -> bool {
         unsafe { ffi::cd_attribute_description_get_transient(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSAttributeDescription.transient`.
     pub fn set_transient(&self, transient: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -284,12 +324,14 @@ impl NSAttributeDescription {
         Ok(())
     }
 
+    /// Wraps `NSAttributeDescription.attribute_type(...)`.
     pub fn attribute_type(&self) -> AttributeType {
         AttributeType::from_raw(unsafe {
             ffi::cd_attribute_description_get_attribute_type(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSAttributeDescription.attribute_type`.
     pub fn set_attribute_type(&self, attribute_type: AttributeType) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -307,6 +349,7 @@ impl NSAttributeDescription {
 }
 
 impl NSRelationshipDescription {
+    /// Wraps `NSRelationshipDescription.init(...)`.
     pub fn new(name: impl AsRef<str>) -> Result<Self, CoreDataError> {
         let mut out_relationship = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -321,12 +364,14 @@ impl NSRelationshipDescription {
         Ok(relationship)
     }
 
+    /// Wraps `NSRelationshipDescription.name(...)`.
     pub fn name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_relationship_description_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "relationship description name was nil"))
     }
 
+    /// Mirrors `NSRelationshipDescription.name`.
     pub fn set_name(&self, name: impl AsRef<str>) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name.as_ref(), "relationship name")?;
         let mut out_error = core::ptr::null_mut();
@@ -339,10 +384,12 @@ impl NSRelationshipDescription {
         Ok(())
     }
 
+    /// Wraps `NSRelationshipDescription.is_optional(...)`.
     pub fn is_optional(&self) -> bool {
         unsafe { ffi::cd_relationship_description_get_optional(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSRelationshipDescription.optional`.
     pub fn set_optional(&self, optional: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -358,10 +405,12 @@ impl NSRelationshipDescription {
         Ok(())
     }
 
+    /// Wraps `NSRelationshipDescription.is_transient(...)`.
     pub fn is_transient(&self) -> bool {
         unsafe { ffi::cd_relationship_description_get_transient(self.as_ptr()) != 0 }
     }
 
+    /// Mirrors `NSRelationshipDescription.transient`.
     pub fn set_transient(&self, transient: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -377,6 +426,7 @@ impl NSRelationshipDescription {
         Ok(())
     }
 
+    /// Wraps `NSRelationshipDescription.destination_entity(...)`.
     pub fn destination_entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
         let ptr = unsafe { ffi::cd_relationship_description_get_destination_entity(self.as_ptr()) };
         if ptr.is_null() {
@@ -387,6 +437,7 @@ impl NSRelationshipDescription {
         }))
     }
 
+    /// Mirrors `NSRelationshipDescription.destination_entity`.
     pub fn set_destination_entity(
         &self,
         entity: Option<&NSEntityDescription>,
@@ -405,6 +456,7 @@ impl NSRelationshipDescription {
         Ok(())
     }
 
+    /// Wraps `NSRelationshipDescription.inverse_relationship(...)`.
     pub fn inverse_relationship(&self) -> Result<Option<NSRelationshipDescription>, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_relationship_description_get_inverse_relationship(self.as_ptr()) };
@@ -416,6 +468,7 @@ impl NSRelationshipDescription {
         }))
     }
 
+    /// Mirrors `NSRelationshipDescription.inverse_relationship`.
     pub fn set_inverse_relationship(
         &self,
         inverse_relationship: Option<&NSRelationshipDescription>,
@@ -435,10 +488,12 @@ impl NSRelationshipDescription {
         Ok(())
     }
 
+    /// Wraps `NSRelationshipDescription.min_count(...)`.
     pub fn min_count(&self) -> usize {
         unsafe { ffi::cd_relationship_description_get_min_count(self.as_ptr()) as usize }
     }
 
+    /// Mirrors `NSRelationshipDescription.min_count`.
     pub fn set_min_count(&self, min_count: usize) -> Result<(), CoreDataError> {
         let min_count = u64::try_from(min_count)
             .map_err(|_| CoreDataError::bridge(-1, "relationship min_count overflow"))?;
@@ -452,10 +507,12 @@ impl NSRelationshipDescription {
         Ok(())
     }
 
+    /// Wraps `NSRelationshipDescription.max_count(...)`.
     pub fn max_count(&self) -> usize {
         unsafe { ffi::cd_relationship_description_get_max_count(self.as_ptr()) as usize }
     }
 
+    /// Mirrors `NSRelationshipDescription.max_count`.
     pub fn set_max_count(&self, max_count: usize) -> Result<(), CoreDataError> {
         let max_count = u64::try_from(max_count)
             .map_err(|_| CoreDataError::bridge(-1, "relationship max_count overflow"))?;
@@ -469,12 +526,14 @@ impl NSRelationshipDescription {
         Ok(())
     }
 
+    /// Wraps `NSRelationshipDescription.delete_rule(...)`.
     pub fn delete_rule(&self) -> DeleteRule {
         DeleteRule::from_raw(unsafe {
             ffi::cd_relationship_description_get_delete_rule(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSRelationshipDescription.delete_rule`.
     pub fn set_delete_rule(&self, delete_rule: DeleteRule) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {

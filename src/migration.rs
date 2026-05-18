@@ -12,12 +12,19 @@ use crate::private::{
 use crate::store::PersistentStoreOptions;
 use crate::value::ValuePayload;
 
+/// Core Data items for migration expression keys.
 pub mod migration_expression_keys {
+    /// Mirrors `NSMigrationManagerKey`.
     pub const MANAGER: &str = "NSMigrationManagerKey";
+    /// Mirrors `NSMigrationSourceObjectKey`.
     pub const SOURCE_OBJECT: &str = "NSMigrationSourceObjectKey";
+    /// Mirrors `NSMigrationDestinationObjectKey`.
     pub const DESTINATION_OBJECT: &str = "NSMigrationDestinationObjectKey";
+    /// Mirrors `NSMigrationEntityMappingKey`.
     pub const ENTITY_MAPPING: &str = "NSMigrationEntityMappingKey";
+    /// Mirrors `NSMigrationPropertyMappingKey`.
     pub const PROPERTY_MAPPING: &str = "NSMigrationPropertyMappingKey";
+    /// Mirrors `NSMigrationEntityPolicyKey`.
     pub const ENTITY_POLICY: &str = "NSMigrationEntityPolicyKey";
 }
 
@@ -41,6 +48,7 @@ fn encode_options_json(
 }
 
 impl NSMappingModel {
+    /// Wraps `NSMappingModel.inferred(...)`.
     pub fn inferred(
         source_model: &NSManagedObjectModel,
         destination_model: &NSManagedObjectModel,
@@ -61,6 +69,7 @@ impl NSMappingModel {
         unsafe { Self::from_retained_ptr(out_model, "mapping model") }
     }
 
+    /// Wraps `NSMappingModel.init(...)`.
     pub fn from_url(path: impl AsRef<Path>) -> Result<Option<Self>, CoreDataError> {
         let path = path_cstring(path.as_ref(), "mapping model URL")?;
         let mut out_model = core::ptr::null_mut();
@@ -79,6 +88,7 @@ impl NSMappingModel {
         }))
     }
 
+    /// Wraps `NSMappingModel.entity_mapping_names(...)`.
     pub fn entity_mapping_names(&self) -> Result<Vec<String>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -97,6 +107,7 @@ impl NSMappingModel {
 }
 
 impl NSMigrationManager {
+    /// Wraps `NSMigrationManager.init(...)`.
     pub fn new(
         source_model: &NSManagedObjectModel,
         destination_model: &NSManagedObjectModel,
@@ -117,11 +128,13 @@ impl NSMigrationManager {
         unsafe { Self::from_retained_ptr(out_manager, "migration manager") }
     }
 
+    /// Wraps `NSMigrationManager.source_model(...)`.
     pub fn source_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
         let ptr = unsafe { ffi::cd_migration_manager_get_source_model(self.as_ptr()) };
         unsafe { NSManagedObjectModel::from_retained_ptr(ptr, "migration manager source model") }
     }
 
+    /// Wraps `NSMigrationManager.destination_model(...)`.
     pub fn destination_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
         let ptr = unsafe { ffi::cd_migration_manager_get_destination_model(self.as_ptr()) };
         unsafe {
@@ -129,6 +142,7 @@ impl NSMigrationManager {
         }
     }
 
+    /// Wraps `NSMigrationManager.source_context(...)`.
     pub fn source_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
         let ptr = unsafe { ffi::cd_migration_manager_get_source_context(self.as_ptr()) };
         unsafe {
@@ -136,6 +150,7 @@ impl NSMigrationManager {
         }
     }
 
+    /// Wraps `NSMigrationManager.destination_context(...)`.
     pub fn destination_context(&self) -> Result<NSManagedObjectContext, CoreDataError> {
         let ptr = unsafe { ffi::cd_migration_manager_get_destination_context(self.as_ptr()) };
         unsafe {
@@ -143,12 +158,14 @@ impl NSMigrationManager {
         }
     }
 
+    /// Wraps `NSMigrationManager.uses_store_specific_migration_manager(...)`.
     pub fn uses_store_specific_migration_manager(&self) -> bool {
         unsafe {
             ffi::cd_migration_manager_get_uses_store_specific_migration_manager(self.as_ptr()) != 0
         }
     }
 
+    /// Mirrors `NSMigrationManager.uses_store_specific_migration_manager`.
     pub fn set_uses_store_specific_migration_manager(
         &self,
         uses_store_specific_migration_manager: bool,
@@ -161,11 +178,13 @@ impl NSMigrationManager {
         }
     }
 
+    /// Wraps `NSMigrationManager.migration_progress(...)`.
     pub fn migration_progress(&self) -> f32 {
         unsafe { ffi::cd_migration_manager_get_migration_progress(self.as_ptr()) }
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// Wraps `NSMigrationManager.migrate_store(...)`.
     pub fn migrate_store<S, D>(
         &self,
         source_url: S,

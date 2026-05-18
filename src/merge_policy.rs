@@ -7,12 +7,19 @@ use crate::private::{error_from_status, impl_object_wrapper};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `MergePolicyType` value.
 pub enum MergePolicyType {
+    /// Mirrors `MergePolicyType::Error`.
     Error,
+    /// Mirrors `MergePolicyType::MergeByPropertyStoreTrump`.
     MergeByPropertyStoreTrump,
+    /// Mirrors `MergePolicyType::MergeByPropertyObjectTrump`.
     MergeByPropertyObjectTrump,
+    /// Mirrors `MergePolicyType::Overwrite`.
     Overwrite,
+    /// Mirrors `MergePolicyType::Rollback`.
     Rollback,
+    /// Mirrors `MergePolicyType::Unknown`.
     Unknown(u64),
 }
 
@@ -45,6 +52,7 @@ impl_object_wrapper!(NSMergeConflict);
 impl_object_wrapper!(NSConstraintConflict);
 
 impl NSMergePolicy {
+    /// Wraps `NSMergePolicy.init(...)`.
     pub fn new(merge_type: MergePolicyType) -> Result<Self, CoreDataError> {
         let mut out_policy = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -57,42 +65,50 @@ impl NSMergePolicy {
         unsafe { Self::from_retained_ptr(out_policy, "merge policy") }
     }
 
+    /// Wraps `NSMergePolicy.error_policy(...)`.
     pub fn error_policy() -> Result<Self, CoreDataError> {
         let ptr = unsafe { ffi::cd_merge_policy_error_policy() };
         unsafe { Self::from_retained_ptr(ptr, "error merge policy") }
     }
 
+    /// Wraps `NSMergePolicy.rollback_policy(...)`.
     pub fn rollback_policy() -> Result<Self, CoreDataError> {
         let ptr = unsafe { ffi::cd_merge_policy_rollback_policy() };
         unsafe { Self::from_retained_ptr(ptr, "rollback merge policy") }
     }
 
+    /// Wraps `NSMergePolicy.overwrite_policy(...)`.
     pub fn overwrite_policy() -> Result<Self, CoreDataError> {
         let ptr = unsafe { ffi::cd_merge_policy_overwrite_policy() };
         unsafe { Self::from_retained_ptr(ptr, "overwrite merge policy") }
     }
 
+    /// Wraps `NSMergePolicy.merge_by_property_object_trump_policy(...)`.
     pub fn merge_by_property_object_trump_policy() -> Result<Self, CoreDataError> {
         let ptr = unsafe { ffi::cd_merge_policy_merge_by_property_object_trump_policy() };
         unsafe { Self::from_retained_ptr(ptr, "object trump merge policy") }
     }
 
+    /// Wraps `NSMergePolicy.merge_by_property_store_trump_policy(...)`.
     pub fn merge_by_property_store_trump_policy() -> Result<Self, CoreDataError> {
         let ptr = unsafe { ffi::cd_merge_policy_merge_by_property_store_trump_policy() };
         unsafe { Self::from_retained_ptr(ptr, "store trump merge policy") }
     }
 
+    /// Wraps `NSMergePolicy.merge_type(...)`.
     pub fn merge_type(&self) -> MergePolicyType {
         MergePolicyType::from_raw(unsafe { ffi::cd_merge_policy_get_merge_type(self.as_ptr()) })
     }
 }
 
 impl NSManagedObjectContext {
+    /// Wraps `NSManagedObjectContext.merge_policy(...)`.
     pub fn merge_policy(&self) -> Result<NSMergePolicy, CoreDataError> {
         let ptr = unsafe { ffi::cd_managed_object_context_get_merge_policy(self.as_ptr()) };
         unsafe { NSMergePolicy::from_retained_ptr(ptr, "managed object context merge policy") }
     }
 
+    /// Mirrors `NSManagedObjectContext.merge_policy`.
     pub fn set_merge_policy(&self, merge_policy: &NSMergePolicy) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {

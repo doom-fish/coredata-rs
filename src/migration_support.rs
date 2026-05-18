@@ -13,13 +13,21 @@ use crate::store::NSPersistentContainer;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Mirrors the corresponding Core Data `NSEntityMappingType` value.
 pub enum NSEntityMappingType {
+    /// Mirrors `NSEntityMappingType::Undefined`.
     Undefined,
+    /// Mirrors `NSEntityMappingType::Custom`.
     Custom,
+    /// Mirrors `NSEntityMappingType::Add`.
     Add,
+    /// Mirrors `NSEntityMappingType::Remove`.
     Remove,
+    /// Mirrors `NSEntityMappingType::Copy`.
     Copy,
+    /// Mirrors `NSEntityMappingType::Transform`.
     Transform,
+    /// Mirrors `NSEntityMappingType::Unknown`.
     Unknown(u64),
 }
 
@@ -67,6 +75,7 @@ where
 }
 
 impl NSEntityMapping {
+    /// Wraps `NSEntityMapping.init(...)`.
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_mapping = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -77,12 +86,14 @@ impl NSEntityMapping {
         unsafe { Self::from_retained_ptr(out_mapping, "entity mapping") }
     }
 
+    /// Wraps `NSEntityMapping.name(...)`.
     pub fn name(&self) -> Result<String, CoreDataError> {
         let ptr = unsafe { ffi::cd_entity_mapping_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
             .ok_or_else(|| CoreDataError::bridge(-1, "entity mapping name was nil"))
     }
 
+    /// Mirrors `NSEntityMapping.name`.
     pub fn set_name(&self, name: &str) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name, "entity mapping name")?;
         let mut out_error = core::ptr::null_mut();
@@ -95,12 +106,14 @@ impl NSEntityMapping {
         Ok(())
     }
 
+    /// Wraps `NSEntityMapping.mapping_type(...)`.
     pub fn mapping_type(&self) -> NSEntityMappingType {
         NSEntityMappingType::from_raw(unsafe {
             ffi::cd_entity_mapping_get_mapping_type(self.as_ptr())
         })
     }
 
+    /// Mirrors `NSEntityMapping.mapping_type`.
     pub fn set_mapping_type(&self, mapping_type: NSEntityMappingType) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -116,11 +129,13 @@ impl NSEntityMapping {
         Ok(())
     }
 
+    /// Wraps `NSEntityMapping.source_entity_name(...)`.
     pub fn source_entity_name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_entity_mapping_get_source_entity_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Mirrors `NSEntityMapping.source_entity_name`.
     pub fn set_source_entity_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "entity mapping source entity name"))
@@ -140,11 +155,13 @@ impl NSEntityMapping {
         Ok(())
     }
 
+    /// Wraps `NSEntityMapping.destination_entity_name(...)`.
     pub fn destination_entity_name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_entity_mapping_get_destination_entity_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Mirrors `NSEntityMapping.destination_entity_name`.
     pub fn set_destination_entity_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "entity mapping destination entity name"))
@@ -166,6 +183,7 @@ impl NSEntityMapping {
 }
 
 impl NSPropertyMapping {
+    /// Wraps `NSPropertyMapping.init(...)`.
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_mapping = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -176,11 +194,13 @@ impl NSPropertyMapping {
         unsafe { Self::from_retained_ptr(out_mapping, "property mapping") }
     }
 
+    /// Wraps `NSPropertyMapping.name(...)`.
     pub fn name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_property_mapping_get_name(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Mirrors `NSPropertyMapping.name`.
     pub fn set_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "property mapping name"))
@@ -202,6 +222,7 @@ impl NSPropertyMapping {
 }
 
 impl NSManagedObjectModelReference {
+    /// Wraps `NSManagedObjectModelReference.init(...)`.
     pub fn new_with_model(
         model: &NSManagedObjectModel,
         version_checksum: &str,
@@ -224,6 +245,7 @@ impl NSManagedObjectModelReference {
         unsafe { Self::from_retained_ptr(out_reference, "managed object model reference") }
     }
 
+    /// Wraps `NSManagedObjectModelReference.resolved_model(...)`.
     pub fn resolved_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_managed_object_model_reference_get_resolved_model(self.as_ptr()) };
@@ -235,6 +257,7 @@ impl NSManagedObjectModelReference {
         }
     }
 
+    /// Wraps `NSManagedObjectModelReference.version_checksum(...)`.
     pub fn version_checksum(&self) -> Result<String, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_managed_object_model_reference_get_version_checksum(self.as_ptr()) };
@@ -248,11 +271,13 @@ impl NSManagedObjectModelReference {
 }
 
 impl NSMigrationStage {
+    /// Wraps `NSMigrationStage.label(...)`.
     pub fn label(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_migration_stage_get_label(self.as_ptr()) };
         unsafe { take_string(ptr) }
     }
 
+    /// Mirrors `NSMigrationStage.label`.
     pub fn set_label(&self, label: Option<&str>) -> Result<(), CoreDataError> {
         let label = label
             .map(|value| cstring_from_str(value, "migration stage label"))
@@ -275,6 +300,7 @@ impl NSMigrationStage {
 }
 
 impl NSLightweightMigrationStage {
+    /// Wraps `NSLightweightMigrationStage.init(...)`.
     pub fn new(version_checksums: &[&str]) -> Result<Self, CoreDataError> {
         let payload = version_checksums
             .iter()
@@ -297,6 +323,7 @@ impl NSLightweightMigrationStage {
         unsafe { Self::from_retained_ptr(out_stage, "lightweight migration stage") }
     }
 
+    /// Wraps `NSLightweightMigrationStage.version_checksums(...)`.
     pub fn version_checksums(&self) -> Result<Vec<String>, CoreDataError> {
         let mut out_json = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -313,12 +340,14 @@ impl NSLightweightMigrationStage {
         unsafe { parse_json_ptr(out_json, "lightweight migration stage version checksums") }
     }
 
+    /// Wraps `NSLightweightMigrationStage.as_migration_stage(...)`.
     pub fn as_migration_stage(&self) -> Result<NSMigrationStage, CoreDataError> {
         clone_retained_wrapper(self.as_ptr(), "migration stage")
     }
 }
 
 impl NSCustomMigrationStage {
+    /// Wraps `NSCustomMigrationStage.init(...)`.
     pub fn new(
         current_model: &NSManagedObjectModelReference,
         next_model: &NSManagedObjectModelReference,
@@ -339,6 +368,7 @@ impl NSCustomMigrationStage {
         unsafe { Self::from_retained_ptr(out_stage, "custom migration stage") }
     }
 
+    /// Wraps `NSCustomMigrationStage.current_model(...)`.
     pub fn current_model(&self) -> Result<NSManagedObjectModelReference, CoreDataError> {
         let ptr = unsafe { ffi::cd_custom_migration_stage_get_current_model(self.as_ptr()) };
         unsafe {
@@ -349,6 +379,7 @@ impl NSCustomMigrationStage {
         }
     }
 
+    /// Wraps `NSCustomMigrationStage.next_model(...)`.
     pub fn next_model(&self) -> Result<NSManagedObjectModelReference, CoreDataError> {
         let ptr = unsafe { ffi::cd_custom_migration_stage_get_next_model(self.as_ptr()) };
         unsafe {
@@ -359,12 +390,14 @@ impl NSCustomMigrationStage {
         }
     }
 
+    /// Wraps `NSCustomMigrationStage.as_migration_stage(...)`.
     pub fn as_migration_stage(&self) -> Result<NSMigrationStage, CoreDataError> {
         clone_retained_wrapper(self.as_ptr(), "migration stage")
     }
 }
 
 impl NSStagedMigrationManager {
+    /// Wraps `NSStagedMigrationManager.init(...)`.
     pub fn new(stages: &[&NSMigrationStage]) -> Result<Self, CoreDataError> {
         let raw_stages = stages
             .iter()
@@ -389,11 +422,13 @@ impl NSStagedMigrationManager {
         unsafe { Self::from_retained_ptr(out_manager, "staged migration manager") }
     }
 
+    /// Wraps `NSStagedMigrationManager.stages(...)`.
     pub fn stages(&self) -> Result<Vec<NSMigrationStage>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_staged_migration_manager_get_stages(self.as_ptr()) };
         collect_array(array_ptr, "staged migration manager stages")
     }
 
+    /// Wraps `NSStagedMigrationManager.container(...)`.
     pub fn container(&self) -> Result<Option<NSPersistentContainer>, CoreDataError> {
         let ptr = unsafe { ffi::cd_staged_migration_manager_get_container(self.as_ptr()) };
         if ptr.is_null() {

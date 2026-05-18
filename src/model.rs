@@ -10,6 +10,7 @@ use crate::schema::NSEntityDescription;
 impl_object_wrapper!(NSManagedObjectModel);
 
 impl NSManagedObjectModel {
+    /// Wraps `NSManagedObjectModel.init(...)`.
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_model = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -20,6 +21,7 @@ impl NSManagedObjectModel {
         unsafe { Self::from_retained_ptr(out_model, "managed object model") }
     }
 
+    /// Wraps `NSManagedObjectModel.init(...)`.
     pub fn from_url(path: impl AsRef<Path>) -> Result<Self, CoreDataError> {
         let path = path_cstring(path.as_ref(), "managed object model URL")?;
         let mut out_model = core::ptr::null_mut();
@@ -33,6 +35,7 @@ impl NSManagedObjectModel {
         unsafe { Self::from_retained_ptr(out_model, "managed object model") }
     }
 
+    /// Wraps `NSManagedObjectModel.add_entity(...)`.
     pub fn add_entity(&self, entity: &NSEntityDescription) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -44,11 +47,13 @@ impl NSManagedObjectModel {
         Ok(())
     }
 
+    /// Wraps `NSManagedObjectModel.entities(...)`.
     pub fn entities(&self) -> Result<Vec<NSEntityDescription>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_managed_object_model_entities(self.as_ptr()) };
         collect_array(array_ptr, "managed object model entities")
     }
 
+    /// Wraps `NSManagedObjectModel.entity_named(...)`.
     pub fn entity_named(&self, name: &str) -> Result<Option<NSEntityDescription>, CoreDataError> {
         let entities = self.entities()?;
         entities
@@ -61,6 +66,7 @@ impl NSManagedObjectModel {
             .transpose()
     }
 
+    /// Wraps `NSManagedObjectModel.version_checksum(...)`.
     pub fn version_checksum(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_managed_object_model_get_version_checksum(self.as_ptr()) };
         unsafe { take_string(ptr) }

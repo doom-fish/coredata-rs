@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 - 2026-05-25
+
+- Added a crate-wide public API doc pass across `src/` (excluding `src/ffi/`), documenting public modules, wrapper types, enums, fields, constants, and methods with Core Data counterpart references.
+- Documented the macro-generated wrapper structs emitted by `impl_object_wrapper!`, bringing the library to a missing-docs-clean public API surface.
+
 ## 0.3.2 - 2026-05-25
 
 - Added `#[derive(Debug)]` to the public async adapter and marker structs that can derive it directly: `AsyncPersistentContainer`, `AsyncPersistentCloudKitContainer`, `AsyncManagedObjectContext`, `AsyncHistory`, and `AsyncBatchOperation`.

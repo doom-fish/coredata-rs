@@ -51,6 +51,7 @@ pub(crate) trait FromRetainedPtr: Sized {
 macro_rules! impl_object_wrapper {
     ($name:ident) => {
         #[derive(Debug, Clone)]
+        #[doc = concat!("Wraps `", stringify!($name), "`.")]
         pub struct $name {
             pub(crate) inner: $crate::private::RetainedObject,
         }
