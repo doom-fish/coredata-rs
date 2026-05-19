@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.4] - 2026-05-19
+
+- Bump MSRV from 1.70 to 1.76 to match fleet baseline.
+
 ## 0.3.3 - 2026-05-25
 
 - Added a crate-wide public API doc pass across `src/` (excluding `src/ffi/`), documenting public modules, wrapper types, enums, fields, constants, and methods with Core Data counterpart references.
