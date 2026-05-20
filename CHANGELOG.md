@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.8] - 2026-05-20
+
+- Migrated local `take_string` body to call `doom_fish_utils::ffi_string::take_owned_cstring_c`. Centralises the duplicated FFI take-string pattern fleet-wide. No public API change.
+
 ## [0.3.7] - 2026-05-20
 
 - Added in-`src/` unit tests across src/error.rs, src/merge_policy.rs, src/schema.rs, and src/validation.rs (Tier 2 quality polish), providing fast `cargo test --lib` fail-fast signal alongside the existing integration tests under `tests/`.
