@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let store = coordinator
         .add_persistent_store_with_description(&description, 30)?
-        .ok_or_else(|| Error::new(std::io::ErrorKind::Other, "expected persistent store"))?;
+        .ok_or_else(|| Error::other("expected persistent store"))?;
 
     assert_eq!(coordinator.name().as_deref(), Some("AdminCoordinator"));
     assert_eq!(coordinator.persistent_stores()?.len(), 1);

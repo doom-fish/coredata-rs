@@ -20,7 +20,7 @@ fn persistent_store_coordinator_can_add_remove_and_destroy_sqlite_store(
 
     let store = coordinator
         .add_persistent_store_with_description(&description, 30)?
-        .ok_or_else(|| Error::new(std::io::ErrorKind::Other, "expected persistent store"))?;
+        .ok_or_else(|| Error::other("expected persistent store"))?;
     assert_eq!(coordinator.persistent_stores()?.len(), 1);
     assert!(coordinator
         .persistent_store_for_url(&artifact.path)?

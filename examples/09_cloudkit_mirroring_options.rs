@@ -22,8 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let roundtrip = container.persistent_store_descriptions()?[0]
         .cloudkit_container_options()?
         .ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
+            std::io::Error::other(
                 "missing CloudKit container options",
             )
         })?;
