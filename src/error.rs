@@ -49,3 +49,56 @@ impl fmt::Display for CoreDataError {
 }
 
 impl std::error::Error for CoreDataError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bridge_sets_expected_domain_and_fields() {
+        let error = CoreDataError::bridge(-7, "bridge failed");
+
+        assert_eq!(error.domain, COREDATA_BRIDGE_ERROR_DOMAIN);
+        assert_eq!(error.code, -7);
+        assert_eq!(error.message, "bridge failed");
+    }
+
+    #[test]
+    fn from_payload_preserves_fields() {
+        let error = CoreDataError::from_payload(ErrorPayload {
+            domain: "NSCocoaErrorDomain".into(),
+            code: 133_000,
+            message: "missing model".into(),
+        });
+
+        assert_eq!(error.domain, "NSCocoaErrorDomain");
+        assert_eq!(error.code, 133_000);
+        assert_eq!(error.message, "missing model");
+    }
+
+    #[test]
+    fn display_formats_message_code_and_domain() {
+        let error = CoreDataError {
+            domain: "NSCocoaErrorDomain".into(),
+            code: 42,
+            message: "boom".into(),
+        };
+
+        assert_eq!(error.to_string(), "boom (42) [NSCocoaErrorDomain]");
+    }
+
+    #[test]
+    fn error_payload_round_trips_through_serde() {
+        let payload = ErrorPayload {
+            domain: COREDATA_BRIDGE_ERROR_DOMAIN.into(),
+            code: -1,
+            message: "decode failed".into(),
+        };
+        let json = serde_json::to_string(&payload).expect("serialize error payload");
+        let decoded: ErrorPayload = serde_json::from_str(&json).expect("deserialize error payload");
+
+        assert_eq!(decoded.domain, payload.domain);
+        assert_eq!(decoded.code, payload.code);
+        assert_eq!(decoded.message, payload.message);
+    }
+}

@@ -549,3 +549,56 @@ impl NSRelationshipDescription {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn attribute_type_round_trips_known_values() {
+        let cases = [
+            (0, AttributeType::Undefined),
+            (100, AttributeType::Integer16),
+            (200, AttributeType::Integer32),
+            (700, AttributeType::String),
+            (1_800, AttributeType::Transformable),
+            (2_000, AttributeType::ObjectId),
+        ];
+
+        for (raw, attribute_type) in cases {
+            assert_eq!(AttributeType::from_raw(raw), attribute_type);
+            assert_eq!(attribute_type.as_raw(), raw);
+        }
+    }
+
+    #[test]
+    fn attribute_type_unknown_round_trips() {
+        let attribute_type = AttributeType::from_raw(777);
+
+        assert_eq!(attribute_type, AttributeType::Unknown(777));
+        assert_eq!(attribute_type.as_raw(), 777);
+    }
+
+    #[test]
+    fn delete_rule_round_trips_known_values() {
+        let cases = [
+            (0, DeleteRule::NoAction),
+            (1, DeleteRule::Nullify),
+            (2, DeleteRule::Cascade),
+            (3, DeleteRule::Deny),
+        ];
+
+        for (raw, delete_rule) in cases {
+            assert_eq!(DeleteRule::from_raw(raw), delete_rule);
+            assert_eq!(delete_rule.as_raw(), raw);
+        }
+    }
+
+    #[test]
+    fn delete_rule_unknown_round_trips() {
+        let delete_rule = DeleteRule::from_raw(9);
+
+        assert_eq!(delete_rule, DeleteRule::Unknown(9));
+        assert_eq!(delete_rule.as_raw(), 9);
+    }
+}

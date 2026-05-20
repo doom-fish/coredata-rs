@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.7] - 2026-05-20
+
+- Added in-`src/` unit tests across src/error.rs, src/merge_policy.rs, src/schema.rs, and src/validation.rs (Tier 2 quality polish), providing fast `cargo test --lib` fail-fast signal alongside the existing integration tests under `tests/`.
+
 ## [0.3.6] - 2026-05-20
 
 - Clippy hygiene sweep: cleared all `-D warnings` lints across the crate. No public API change.

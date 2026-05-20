@@ -195,3 +195,49 @@ impl NSManagedObject {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn validation_rule_new_sets_fields() {
+        let rule = ValidationRule::new("name != nil", "Name is required");
+
+        assert_eq!(rule.predicate_format, "name != nil");
+        assert_eq!(rule.warning, "Name is required");
+    }
+
+    #[test]
+    fn validation_rule_round_trips_through_serde() {
+        let rule = ValidationRule::new("age > 0", "Age must be positive");
+        let json = serde_json::to_string(&rule).expect("serialize validation rule");
+        let decoded: ValidationRule =
+            serde_json::from_str(&json).expect("deserialize validation rule");
+
+        assert_eq!(decoded, rule);
+    }
+
+    #[test]
+    fn validation_rule_serializes_camel_case_fields() {
+        let value = serde_json::to_value(ValidationRule::new("score >= 10", "score warning"))
+            .expect("serialize validation rule to value");
+
+        assert_eq!(
+            value,
+            json!({
+                "predicateFormat": "score >= 10",
+                "warning": "score warning"
+            })
+        );
+    }
+
+    #[test]
+    fn validation_error_codes_match_expected_values() {
+        assert_eq!(validation_error_codes::MANAGED_OBJECT_VALIDATION, 1_550);
+        assert_eq!(validation_error_codes::MISSING_MANDATORY_PROPERTY, 1_570);
+        assert_eq!(validation_error_codes::STRING_PATTERN_MATCHING, 1_680);
+        assert_eq!(validation_error_codes::INVALID_URI, 1_690);
+    }
+}

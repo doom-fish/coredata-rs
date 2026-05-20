@@ -124,3 +124,48 @@ impl NSManagedObjectContext {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn merge_policy_type_from_raw_maps_known_values() {
+        let cases = [
+            (0, MergePolicyType::Error),
+            (1, MergePolicyType::MergeByPropertyStoreTrump),
+            (2, MergePolicyType::MergeByPropertyObjectTrump),
+            (3, MergePolicyType::Overwrite),
+            (4, MergePolicyType::Rollback),
+        ];
+
+        for (raw, expected) in cases {
+            assert_eq!(MergePolicyType::from_raw(raw), expected);
+        }
+    }
+
+    #[test]
+    fn merge_policy_type_from_raw_preserves_unknown_values() {
+        assert_eq!(MergePolicyType::from_raw(99), MergePolicyType::Unknown(99));
+    }
+
+    #[test]
+    fn merge_policy_type_as_raw_maps_known_values() {
+        let cases = [
+            (MergePolicyType::Error, 0),
+            (MergePolicyType::MergeByPropertyStoreTrump, 1),
+            (MergePolicyType::MergeByPropertyObjectTrump, 2),
+            (MergePolicyType::Overwrite, 3),
+            (MergePolicyType::Rollback, 4),
+        ];
+
+        for (merge_type, raw) in cases {
+            assert_eq!(merge_type.as_raw(), raw);
+        }
+    }
+
+    #[test]
+    fn merge_policy_type_as_raw_preserves_unknown_values() {
+        assert_eq!(MergePolicyType::Unknown(77).as_raw(), 77);
+    }
+}
