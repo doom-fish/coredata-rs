@@ -16,11 +16,6 @@ let package = Package(
         .target(
             name: "CoreDataBridge",
             path: "Sources/CoreDataBridge",
-            exclude: [
-                "Context.swift",
-                "Model.swift",
-                "Store.swift",
-            ],
             publicHeadersPath: "include")
     ]
 )
