@@ -342,3 +342,36 @@ pub mod status {
     pub const OBJC_EXCEPTION: i32 = -5;
     pub const INVALIDATED: i32 = -6;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::error::bridge_error_codes;
+
+    #[test]
+    fn bridge_status_codes_match_the_public_error_codes() {
+        assert_eq!(
+            i64::from(super::status::INVALID_ARGUMENT),
+            bridge_error_codes::INVALID_ARGUMENT
+        );
+        assert_eq!(
+            i64::from(super::status::FAILURE),
+            bridge_error_codes::FAILURE
+        );
+        assert_eq!(
+            i64::from(super::status::TIMED_OUT),
+            bridge_error_codes::TIMED_OUT
+        );
+        assert_eq!(
+            i64::from(super::status::WRONG_THREAD),
+            bridge_error_codes::WRONG_THREAD
+        );
+        assert_eq!(
+            i64::from(super::status::OBJC_EXCEPTION),
+            bridge_error_codes::OBJC_EXCEPTION
+        );
+        assert_eq!(
+            i64::from(super::status::INVALIDATED),
+            bridge_error_codes::INVALIDATED
+        );
+    }
+}

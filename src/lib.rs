@@ -106,7 +106,7 @@ pub use context::{NSManagedObject, NSManagedObjectContext, NSManagedObjectContex
 pub use custom_store::{
     NSAtomicStore, NSAtomicStoreCacheNode, NSIncrementalStore, NSIncrementalStoreNode,
 };
-pub use error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
+pub use error::{bridge_error_codes, CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
 pub use fetch_request::FetchRequestResultType;
 pub use fetched_results_controller::{
     FetchedResultsControllerDelegateRegistration, FetchedResultsIndexPath,
@@ -177,7 +177,7 @@ pub mod prelude {
     pub use crate::custom_store::{
         NSAtomicStore, NSAtomicStoreCacheNode, NSIncrementalStore, NSIncrementalStoreNode,
     };
-    pub use crate::error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
+    pub use crate::error::{bridge_error_codes, CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
     pub use crate::fetch_request::FetchRequestResultType;
     pub use crate::fetched_results_controller::{
         FetchedResultsControllerDelegateRegistration, FetchedResultsIndexPath,

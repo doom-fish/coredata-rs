@@ -9,10 +9,7 @@ use std::time::{Duration, Instant};
 use coredata::prelude::*;
 use support::*;
 
-const INVALID_ARGUMENT: i64 = -1;
-const WRONG_THREAD: i64 = -4;
-const OBJC_EXCEPTION: i64 = -5;
-const INVALIDATED: i64 = -6;
+use coredata::bridge_error_codes::{INVALIDATED, INVALID_ARGUMENT, OBJC_EXCEPTION, WRONG_THREAD};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 

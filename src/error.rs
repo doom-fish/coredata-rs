@@ -5,6 +5,15 @@ use serde::{Deserialize, Serialize};
 /// Mirrors `CoreDataBridge`.
 pub const COREDATA_BRIDGE_ERROR_DOMAIN: &str = "CoreDataBridge";
 
+pub mod bridge_error_codes {
+    pub const INVALID_ARGUMENT: i64 = -1;
+    pub const FAILURE: i64 = -2;
+    pub const TIMED_OUT: i64 = -3;
+    pub const WRONG_THREAD: i64 = -4;
+    pub const OBJC_EXCEPTION: i64 = -5;
+    pub const INVALIDATED: i64 = -6;
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Wraps `CoreDataError`.
 pub struct CoreDataError {
