@@ -63,6 +63,8 @@ async fn load_and_save(container: &NSPersistentContainer) -> Result<(), Box<dyn 
 | `AsyncHistory` | `NSPersistentHistoryChangeRequest` execute |
 | `AsyncBatchOperation` | `NSBatchInsertRequest` / `NSBatchUpdateRequest` |
 
+The context-based futures run their work with `perform` on the context's queue. On a main-queue context that work only runs once the main thread services the main queue, so use a private-queue context in processes without a main run loop.
+
 > **Note:** `performAndWait`-style sync APIs are not futures. Fetched-results
 > changes are delivered through `NSFetchedResultsController::set_delegate`;
 > CloudKit event notifications are not bridged.
