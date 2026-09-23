@@ -1,8 +1,8 @@
-# Core Data coverage matrix (v0.2.2)
+# Core Data coverage matrix (revised for v0.4.0)
 
-This audit covers the v0.2.2 target areas requested for `coredata-rs`: persistent containers, store coordinators, contexts, managed objects, schema/model metadata, fetch requests, fetched-results controllers, predicates, persistent-store request/result layers, history, CloudKit mirroring/events, batch operations, merge policies/conflicts, migrations/staged migration, validation, and named Core Data constants.
+This matrix covers persistent containers, store coordinators, contexts, managed objects, schema/model metadata, fetch requests, fetched-results controllers, predicates, persistent-store request/result layers, history, CloudKit mirroring/events, batch operations, merge policies/conflicts, migrations/staged migration, validation, and named Core Data constants.
 
-`COVERAGE_AUDIT.md` now reports **100% coverage of all non-exempt top-level `CoreData.framework` public symbols**. The matrix below tracks family-level depth: `✅` means the family has public Rust wrappers and Swift bridge coverage, `🟡` means higher-order workflows or callback-heavy members are still additive work, and `⏭️` marks intentionally skipped entitlement- or legacy-driven areas.
+`COVERAGE_AUDIT.md` counts top-level `CoreData.framework` symbols against MacOSX26.2.sdk: 155 of 161 non-exempt symbols (96.3%) have a working wrapper. The six gaps are opaque types with no constructor or methods. That count says nothing about member coverage; this matrix tracks family-level depth: `✅` means the family has public Rust wrappers and Swift bridge coverage, `🟡` means part of the family is missing, and `⏭️` marks intentionally skipped entitlement- or legacy-driven areas.
 
 ## PersistentContainer
 
@@ -16,15 +16,15 @@ This audit covers the v0.2.2 target areas requested for `coredata-rs`: persisten
 
 | API row | Status | Notes |
 | --- | --- | --- |
-| Context construction, concurrency type, naming, save/insert/delete, `perform`, `performAndWait`, and coordinator attachment | ✅ implemented | Existing 0.1.x surface retained. |
+| Context construction, concurrency type, naming, save/insert/delete, `perform`, `performAndWait`, and coordinator attachment | ✅ implemented | Every operation runs on the context's queue; a main-queue context used off the main thread returns a wrong-thread error. |
 | Parent context, merge flags, transaction author, inserted/updated/deleted/registered object snapshots, refresh/reset/rollback/process-pending-changes, permanent IDs, merge-policy round-tripping, query-generation symbol coverage, and history merge helpers | ✅ implemented | Includes the `NSManagedObjectContextQueryGenerationKey` constant and `NSQueryGenerationToken` wrappers. |
-| Undo manager and remote-context save-merging orchestration | 🟡 partial | Named notification/user-info constants are exposed, but higher-level merge orchestration remains additive work. |
+| Undo manager and remote-context save-merging orchestration | 🟡 partial | Notification and user-info names are exposed as constants only. There is no API to observe notifications. |
 
 ## ManagedObject
 
 | API row | Status | Notes |
 | --- | --- | --- |
-| Object construction, entity lookup, keyed value set/get, and context lookup | ✅ implemented | Existing wrapper extended in `src/managed_object.rs`. |
+| Object construction, entity lookup, keyed value set/get, and context lookup | ✅ implemented | Values are read and written on the owning context's queue. Keys must name attributes of the entity; handles fail with an invalidated error after reset, rollback, or delete and save. |
 | Inserted/updated/deleted/fault/change-state inspection, committed/changed-value snapshots, relationship-fault inspection, object IDs, URI representations, and snapshot-event type coverage | ✅ implemented | Exposed through object/object-id wrappers plus `managed_object::NSSnapshotEventType`. |
 | Reference-object helpers and KVC collection mutation helpers | 🟡 partial | Still deferred for a later release. |
 
@@ -49,16 +49,16 @@ This audit covers the v0.2.2 target areas requested for `coredata-rs`: persisten
 | API row | Status | Notes |
 | --- | --- | --- |
 | `NSFetchedResultsController` construction, `performFetch`, fetched objects, index-path lookup, section metadata, and cache deletion | ✅ implemented | Added in `src/fetched_results_controller.rs`. |
-| Delegate protocol symbol coverage | ✅ implemented | `NSFetchedResultsControllerDelegate` now has a public Rust marker trait. |
-| Delegate-driven change callback bridging | 🟡 partial | Callback delivery remains deferred. |
+| Delegate callbacks (`controllerWillChangeContent`, object and section changes, `controllerDidChangeContent`) | ✅ implemented | `NSFetchedResultsController::set_delegate` returns a registration; callbacks run on the context's queue until it is dropped. The snapshot/difference delegate methods are not bridged. |
 
 ## NSPredicate
 
 | API row | Status | Notes |
 | --- | --- | --- |
-| Format-string predicate construction | ✅ implemented | Existing 0.1.x surface retained. |
+| Format-string predicate construction | ✅ implemented | Parse errors and missing arguments return errors. Pass values as arguments, not by editing the format string. |
+| Argument-based comparison predicates and `AND` / `OR` / `NOT` compounds | ✅ implemented | `NSPredicate::comparison`, `and`, `or`, `not`; values never pass through the format parser. |
 | `predicateWithValue`, predicate format inspection, substitution variables, and JSON-backed evaluation against dictionary-like objects | ✅ implemented | Added in `src/ns_predicate.rs`. |
-| Compound predicates, expression trees, and editor/UI-facing predicate helpers | 🟡 partial | Not exposed. |
+| Expression trees, `IN`/`BETWEEN`/aggregate operators, and editor/UI-facing predicate helpers | 🟡 partial | Not exposed. |
 
 ## History
 
@@ -89,16 +89,16 @@ This audit covers the v0.2.2 target areas requested for `coredata-rs`: persisten
 | API row | Status | Notes |
 | --- | --- | --- |
 | Merge-policy type helpers, singleton policies, custom `NSMergePolicy` construction, and context merge-policy round-tripping | ✅ implemented | Added in `src/merge_policy.rs` and wired into `NSManagedObjectContext`. |
-| `NSMergeConflict` and `NSConstraintConflict` top-level symbol coverage | ✅ implemented | Public Rust wrapper types are now exported for both conflict classes. |
-| Conflict inspection and custom conflict-resolution entry points | 🟡 partial | The crate currently exposes marker/wrapper coverage rather than rich conflict introspection helpers. |
+| `NSMergeConflict` and `NSConstraintConflict` | 🟡 type only | Opaque types with no constructor or methods; no API returns them. Save conflicts surface as a `CoreDataError`. |
+| Conflict inspection and custom conflict-resolution entry points | 🟡 partial | Not exposed. |
 
 ## Migration / StagedMigration
 
 | API row | Status | Notes |
 | --- | --- | --- |
 | Inferred `NSMappingModel` construction, entity-mapping-name inspection, `NSMigrationManager` construction, source/destination model/context access, migration expression keys, and SQLite store migration execution | ✅ implemented | Added in `src/migration.rs` with a lightweight-migration smoke test and example. |
-| Entity/property mappings, migration-policy marker coverage, model references, migration stages, and `NSStagedMigrationManager` | ✅ implemented | Added in `src/migration_support.rs`; staged migration wrappers are available behind the platform/runtime constraints enforced by Core Data. |
-| End-to-end staged-migration authoring with versioned model artifacts | 🟡 partial | Public symbols are wrapped, but app-specific staged migration flows remain lightly exercised. |
+| Entity/property mappings, model references, migration stages, `NSStagedMigrationManager`, and custom-stage `willMigrate`/`didMigrate` handlers | ✅ implemented | `NSPersistentStoreDescription::set_staged_migration_manager` attaches a manager; a staged migration with custom-stage handlers is covered by `tests/migration_tests.rs`. Requires macOS 14; older systems return an error. |
+| `NSEntityMigrationPolicy` | 🟡 type only | Opaque type; custom migration policies need an Objective-C subclass, which is not supported. |
 
 ## PersistentStoreCoordinator / CustomStore
 
@@ -106,8 +106,8 @@ This audit covers the v0.2.2 target areas requested for `coredata-rs`: persisten
 | --- | --- | --- |
 | Coordinator construction, store enumeration, add/remove/destroy operations, model lookup, current history token, and persistent-store inspection/mutation | ✅ implemented | Existing coordinator surface retained and expanded. |
 | Named notification/user-info constants, metadata keys, XML/binary/store-type constants, and generic option-key coverage | ✅ implemented | Added in `src/constants.rs`, plus store-type helpers in `src/store.rs`. |
-| Custom-store node helpers (`NSAtomicStoreCacheNode`, `NSIncrementalStoreNode`) and marker coverage for `NSAtomicStore` / `NSIncrementalStore` | ✅ implemented | Added in `src/custom_store.rs`. |
-| Custom incremental-store subclassing and replace/migrate metadata convenience APIs | 🟡 partial | Top-level symbol coverage is complete, but subclass-oriented workflows remain additive. |
+| Custom-store node helpers (`NSAtomicStoreCacheNode`, `NSIncrementalStoreNode`) | ✅ implemented | Added in `src/custom_store.rs`. |
+| `NSAtomicStore` / `NSIncrementalStore` and custom-store subclassing | 🟡 type only | Opaque types with no constructor or methods; custom stores cannot be implemented from Rust. |
 
 ## Validation / Constants
 
@@ -123,5 +123,6 @@ This audit covers the v0.2.2 target areas requested for `coredata-rs`: persisten
 | API row | Status | Reason |
 | --- | --- | --- |
 | Live CloudKit sync callbacks and CKShare / record-zone convenience APIs attached to Core Data mirroring | ⏭️ skipped | Entitlement- and account-dependent. |
-| Delegate-driven fetched-results change callback delivery | ⏭️ skipped | Requires a callback/lifetime model beyond the current safe wrapper scope. |
+| `NSCoreDataCoreSpotlightDelegate` | ⏭️ skipped | Opaque type only; it cannot be created or attached to a store. |
+| Notification observation (context, coordinator, CloudKit event and Spotlight notifications) | ⏭️ skipped | Only the notification names are exposed. |
 | Legacy ubiquity / Spotlight external-record APIs listed in `COVERAGE_AUDIT.md` as exempt | ⏭️ skipped | Deprecated in the SDK and intentionally kept out of the safe surface. |

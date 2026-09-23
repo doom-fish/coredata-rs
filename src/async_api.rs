@@ -16,8 +16,10 @@
 //! ## Note on Tier-2 APIs
 //!
 //! `NSFetchedResultsController` delegate callbacks and `NSPersistentCloudKitContainer`
-//! event notifications are multi-fire observer patterns. Use a **Tier-2 Stream** wrapper
-//! for those — they are not Future candidates.
+//! event notifications are multi-fire observer patterns, not Future candidates.
+//! Fetched-results changes are delivered through
+//! [`NSFetchedResultsController::set_delegate`](crate::NSFetchedResultsController::set_delegate);
+//! CloudKit event notifications are not bridged.
 //!
 //! ## Runtime Agnostic Design
 //!

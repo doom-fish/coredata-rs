@@ -2,7 +2,30 @@
 
 Safe Rust bindings for Apple's [Core Data](https://developer.apple.com/documentation/coredata) framework on macOS.
 
-> **Status:** v0.3.0 adds a Tier-1 `async_api` module (gated behind the `async` feature) wrapping CoreData completion-handler and expensive-sync APIs as executor-agnostic Rust Futures.
+Requires macOS 13 or later. The staged-migration APIs (`NSStagedMigrationManager`, migration stages and model references) need macOS 14 and return an error on older systems.
+
+## Installation
+
+```toml
+[dependencies]
+coredata = "0.4"
+```
+
+## Concurrency
+
+Core Data contexts and managed objects are confined to their context's queue. This crate enforces that confinement instead of leaving it to the caller:
+
+- `NSManagedObjectContext`, `NSManagedObject`, `NSFetchedResultsController` and `NSFetchedResultsSectionInfo` are `Send + Sync`. Every method runs through `performAndWait` on the context's queue, so a private-queue context can be shared between threads.
+- A main-queue context (for example `NSPersistentContainer::view_context`) and its objects can only be used on the main thread. Calls from any other thread return an error with code `bridge_error_codes::WRONG_THREAD`; use a private-queue context such as `new_background_context` for background work.
+- `perform_and_wait` runs a closure on the context's queue and returns its result. The closure and the result must be `Send`, because on a main-queue context the closure runs on the main thread. Called off the main thread on a main-queue context, it waits until the main thread runs the main queue, so it only returns in a process whose main thread runs a run loop. `perform` schedules a closure without waiting.
+- A managed-object handle keeps its context alive. Once the object leaves its context (the context was reset or rolled back, or the object was deleted and saved), value and state calls return `bridge_error_codes::INVALIDATED`; `managed_object_context` returns `None` and `object_id` still works.
+- Configuration objects (models, entity and property descriptions, fetch requests, store descriptions, batch and history requests) are `Send` but not `Sync`, and their clones share one Objective-C object. Configure each one from one thread at a time. Asynchronous APIs copy the request they are given before they queue it.
+
+## Errors
+
+Every fallible call returns `CoreDataError` with the Core Data domain and code, or the `CoreDataBridge` domain and one of the `bridge_error_codes`. Objective-C exceptions that Core Data raises for misuse (malformed predicate formats, unknown keys, editing a model that is in use, unsupported store types, and similar) are caught and returned as `bridge_error_codes::OBJC_EXCEPTION` errors instead of aborting the process. Common mistakes are checked first and return `INVALID_ARGUMENT`: unknown entities and attributes, inserting or deleting an object that belongs to another context, saving without a persistent store, fetched-results controllers without sort descriptors, and batch requests against non-SQLite stores.
+
+Build predicates from values with `NSPredicate::comparison`, `and`, `or` and `not`. `NSPredicate::from_format` takes a trusted format string; pass values as arguments instead of formatting them into the string.
 
 ## Async API
 
@@ -10,7 +33,7 @@ Enable the `async` feature to access the `async_api` module:
 
 ```toml
 [dependencies]
-coredata = { version = "0.3", features = ["async"] }
+coredata = { version = "0.4", features = ["async"] }
 ```
 
 The async API is **executor-agnostic** — it works with Tokio, async-std, smol, pollster, or any other `std::future::Future`-compatible runtime.
@@ -40,9 +63,9 @@ async fn load_and_save(container: &NSPersistentContainer) -> Result<(), Box<dyn 
 | `AsyncHistory` | `NSPersistentHistoryChangeRequest` execute |
 | `AsyncBatchOperation` | `NSBatchInsertRequest` / `NSBatchUpdateRequest` |
 
-> **Note:** `performAndWait`-style sync APIs and multi-fire observer patterns (e.g.
-> `NSFetchedResultsController` delegate, CloudKit event notifications) are not
-> covered here — those belong to a Tier-2 Stream wrapper.
+> **Note:** `performAndWait`-style sync APIs are not futures. Fetched-results
+> changes are delivered through `NSFetchedResultsController::set_delegate`;
+> CloudKit event notifications are not bridged.
 
 ## Quick start
 
@@ -67,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     container.set_persistent_store_descriptions(&[&description])?;
     container.load_persistent_stores()?;
 
-    let context = container.view_context()?;
+    let context = container.new_background_context()?;
     let person_object = NSManagedObject::new(&person, None)?;
     context.insert(&person_object)?;
     person_object.set_value("name", "doom-fish")?;
@@ -82,34 +105,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - persistent-store descriptions, option keys, CloudKit mirroring options, CloudKit event requests, and synchronous store loading
 - richer `NSPersistentStoreCoordinator` administration and `NSPersistentStore` inspection
 - `NSManagedObjectContext` concurrency helpers, parent/merge metadata, merge-policy round-tripping, and history-request execution
-- `NSManagedObject` state inspection plus `NSManagedObjectID` wrappers
+- `NSManagedObject` state inspection plus `NSManagedObjectID` wrappers, with every object operation confined to its context's queue
 - entity, attribute, and relationship metadata including versioning, user info, uniqueness constraints, ordering, and validation rules
-- fetch-request result types, persistent-store request/result wrappers, fetched-results controllers/section info, prefetch configuration, batch sizing, and predicate substitution/evaluation
-- persistent-history request/result/transaction/change wrappers plus named Core Data notifications, metadata keys, option keys, and error constants
+- fetch-request result types, persistent-store request/result wrappers, fetched-results controllers/section info with delegate callbacks, prefetch configuration, batch sizing, argument-based predicates, and predicate substitution/evaluation
+- persistent-history request/result/transaction/change wrappers plus named Core Data notification names (names only; there is no observer API), metadata keys, option keys, and error constants
 - advanced model metadata wrappers including fetched/expression/derived/composite properties and fetch-index descriptions
 - SQLite-backed batch insert/update/delete requests and results
-- inferred mapping models, staged-migration support types, and custom-store node helpers for migration/extensibility workflows
+- inferred mapping models, staged migrations with custom-stage handlers, and custom-store node helpers (custom store subclasses and migration policies are not supported)
 - validation rule metadata and object-validation entry points
 
 ## Coverage, examples, and tests
 
-- [`COVERAGE_AUDIT.md`](COVERAGE_AUDIT.md) records the 100% non-exempt public-symbol audit, and [`COVERAGE.md`](COVERAGE.md) tracks family-level depth/deferred rows.
-- `examples/01_in_memory_smoke.rs` plus `examples/02_*` through `examples/15_*` cover every logical area.
-- `tests/*_tests.rs` provides smoke coverage for each logical area.
+- [`COVERAGE_AUDIT.md`](COVERAGE_AUDIT.md) counts top-level SDK symbols (155 of 161 non-exempt symbols against MacOSX26.2.sdk; the gaps are opaque types with no methods), and [`COVERAGE.md`](COVERAGE.md) tracks family-level depth and missing members.
+- `examples/01_in_memory_smoke.rs` plus `examples/02_*` through `examples/16_*` cover every logical area.
+- `tests/*_tests.rs` provides smoke coverage for each logical area; `tests/soundness_tests.rs` covers queue confinement, invalidated objects and errors in place of Objective-C exceptions.
 
 Run the full verification suite with:
 
 ```bash
-cargo clippy --all-targets -- -D warnings
-cargo test
-for ex in examples/*.rs; do cargo run --example "$(basename "$ex" .rs)"; done
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-features
+for ex in examples/*.rs; do cargo run --all-features --example "$(basename "$ex" .rs)"; done
 ```
 
 ## Notes
 
 - CloudKit mirroring and event-request wrappers are available, but live iCloud sync callbacks remain environment-dependent.
 - Persistent-history request construction and wrappers are covered; end-to-end history replay is documented in `COVERAGE.md` as a deferred deeper runtime workflow.
-- Core Data still enforces queue confinement rules; use `NSManagedObjectContext::perform` or `perform_and_wait` when moving work onto a context-owned queue.
+- `load_persistent_stores` waits up to 30 seconds (`load_persistent_stores_with_timeout` takes another limit) and returns a timeout error when the limit passes. Core Data cannot cancel a store load, so a load that times out keeps running in the background.
 
 ## License
 

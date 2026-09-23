@@ -1,16 +1,20 @@
 # coredata-rs coverage audit (vs MacOSX26.2.sdk)
 
 SDK_PUBLIC_SYMBOLS: 180
-VERIFIED: 161
-GAPS: 0
+VERIFIED: 155
+GAPS: 6
 EXEMPT: 19
-COVERAGE_PCT: 100.0%
+COVERAGE_PCT: 96.3%
 
 Audit notes:
 - Scope is top-level CoreData.framework symbols only: interfaces, protocols, typedef enum/option types, exported constants, and C functions (none found).
 - Obj-C category/extension declarations on existing classes were excluded because they do not introduce new top-level symbols.
 - Duplicate exports were deduplicated by symbol name, and `NSPersistentStoreFileProtectionKey` was excluded because it is `API_UNAVAILABLE(macos)`.
-- A symbol is marked VERIFIED when the crate exposes a public Rust wrapper or an explicit named helper for that SDK symbol; member-level completeness is tracked separately in `COVERAGE.md`.
+- A symbol is marked VERIFIED when the crate exposes a public Rust wrapper with at least one working operation, or an explicit named helper for that SDK symbol. Opaque types with no constructor and no methods are listed under GAPS, not VERIFIED.
+- The percentage measures top-level symbols only. It says nothing about member coverage: many wrapped classes expose only part of their properties and methods (see `COVERAGE.md`).
+- Constants such as notification names are counted when the crate names them. The crate does not observe notifications; there is no notification or observer API.
+- This file was generated against MacOSX26.2.sdk and has not been regenerated for newer SDKs; symbols added after 26.2 are not listed.
+- Revised for 0.4.0: six method-less wrappers moved from VERIFIED to GAPS. `NSFetchedResultsControllerDelegate`, `NSCustomMigrationStage` and `NSStagedMigrationManager` stay VERIFIED because 0.4.0 implements delegate callbacks, stage handlers and attaching a staged migration manager to a store description.
 
 ## 🟢 VERIFIED
 | Symbol | Kind | Header | Wrapped by |
@@ -95,13 +99,10 @@ Audit notes:
 | `NSAffectedStoresErrorKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::AFFECTED_STORES` |
 | `NSAsynchronousFetchRequest` | Interface | `NSFetchRequest.h` | `persistent_store_request::NSAsynchronousFetchRequest` |
 | `NSAsynchronousFetchResult` | Interface | `NSPersistentStoreResult.h` | `persistent_store_request::NSAsynchronousFetchResult` |
-| `NSAtomicStore` | Interface | `NSAtomicStore.h` | `custom_store::NSAtomicStore` |
 | `NSAtomicStoreCacheNode` | Interface | `NSAtomicStoreCacheNode.h` | `custom_store::NSAtomicStoreCacheNode` |
 | `NSBinaryStoreInsecureDecodingCompatibilityOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::BINARY_STORE_INSECURE_DECODING_COMPATIBILITY` |
 | `NSBinaryStoreSecureDecodingClasses` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::BINARY_STORE_SECURE_DECODING_CLASSES` |
 | `NSCompositeAttributeDescription` | Interface | `NSCompositeAttributeDescription.h` | `model_metadata::NSCompositeAttributeDescription` |
-| `NSConstraintConflict` | Interface | `NSMergePolicy.h` | `merge_policy::NSConstraintConflict` |
-| `NSCoreDataCoreSpotlightDelegate` | Interface | `NSCoreDataCoreSpotlightDelegate.h` | `spotlight::NSCoreDataCoreSpotlightDelegate` |
 | `NSCoreDataCoreSpotlightDelegateIndexDidUpdateNotification` | Constant | `NSCoreDataCoreSpotlightDelegate.h` | `constants::persistent_store_notification_names::CORE_SPOTLIGHT_INDEX_DID_UPDATE` |
 | `NSCoreDataCoreSpotlightExporter` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::CORE_SPOTLIGHT_EXPORTER` |
 | `NSCoreDataVersionNumber` | Constant | `CoreDataDefines.h` | `constants::coredata_version_number` |
@@ -112,7 +113,6 @@ Audit notes:
 | `NSDetailedErrorsKey` | Constant | `CoreDataErrors.h` | `constants::error_user_info_keys::DETAILED_ERRORS` |
 | `NSEntityMapping` | Interface | `NSEntityMapping.h` | `migration_support::NSEntityMapping` |
 | `NSEntityMappingType` | Type | `NSEntityMapping.h` | `migration_support::NSEntityMappingType` |
-| `NSEntityMigrationPolicy` | Interface | `NSEntityMigrationPolicy.h` | `migration_support::NSEntityMigrationPolicy` |
 | `NSExpressionDescription` | Interface | `NSExpressionDescription.h` | `model_metadata::NSExpressionDescription` |
 | `NSFetchIndexDescription` | Interface | `NSFetchIndexDescription.h` | `model_metadata::NSFetchIndexDescription` |
 | `NSFetchIndexElementDescription` | Interface | `NSFetchIndexElementDescription.h` | `model_metadata::NSFetchIndexElementDescription` |
@@ -122,7 +122,6 @@ Audit notes:
 | `NSFetchedPropertyDescription` | Interface | `NSFetchedPropertyDescription.h` | `model_metadata::NSFetchedPropertyDescription` |
 | `NSFetchedResultsControllerDelegate` | Protocol | `NSFetchedResultsController.h` | `fetched_results_controller::NSFetchedResultsControllerDelegate` |
 | `NSIgnorePersistentStoreVersioningOption` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_option_keys::IGNORE_VERSIONING` |
-| `NSIncrementalStore` | Interface | `NSIncrementalStore.h` | `custom_store::NSIncrementalStore` |
 | `NSIncrementalStoreNode` | Interface | `NSIncrementalStoreNode.h` | `custom_store::NSIncrementalStoreNode` |
 | `NSInsertedObjectIDsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::INSERTED_OBJECT_IDS` |
 | `NSInsertedObjectsKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::INSERTED_OBJECTS` |
@@ -137,7 +136,6 @@ Audit notes:
 | `NSManagedObjectContextQueryGenerationKey` | Constant | `NSManagedObjectContext.h` | `constants::context_user_info_keys::QUERY_GENERATION` |
 | `NSManagedObjectContextWillSaveNotification` | Constant | `NSManagedObjectContext.h` | `constants::context_notification_names::WILL_SAVE` |
 | `NSManagedObjectModelReference` | Interface | `NSManagedObjectModelReference.h` | `migration_support::NSManagedObjectModelReference` |
-| `NSMergeConflict` | Interface | `NSMergePolicy.h` | `merge_policy::NSMergeConflict` |
 | `NSMigrationStage` | Interface | `NSMigrationStage.h` | `migration_support::NSMigrationStage` |
 | `NSPersistentHistoryTokenKey` | Constant | `NSPersistentStoreCoordinator.h` | `constants::persistent_store_user_info_keys::PERSISTENT_HISTORY_TOKEN` |
 | `NSPersistentStoreAsynchronousResult` | Interface | `NSPersistentStoreResult.h` | `persistent_store_request::NSPersistentStoreAsynchronousResult` |
@@ -185,7 +183,12 @@ Audit notes:
 ## 🔴 GAPS
 | Symbol | Kind | Header | Notes |
 | --- | --- | --- | --- |
-| _None_ | — | — | All non-exempt CoreData.framework top-level symbols are now wrapped or named by the crate. |
+| `NSAtomicStore` | Interface | `NSAtomicStore.h` | Opaque type only. No constructor or methods; subclassing `NSAtomicStore` from Rust is not supported. |
+| `NSIncrementalStore` | Interface | `NSIncrementalStore.h` | Opaque type only. No constructor or methods; subclassing `NSIncrementalStore` from Rust is not supported. |
+| `NSEntityMigrationPolicy` | Interface | `NSEntityMigrationPolicy.h` | Opaque type only. Custom migration policies need an Objective-C subclass, which is not supported. |
+| `NSMergeConflict` | Interface | `NSMergePolicy.h` | Opaque type only. No API returns it; save conflicts surface as a `CoreDataError` without conflict details. |
+| `NSConstraintConflict` | Interface | `NSMergePolicy.h` | Opaque type only. No API returns it; save conflicts surface as a `CoreDataError` without conflict details. |
+| `NSCoreDataCoreSpotlightDelegate` | Interface | `NSCoreDataCoreSpotlightDelegate.h` | Opaque type only. It cannot be created or attached to a store. |
 
 ## ⏭️ EXEMPT
 | Symbol | Kind | Header | Reason | SDK attribute |
