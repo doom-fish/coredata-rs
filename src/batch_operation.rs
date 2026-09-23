@@ -105,8 +105,8 @@ impl NSBatchDeleteRequest {
         let status = unsafe {
             ffi::cd_batch_delete_request_new_with_fetch_request(
                 fetch_request.as_ptr(),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -129,8 +129,8 @@ impl NSBatchDeleteRequest {
             ffi::cd_batch_delete_request_new_with_object_ids(
                 raw_object_ids.as_ptr(),
                 count,
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -168,8 +168,8 @@ impl NSBatchDeleteRequest {
             ffi::cd_managed_object_context_execute_batch_delete_request(
                 context.as_ptr(),
                 self.as_ptr(),
-                &mut out_result,
-                &mut out_error,
+                &raw mut out_result,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -219,8 +219,8 @@ impl NSBatchInsertRequest {
             ffi::cd_batch_insert_request_new_with_entity_name(
                 entity_name.as_ptr(),
                 objects_json.as_ptr(),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -241,8 +241,8 @@ impl NSBatchInsertRequest {
             ffi::cd_batch_insert_request_new_with_entity(
                 entity.as_ptr(),
                 objects_json.as_ptr(),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -292,8 +292,8 @@ impl NSBatchInsertRequest {
             ffi::cd_managed_object_context_execute_batch_insert_request(
                 context.as_ptr(),
                 self.as_ptr(),
-                &mut out_result,
-                &mut out_error,
+                &raw mut out_result,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -385,8 +385,8 @@ impl NSBatchUpdateRequest {
         let status = unsafe {
             ffi::cd_batch_update_request_new_with_entity_name(
                 entity_name.as_ptr(),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -465,7 +465,7 @@ impl NSBatchUpdateRequest {
                 properties_to_update
                     .as_ref()
                     .map_or(core::ptr::null(), |value| value.as_c_str().as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -485,8 +485,8 @@ impl NSBatchUpdateRequest {
             ffi::cd_managed_object_context_execute_batch_update_request(
                 context.as_ptr(),
                 self.as_ptr(),
-                &mut out_result,
-                &mut out_error,
+                &raw mut out_result,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

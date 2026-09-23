@@ -20,7 +20,7 @@ impl NSPredicate {
         let mut out_predicate = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_predicate_new_with_value(i32::from(value), &mut out_predicate, &mut out_error)
+            ffi::cd_predicate_new_with_value(i32::from(value), &raw mut out_predicate, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -47,8 +47,8 @@ impl NSPredicate {
             ffi::cd_predicate_with_substitution_variables(
                 self.as_ptr(),
                 variables_json.as_ptr(),
-                &mut out_predicate,
-                &mut out_error,
+                &raw mut out_predicate,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -77,8 +77,8 @@ impl NSPredicate {
                 substitution_variables_json
                     .as_ref()
                     .map_or(core::ptr::null(), |json| json.as_ptr()),
-                &mut out_result,
-                &mut out_error,
+                &raw mut out_result,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

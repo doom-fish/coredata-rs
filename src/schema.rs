@@ -133,7 +133,7 @@ impl NSEntityDescription {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_entity = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_entity_description_new(&mut out_entity, &mut out_error) };
+        let status = unsafe { ffi::cd_entity_description_new(&raw mut out_entity, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -159,7 +159,7 @@ impl NSEntityDescription {
         let name = cstring_from_str(name.as_ref(), "entity name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_entity_description_set_name(self.as_ptr(), name.as_ptr(), &mut out_error)
+            ffi::cd_entity_description_set_name(self.as_ptr(), name.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -186,7 +186,7 @@ impl NSEntityDescription {
             ffi::cd_entity_description_set_managed_object_class_name(
                 self.as_ptr(),
                 name.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -202,7 +202,7 @@ impl NSEntityDescription {
             ffi::cd_entity_description_add_attribute(
                 self.as_ptr(),
                 attribute.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -221,7 +221,7 @@ impl NSEntityDescription {
             ffi::cd_entity_description_add_relationship(
                 self.as_ptr(),
                 relationship.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -252,7 +252,7 @@ impl NSAttributeDescription {
         let mut out_attribute = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status =
-            unsafe { ffi::cd_attribute_description_new(&mut out_attribute, &mut out_error) };
+            unsafe { ffi::cd_attribute_description_new(&raw mut out_attribute, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -274,7 +274,7 @@ impl NSAttributeDescription {
         let name = cstring_from_str(name.as_ref(), "attribute name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_attribute_description_set_name(self.as_ptr(), name.as_ptr(), &mut out_error)
+            ffi::cd_attribute_description_set_name(self.as_ptr(), name.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -294,7 +294,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_optional(
                 self.as_ptr(),
                 i32::from(optional),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -315,7 +315,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_transient(
                 self.as_ptr(),
                 i32::from(transient),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -338,7 +338,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_attribute_type(
                 self.as_ptr(),
                 attribute_type.as_raw(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -354,7 +354,7 @@ impl NSRelationshipDescription {
         let mut out_relationship = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status =
-            unsafe { ffi::cd_relationship_description_new(&mut out_relationship, &mut out_error) };
+            unsafe { ffi::cd_relationship_description_new(&raw mut out_relationship, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -376,7 +376,7 @@ impl NSRelationshipDescription {
         let name = cstring_from_str(name.as_ref(), "relationship name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_relationship_description_set_name(self.as_ptr(), name.as_ptr(), &mut out_error)
+            ffi::cd_relationship_description_set_name(self.as_ptr(), name.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -396,7 +396,7 @@ impl NSRelationshipDescription {
             ffi::cd_relationship_description_set_optional(
                 self.as_ptr(),
                 i32::from(optional),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -417,7 +417,7 @@ impl NSRelationshipDescription {
             ffi::cd_relationship_description_set_transient(
                 self.as_ptr(),
                 i32::from(transient),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -447,7 +447,7 @@ impl NSRelationshipDescription {
             ffi::cd_relationship_description_set_destination_entity(
                 self.as_ptr(),
                 entity.map_or(core::ptr::null_mut(), NSEntityDescription::as_ptr),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -479,7 +479,7 @@ impl NSRelationshipDescription {
                 self.as_ptr(),
                 inverse_relationship
                     .map_or(core::ptr::null_mut(), NSRelationshipDescription::as_ptr),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -499,7 +499,7 @@ impl NSRelationshipDescription {
             .map_err(|_| CoreDataError::bridge(-1, "relationship min_count overflow"))?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_relationship_description_set_min_count(self.as_ptr(), min_count, &mut out_error)
+            ffi::cd_relationship_description_set_min_count(self.as_ptr(), min_count, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -518,7 +518,7 @@ impl NSRelationshipDescription {
             .map_err(|_| CoreDataError::bridge(-1, "relationship max_count overflow"))?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_relationship_description_set_max_count(self.as_ptr(), max_count, &mut out_error)
+            ffi::cd_relationship_description_set_max_count(self.as_ptr(), max_count, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -540,7 +540,7 @@ impl NSRelationshipDescription {
             ffi::cd_relationship_description_set_delete_rule(
                 self.as_ptr(),
                 delete_rule.as_raw(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

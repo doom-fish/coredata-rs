@@ -21,7 +21,7 @@ impl NSRelationshipDescription {
             ffi::cd_relationship_description_set_ordered(
                 self.as_ptr(),
                 i32::from(ordered),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

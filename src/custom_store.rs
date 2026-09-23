@@ -30,7 +30,7 @@ impl NSAtomicStoreCacheNode {
         let mut out_node = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_atomic_store_cache_node_new(object_id.as_ptr(), &mut out_node, &mut out_error)
+            ffi::cd_atomic_store_cache_node_new(object_id.as_ptr(), &raw mut out_node, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -60,8 +60,8 @@ impl NSIncrementalStoreNode {
                 object_id.as_ptr(),
                 values_json.as_ptr(),
                 version,
-                &mut out_node,
-                &mut out_error,
+                &raw mut out_node,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -94,7 +94,7 @@ impl NSIncrementalStoreNode {
                 self.as_ptr(),
                 values_json.as_ptr(),
                 version,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

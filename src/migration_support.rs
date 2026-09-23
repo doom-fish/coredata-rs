@@ -79,7 +79,7 @@ impl NSEntityMapping {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_mapping = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_entity_mapping_new(&mut out_mapping, &mut out_error) };
+        let status = unsafe { ffi::cd_entity_mapping_new(&raw mut out_mapping, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -98,7 +98,7 @@ impl NSEntityMapping {
         let name = cstring_from_str(name, "entity mapping name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_entity_mapping_set_name(self.as_ptr(), name.as_ptr(), &mut out_error)
+            ffi::cd_entity_mapping_set_name(self.as_ptr(), name.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -120,7 +120,7 @@ impl NSEntityMapping {
             ffi::cd_entity_mapping_set_mapping_type(
                 self.as_ptr(),
                 mapping_type.as_raw(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -146,7 +146,7 @@ impl NSEntityMapping {
                 self.as_ptr(),
                 name.as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -172,7 +172,7 @@ impl NSEntityMapping {
                 self.as_ptr(),
                 name.as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -187,7 +187,7 @@ impl NSPropertyMapping {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_mapping = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_property_mapping_new(&mut out_mapping, &mut out_error) };
+        let status = unsafe { ffi::cd_property_mapping_new(&raw mut out_mapping, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -211,7 +211,7 @@ impl NSPropertyMapping {
                 self.as_ptr(),
                 name.as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -235,8 +235,8 @@ impl NSManagedObjectModelReference {
             ffi::cd_managed_object_model_reference_new_with_model(
                 model.as_ptr(),
                 version_checksum.as_ptr(),
-                &mut out_reference,
-                &mut out_error,
+                &raw mut out_reference,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -289,7 +289,7 @@ impl NSMigrationStage {
                 label
                     .as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -313,8 +313,8 @@ impl NSLightweightMigrationStage {
         let status = unsafe {
             ffi::cd_lightweight_migration_stage_new(
                 version_checksums_json.as_ptr(),
-                &mut out_stage,
-                &mut out_error,
+                &raw mut out_stage,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -330,8 +330,8 @@ impl NSLightweightMigrationStage {
         let status = unsafe {
             ffi::cd_lightweight_migration_stage_get_version_checksums_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -358,8 +358,8 @@ impl NSCustomMigrationStage {
             ffi::cd_custom_migration_stage_new(
                 current_model.as_ptr(),
                 next_model.as_ptr(),
-                &mut out_stage,
-                &mut out_error,
+                &raw mut out_stage,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -412,8 +412,8 @@ impl NSStagedMigrationManager {
             ffi::cd_staged_migration_manager_new(
                 raw_stages.as_ptr(),
                 count,
-                &mut out_manager,
-                &mut out_error,
+                &raw mut out_manager,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

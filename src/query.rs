@@ -50,8 +50,8 @@ impl NSPredicate {
             ffi::cd_predicate_new_with_format(
                 format.as_ptr(),
                 arguments_json.as_ptr(),
-                &mut out_predicate,
-                &mut out_error,
+                &raw mut out_predicate,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -68,7 +68,7 @@ impl NSFetchRequest {
         let mut out_request = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_fetch_request_new(entity_name.as_ptr(), &mut out_request, &mut out_error)
+            ffi::cd_fetch_request_new(entity_name.as_ptr(), &raw mut out_request, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -97,7 +97,7 @@ impl NSFetchRequest {
             ffi::cd_fetch_request_set_sort_descriptors_json(
                 self.as_ptr(),
                 descriptors_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

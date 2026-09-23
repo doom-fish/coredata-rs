@@ -47,7 +47,7 @@ impl NSPersistentStoreCoordinator {
             ffi::cd_persistent_store_coordinator_set_name(
                 self.as_ptr(),
                 opt_cstring_ptr(&name),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -85,8 +85,8 @@ impl NSPersistentStoreCoordinator {
                 self.as_ptr(),
                 description.as_ptr(),
                 timeout_seconds,
-                &mut out_store,
-                &mut out_error,
+                &raw mut out_store,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -107,7 +107,7 @@ impl NSPersistentStoreCoordinator {
             ffi::cd_persistent_store_coordinator_remove_persistent_store(
                 self.as_ptr(),
                 store.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -184,7 +184,7 @@ impl NSPersistentStoreCoordinator {
                 path.as_ptr(),
                 store_type.as_ptr(),
                 opt_cstring_ptr(&options_json),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -213,7 +213,7 @@ impl NSPersistentStore {
         let path = path_cstring(path.as_ref(), "persistent store URL")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_persistent_store_set_url(self.as_ptr(), path.as_ptr(), &mut out_error)
+            ffi::cd_persistent_store_set_url(self.as_ptr(), path.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -225,7 +225,7 @@ impl NSPersistentStore {
     pub fn clear_url(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_persistent_store_set_url(self.as_ptr(), core::ptr::null(), &mut out_error)
+            ffi::cd_persistent_store_set_url(self.as_ptr(), core::ptr::null(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -250,7 +250,7 @@ impl NSPersistentStore {
             ffi::cd_persistent_store_set_identifier(
                 self.as_ptr(),
                 opt_cstring_ptr(&identifier),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -278,7 +278,7 @@ impl NSPersistentStore {
             ffi::cd_persistent_store_set_read_only(
                 self.as_ptr(),
                 i32::from(read_only),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

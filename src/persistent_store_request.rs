@@ -102,7 +102,7 @@ impl NSPersistentStoreRequest {
                 self.as_ptr(),
                 raw_stores.as_ptr(),
                 count,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -172,8 +172,8 @@ impl NSAsynchronousFetchRequest {
         let status = unsafe {
             ffi::cd_asynchronous_fetch_request_new(
                 fetch_request.as_ptr(),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -216,8 +216,8 @@ impl NSAsynchronousFetchRequest {
             ffi::cd_managed_object_context_execute_asynchronous_fetch_request(
                 context.as_ptr(),
                 self.as_ptr(),
-                &mut out_result,
-                &mut out_error,
+                &raw mut out_result,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -280,8 +280,8 @@ impl NSSaveChangesRequest {
                 deleted_count,
                 locked_ptr,
                 locked_count,
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         let _ = (inserted_raw, updated_raw, deleted_raw, locked_raw);
@@ -335,8 +335,8 @@ impl NSFetchRequestExpression {
                 fetch_request.as_ptr(),
                 context.as_ptr(),
                 i32::from(count_only),
-                &mut out_expression,
-                &mut out_error,
+                &raw mut out_expression,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

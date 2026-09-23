@@ -59,7 +59,7 @@ impl NSPropertyDescription {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_property = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_property_description_new(&mut out_property, &mut out_error) };
+        let status = unsafe { ffi::cd_property_description_new(&raw mut out_property, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -78,7 +78,7 @@ impl NSPropertyDescription {
         let name = cstring_from_str(name, "property description name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_property_description_set_name(self.as_ptr(), name.as_ptr(), &mut out_error)
+            ffi::cd_property_description_set_name(self.as_ptr(), name.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -98,7 +98,7 @@ impl NSPropertyDescription {
             ffi::cd_property_description_set_optional(
                 self.as_ptr(),
                 i32::from(optional),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -119,7 +119,7 @@ impl NSPropertyDescription {
             ffi::cd_property_description_set_transient(
                 self.as_ptr(),
                 i32::from(transient),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -135,7 +135,7 @@ impl NSFetchedPropertyDescription {
         let mut out_property = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status =
-            unsafe { ffi::cd_fetched_property_description_new(&mut out_property, &mut out_error) };
+            unsafe { ffi::cd_fetched_property_description_new(&raw mut out_property, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -163,7 +163,7 @@ impl NSFetchedPropertyDescription {
             ffi::cd_fetched_property_description_set_fetch_request(
                 self.as_ptr(),
                 fetch_request.map_or(core::ptr::null_mut(), NSFetchRequest::as_ptr),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -184,7 +184,7 @@ impl NSExpressionDescription {
         let mut out_property = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status =
-            unsafe { ffi::cd_expression_description_new(&mut out_property, &mut out_error) };
+            unsafe { ffi::cd_expression_description_new(&raw mut out_property, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -208,7 +208,7 @@ impl NSExpressionDescription {
             ffi::cd_expression_description_set_result_type(
                 self.as_ptr(),
                 result_type.as_raw(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -229,7 +229,7 @@ impl NSDerivedAttributeDescription {
         let mut out_attribute = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_derived_attribute_description_new(&mut out_attribute, &mut out_error)
+            ffi::cd_derived_attribute_description_new(&raw mut out_attribute, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -249,7 +249,7 @@ impl NSCompositeAttributeDescription {
         let mut out_attribute = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_composite_attribute_description_new(&mut out_attribute, &mut out_error)
+            ffi::cd_composite_attribute_description_new(&raw mut out_attribute, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -278,7 +278,7 @@ impl NSCompositeAttributeDescription {
                 self.as_ptr(),
                 raw_elements.as_ptr(),
                 count,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -305,8 +305,8 @@ impl NSFetchIndexElementDescription {
             ffi::cd_fetch_index_element_description_new(
                 property.as_ptr(),
                 collation_type.as_raw(),
-                &mut out_element,
-                &mut out_error,
+                &raw mut out_element,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -339,7 +339,7 @@ impl NSFetchIndexElementDescription {
             ffi::cd_fetch_index_element_description_set_collation_type(
                 self.as_ptr(),
                 collation_type.as_raw(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -360,7 +360,7 @@ impl NSFetchIndexElementDescription {
             ffi::cd_fetch_index_element_description_set_ascending(
                 self.as_ptr(),
                 i32::from(ascending),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -390,8 +390,8 @@ impl NSFetchIndexDescription {
                 name.as_ptr(),
                 raw_elements.as_ptr(),
                 count,
-                &mut out_index,
-                &mut out_error,
+                &raw mut out_index,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -412,7 +412,7 @@ impl NSFetchIndexDescription {
         let name = cstring_from_str(name, "fetch index description name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_fetch_index_description_set_name(self.as_ptr(), name.as_ptr(), &mut out_error)
+            ffi::cd_fetch_index_description_set_name(self.as_ptr(), name.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -443,7 +443,7 @@ impl NSFetchIndexDescription {
                 self.as_ptr(),
                 raw_elements.as_ptr(),
                 count,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

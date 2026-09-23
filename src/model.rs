@@ -14,7 +14,7 @@ impl NSManagedObjectModel {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_model = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_managed_object_model_new(&mut out_model, &mut out_error) };
+        let status = unsafe { ffi::cd_managed_object_model_new(&raw mut out_model, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -27,7 +27,7 @@ impl NSManagedObjectModel {
         let mut out_model = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_managed_object_model_from_url(path.as_ptr(), &mut out_model, &mut out_error)
+            ffi::cd_managed_object_model_from_url(path.as_ptr(), &raw mut out_model, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -39,7 +39,7 @@ impl NSManagedObjectModel {
     pub fn add_entity(&self, entity: &NSEntityDescription) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_managed_object_model_add_entity(self.as_ptr(), entity.as_ptr(), &mut out_error)
+            ffi::cd_managed_object_model_add_entity(self.as_ptr(), entity.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });

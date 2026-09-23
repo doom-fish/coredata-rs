@@ -69,8 +69,8 @@ impl NSAttributeDescription {
         let status = unsafe {
             ffi::cd_attribute_description_get_validation_rules_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -87,7 +87,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_validation_rules_json(
                 self.as_ptr(),
                 rules_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -105,8 +105,8 @@ impl NSRelationshipDescription {
         let status = unsafe {
             ffi::cd_relationship_description_get_validation_rules_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -123,7 +123,7 @@ impl NSRelationshipDescription {
             ffi::cd_relationship_description_set_validation_rules_json(
                 self.as_ptr(),
                 rules_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -150,8 +150,8 @@ impl NSManagedObject {
                 self.as_ptr(),
                 key.as_ptr(),
                 value_json.as_ptr(),
-                &mut out_validated_json,
-                &mut out_error,
+                &raw mut out_validated_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -166,7 +166,7 @@ impl NSManagedObject {
     pub fn validate_for_insert(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status =
-            unsafe { ffi::cd_managed_object_validate_for_insert(self.as_ptr(), &mut out_error) };
+            unsafe { ffi::cd_managed_object_validate_for_insert(self.as_ptr(), &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -177,7 +177,7 @@ impl NSManagedObject {
     pub fn validate_for_update(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status =
-            unsafe { ffi::cd_managed_object_validate_for_update(self.as_ptr(), &mut out_error) };
+            unsafe { ffi::cd_managed_object_validate_for_update(self.as_ptr(), &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -188,7 +188,7 @@ impl NSManagedObject {
     pub fn validate_for_delete(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status =
-            unsafe { ffi::cd_managed_object_validate_for_delete(self.as_ptr(), &mut out_error) };
+            unsafe { ffi::cd_managed_object_validate_for_delete(self.as_ptr(), &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }

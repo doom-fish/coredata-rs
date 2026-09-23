@@ -83,8 +83,8 @@ impl NSPersistentCloudKitContainerOptions {
         let status = unsafe {
             ffi::cd_persistent_cloudkit_container_options_new(
                 container_identifier.as_ptr(),
-                &mut out_options,
-                &mut out_error,
+                &raw mut out_options,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -119,7 +119,7 @@ impl NSPersistentCloudKitContainerOptions {
             ffi::cd_persistent_cloudkit_container_options_set_database_scope(
                 self.as_ptr(),
                 database_scope.as_raw(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -161,7 +161,7 @@ impl NSPersistentStoreDescription {
                     core::ptr::null_mut(),
                     NSPersistentCloudKitContainerOptions::as_ptr,
                 ),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -181,8 +181,8 @@ impl NSPersistentCloudKitContainer {
             ffi::cd_persistent_cloudkit_container_new(
                 name.as_ptr(),
                 model.as_ptr(),
-                &mut out_container,
-                &mut out_error,
+                &raw mut out_container,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -248,7 +248,7 @@ impl NSPersistentCloudKitContainer {
                 self.as_ptr(),
                 raw_descriptions.as_ptr(),
                 count,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -267,7 +267,7 @@ impl NSPersistentCloudKitContainer {
             ffi::cd_persistent_cloudkit_container_load_persistent_stores(
                 self.as_ptr(),
                 timeout_seconds,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -306,7 +306,7 @@ impl NSPersistentCloudKitContainer {
             ffi::cd_persistent_cloudkit_container_initialize_schema(
                 self.as_ptr(),
                 options.bits(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -500,8 +500,8 @@ impl NSPersistentCloudKitContainerEventRequest {
         let status = unsafe {
             ffi::cd_persistent_cloudkit_event_request_fetch_after_date(
                 timestamp,
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -522,8 +522,8 @@ impl NSPersistentCloudKitContainerEventRequest {
                     core::ptr::null_mut(),
                     NSPersistentCloudKitContainerEvent::as_ptr,
                 ),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -538,8 +538,8 @@ impl NSPersistentCloudKitContainerEventRequest {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_persistent_cloudkit_event_request_fetch_request_for_events(
-                &mut out_fetch_request,
-                &mut out_error,
+                &raw mut out_fetch_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -578,8 +578,8 @@ impl NSPersistentCloudKitContainerEventRequest {
             ffi::cd_managed_object_context_execute_persistent_cloudkit_event_request(
                 context.as_ptr(),
                 self.as_ptr(),
-                &mut out_result,
-                &mut out_error,
+                &raw mut out_result,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -616,8 +616,8 @@ impl NSPersistentCloudKitContainerEventResult {
         let status = unsafe {
             ffi::cd_persistent_cloudkit_event_result_get_counts_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

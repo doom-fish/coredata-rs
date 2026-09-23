@@ -57,7 +57,7 @@ impl NSMergePolicy {
         let mut out_policy = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_merge_policy_new(merge_type.as_raw(), &mut out_policy, &mut out_error)
+            ffi::cd_merge_policy_new(merge_type.as_raw(), &raw mut out_policy, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -115,7 +115,7 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_set_merge_policy(
                 self.as_ptr(),
                 merge_policy.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

@@ -59,8 +59,8 @@ impl NSMappingModel {
             ffi::cd_mapping_model_inferred(
                 source_model.as_ptr(),
                 destination_model.as_ptr(),
-                &mut out_model,
-                &mut out_error,
+                &raw mut out_model,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -75,7 +75,7 @@ impl NSMappingModel {
         let mut out_model = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_mapping_model_from_url(path.as_ptr(), &mut out_model, &mut out_error)
+            ffi::cd_mapping_model_from_url(path.as_ptr(), &raw mut out_model, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -95,8 +95,8 @@ impl NSMappingModel {
         let status = unsafe {
             ffi::cd_mapping_model_get_entity_mapping_names_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -118,8 +118,8 @@ impl NSMigrationManager {
             ffi::cd_migration_manager_new(
                 source_model.as_ptr(),
                 destination_model.as_ptr(),
-                &mut out_manager,
-                &mut out_error,
+                &raw mut out_manager,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -218,7 +218,7 @@ impl NSMigrationManager {
                 destination_url.as_ptr(),
                 destination_store_type.as_ptr(),
                 opt_cstring_ptr(&destination_options),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

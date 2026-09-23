@@ -36,7 +36,7 @@ impl NSManagedObjectContext {
                 self.as_ptr(),
                 name.as_ref()
                     .map_or(core::ptr::null(), |name| name.as_c_str().as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -63,7 +63,7 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_set_parent_context(
                 self.as_ptr(),
                 parent_context.map_or(core::ptr::null_mut(), Self::as_ptr),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -148,8 +148,8 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_existing_object_with_id(
                 self.as_ptr(),
                 object_id.as_ptr(),
-                &mut out_object,
-                &mut out_error,
+                &raw mut out_object,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -171,8 +171,8 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_count_for_fetch_request(
                 self.as_ptr(),
                 request.as_ptr(),
-                &mut out_count,
-                &mut out_error,
+                &raw mut out_count,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -232,7 +232,7 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_set_automatically_merges_changes_from_parent(
                 self.as_ptr(),
                 i32::from(automatically_merges),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -259,7 +259,7 @@ impl NSManagedObjectContext {
                 author
                     .as_ref()
                     .map_or(core::ptr::null(), |author| author.as_c_str().as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -282,7 +282,7 @@ impl NSManagedObjectContext {
                 self.as_ptr(),
                 raw_objects.as_ptr(),
                 count,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -301,7 +301,7 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_merge_changes_from_history_transaction(
                 self.as_ptr(),
                 transaction.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

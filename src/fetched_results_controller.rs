@@ -84,8 +84,8 @@ impl NSFetchedResultsController {
                 cache_name
                     .as_ref()
                     .map_or(core::ptr::null(), |value| value.as_c_str().as_ptr()),
-                &mut out_controller,
-                &mut out_error,
+                &raw mut out_controller,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -98,7 +98,7 @@ impl NSFetchedResultsController {
     pub fn perform_fetch(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_fetched_results_controller_perform_fetch(self.as_ptr(), &mut out_error)
+            ffi::cd_fetched_results_controller_perform_fetch(self.as_ptr(), &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -159,8 +159,8 @@ impl NSFetchedResultsController {
         let status = unsafe {
             ffi::cd_fetched_results_controller_get_section_index_titles_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -185,8 +185,8 @@ impl NSFetchedResultsController {
                 self.as_ptr(),
                 section,
                 item,
-                &mut out_object,
-                &mut out_error,
+                &raw mut out_object,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -209,9 +209,9 @@ impl NSFetchedResultsController {
             ffi::cd_fetched_results_controller_index_path_for_object(
                 self.as_ptr(),
                 object.as_ptr(),
-                &mut section,
-                &mut item,
-                &mut out_error,
+                &raw mut section,
+                &raw mut item,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

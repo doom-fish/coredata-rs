@@ -38,8 +38,8 @@ impl NSPersistentStoreDescription {
         let status = unsafe {
             ffi::cd_persistent_store_description_new(
                 core::ptr::null(),
-                &mut out_description,
-                &mut out_error,
+                &raw mut out_description,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -56,8 +56,8 @@ impl NSPersistentStoreDescription {
         let status = unsafe {
             ffi::cd_persistent_store_description_new(
                 path.as_ptr(),
-                &mut out_description,
-                &mut out_error,
+                &raw mut out_description,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -81,7 +81,7 @@ impl NSPersistentStoreDescription {
             ffi::cd_persistent_store_description_set_type(
                 self.as_ptr(),
                 store_type.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -106,7 +106,7 @@ impl NSPersistentStoreDescription {
             ffi::cd_persistent_store_description_set_configuration(
                 self.as_ptr(),
                 opt_cstring_ptr(&configuration),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -129,7 +129,7 @@ impl NSPersistentStoreDescription {
             ffi::cd_persistent_store_description_set_url(
                 self.as_ptr(),
                 path.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -145,7 +145,7 @@ impl NSPersistentStoreDescription {
             ffi::cd_persistent_store_description_set_url(
                 self.as_ptr(),
                 core::ptr::null(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -166,7 +166,7 @@ impl NSPersistentStoreDescription {
             ffi::cd_persistent_store_description_set_read_only(
                 self.as_ptr(),
                 i32::from(read_only),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -184,7 +184,7 @@ impl NSPersistentStoreDescription {
     pub fn set_timeout(&self, timeout: f64) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_persistent_store_description_set_timeout(self.as_ptr(), timeout, &mut out_error)
+            ffi::cd_persistent_store_description_set_timeout(self.as_ptr(), timeout, &raw mut out_error)
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
@@ -199,8 +199,8 @@ impl NSPersistentStoreDescription {
         let status = unsafe {
             ffi::cd_persistent_store_description_sqlite_pragmas_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -221,7 +221,7 @@ impl NSPersistentStoreDescription {
                 self.as_ptr(),
                 name.as_ptr(),
                 opt_cstring_ptr(&value),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -298,7 +298,7 @@ impl NSPersistentStoreDescription {
                 self.as_ptr(),
                 key.as_ptr(),
                 opt_cstring_ptr(&value_json),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -376,7 +376,7 @@ impl NSPersistentContainer {
                 self.as_ptr(),
                 raw_descriptions.as_ptr(),
                 count,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

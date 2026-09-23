@@ -37,8 +37,8 @@ impl NSPersistentStoreCoordinator {
         let status = unsafe {
             ffi::cd_persistent_store_coordinator_new(
                 model.as_ptr(),
-                &mut out_coordinator,
-                &mut out_error,
+                &raw mut out_coordinator,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -83,7 +83,7 @@ impl NSPersistentStoreCoordinator {
                 opt_cstring_ptr(&configuration_name),
                 opt_cstring_ptr(&store_url),
                 opt_cstring_ptr(&options_json),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -103,8 +103,8 @@ impl NSPersistentContainer {
             ffi::cd_persistent_container_new(
                 name.as_ptr(),
                 model.as_ptr(),
-                &mut out_container,
-                &mut out_error,
+                &raw mut out_container,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -128,7 +128,7 @@ impl NSPersistentContainer {
             ffi::cd_persistent_container_load_persistent_stores(
                 self.as_ptr(),
                 timeout_seconds,
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

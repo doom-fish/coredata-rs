@@ -24,8 +24,8 @@ impl NSEntityDescription {
             ffi::cd_entity_description_entity_for_name(
                 name.as_ptr(),
                 context.as_ptr(),
-                &mut out_entity,
-                &mut out_error,
+                &raw mut out_entity,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -51,8 +51,8 @@ impl NSEntityDescription {
             ffi::cd_entity_description_insert_new_object_for_name(
                 name.as_ptr(),
                 context.as_ptr(),
-                &mut out_object,
-                &mut out_error,
+                &raw mut out_object,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -79,7 +79,7 @@ impl NSEntityDescription {
             ffi::cd_entity_description_set_abstract(
                 self.as_ptr(),
                 i32::from(abstract_flag),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -95,8 +95,8 @@ impl NSEntityDescription {
         let status = unsafe {
             ffi::cd_entity_description_get_user_info_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -113,7 +113,7 @@ impl NSEntityDescription {
             ffi::cd_entity_description_set_user_info_json(
                 self.as_ptr(),
                 user_info_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -147,7 +147,7 @@ impl NSEntityDescription {
                 modifier
                     .as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -174,7 +174,7 @@ impl NSEntityDescription {
                 identifier
                     .as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -190,8 +190,8 @@ impl NSEntityDescription {
         let status = unsafe {
             ffi::cd_entity_description_get_uniqueness_constraints_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -211,7 +211,7 @@ impl NSEntityDescription {
             ffi::cd_entity_description_set_uniqueness_constraints_json(
                 self.as_ptr(),
                 constraints_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -265,7 +265,7 @@ impl NSAttributeDescription {
                 class_name
                     .as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -281,8 +281,8 @@ impl NSAttributeDescription {
         let status = unsafe {
             ffi::cd_attribute_description_get_default_value_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -301,7 +301,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_default_value_json(
                 self.as_ptr(),
                 value_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -328,7 +328,7 @@ impl NSAttributeDescription {
                 self.as_ptr(),
                 name.as_ref()
                     .map_or(core::ptr::null(), |value| value.as_ptr()),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -355,7 +355,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_allows_external_binary_data_storage(
                 self.as_ptr(),
                 i32::from(allows_external_storage),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -382,7 +382,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_preserves_value_in_history_on_deletion(
                 self.as_ptr(),
                 i32::from(preserves_value),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -406,7 +406,7 @@ impl NSAttributeDescription {
             ffi::cd_attribute_description_set_allows_cloud_encryption(
                 self.as_ptr(),
                 i32::from(allows_encryption),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

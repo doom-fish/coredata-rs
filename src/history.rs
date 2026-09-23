@@ -118,8 +118,8 @@ impl NSPersistentHistoryChangeRequest {
         let status = unsafe {
             ffi::cd_persistent_history_change_request_fetch_after_token(
                 token.map_or(core::ptr::null_mut(), NSPersistentHistoryToken::as_ptr),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -136,8 +136,8 @@ impl NSPersistentHistoryChangeRequest {
         let status = unsafe {
             ffi::cd_persistent_history_change_request_fetch_after_date(
                 timestamp,
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -158,8 +158,8 @@ impl NSPersistentHistoryChangeRequest {
                     core::ptr::null_mut(),
                     NSPersistentHistoryTransaction::as_ptr,
                 ),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -177,8 +177,8 @@ impl NSPersistentHistoryChangeRequest {
         let status = unsafe {
             ffi::cd_persistent_history_change_request_delete_before_token(
                 token.map_or(core::ptr::null_mut(), NSPersistentHistoryToken::as_ptr),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -195,8 +195,8 @@ impl NSPersistentHistoryChangeRequest {
         let status = unsafe {
             ffi::cd_persistent_history_change_request_delete_before_date(
                 timestamp,
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -217,8 +217,8 @@ impl NSPersistentHistoryChangeRequest {
                     core::ptr::null_mut(),
                     NSPersistentHistoryTransaction::as_ptr,
                 ),
-                &mut out_request,
-                &mut out_error,
+                &raw mut out_request,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -255,8 +255,8 @@ impl NSPersistentHistoryChangeRequest {
             ffi::cd_managed_object_context_execute_persistent_history_change_request(
                 context.as_ptr(),
                 self.as_ptr(),
-                &mut out_result,
-                &mut out_error,
+                &raw mut out_result,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -395,8 +395,8 @@ impl NSPersistentHistoryChange {
         let status = unsafe {
             ffi::cd_persistent_history_change_get_tombstone_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -412,8 +412,8 @@ impl NSPersistentHistoryChange {
         let status = unsafe {
             ffi::cd_persistent_history_change_get_updated_properties_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

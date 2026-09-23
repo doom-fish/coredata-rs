@@ -39,7 +39,7 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_set_query_generation_from_token(
                 self.as_ptr(),
                 token.map_or(core::ptr::null_mut(), NSQueryGenerationToken::as_ptr),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

@@ -63,7 +63,7 @@ impl NSFetchRequest {
             ffi::cd_fetch_request_set_entity(
                 self.as_ptr(),
                 entity.map_or(core::ptr::null_mut(), NSEntityDescription::as_ptr),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -95,7 +95,7 @@ impl NSFetchRequest {
             ffi::cd_fetch_request_set_result_type(
                 self.as_ptr(),
                 result_type.as_raw(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -156,8 +156,8 @@ impl NSFetchRequest {
         let status = unsafe {
             ffi::cd_fetch_request_get_relationship_key_paths_for_prefetching_json(
                 self.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -181,7 +181,7 @@ impl NSFetchRequest {
             ffi::cd_fetch_request_set_relationship_key_paths_for_prefetching_json(
                 self.as_ptr(),
                 key_paths_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -259,8 +259,8 @@ impl NSFetchRequest {
             ffi::cd_fetch_request_execute_object_ids(
                 self.as_ptr(),
                 context.as_ptr(),
-                &mut out_array,
-                &mut out_error,
+                &raw mut out_array,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {

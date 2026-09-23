@@ -94,8 +94,8 @@ impl NSManagedObjectContext {
         let status = unsafe {
             ffi::cd_managed_object_context_new(
                 concurrency_type.as_raw(),
-                &mut out_context,
-                &mut out_error,
+                &raw mut out_context,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -124,7 +124,7 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_set_persistent_store_coordinator(
                 self.as_ptr(),
                 coordinator.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -141,7 +141,7 @@ impl NSManagedObjectContext {
     /// Wraps `NSManagedObjectContext.save(...)`.
     pub fn save(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_managed_object_context_save(self.as_ptr(), &mut out_error) };
+        let status = unsafe { ffi::cd_managed_object_context_save(self.as_ptr(), &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -155,7 +155,7 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_insert_object(
                 self.as_ptr(),
                 object.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -219,8 +219,8 @@ impl NSManagedObjectContext {
             ffi::cd_managed_object_context_execute_fetch_request(
                 self.as_ptr(),
                 request.as_ptr(),
-                &mut out_array,
-                &mut out_error,
+                &raw mut out_array,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -242,8 +242,8 @@ impl NSManagedObject {
             ffi::cd_managed_object_new(
                 entity.as_ptr(),
                 context.map_or(core::ptr::null_mut(), NSManagedObjectContext::as_ptr),
-                &mut out_object,
-                &mut out_error,
+                &raw mut out_object,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -269,7 +269,7 @@ impl NSManagedObject {
                 self.as_ptr(),
                 key.as_ptr(),
                 value_json.as_ptr(),
-                &mut out_error,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
@@ -287,8 +287,8 @@ impl NSManagedObject {
             ffi::cd_managed_object_get_value_json(
                 self.as_ptr(),
                 key.as_ptr(),
-                &mut out_json,
-                &mut out_error,
+                &raw mut out_json,
+                &raw mut out_error,
             )
         };
         if status != ffi::status::OK {
