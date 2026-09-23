@@ -141,7 +141,8 @@ impl NSManagedObjectContext {
     /// Wraps `NSManagedObjectContext.save(...)`.
     pub fn save(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_managed_object_context_save(self.as_ptr(), &raw mut out_error) };
+        let status =
+            unsafe { ffi::cd_managed_object_context_save(self.as_ptr(), &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }

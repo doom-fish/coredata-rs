@@ -165,8 +165,9 @@ impl NSManagedObject {
     /// Wraps `NSManagedObject.validate_for_insert(...)`.
     pub fn validate_for_insert(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
-        let status =
-            unsafe { ffi::cd_managed_object_validate_for_insert(self.as_ptr(), &raw mut out_error) };
+        let status = unsafe {
+            ffi::cd_managed_object_validate_for_insert(self.as_ptr(), &raw mut out_error)
+        };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -176,8 +177,9 @@ impl NSManagedObject {
     /// Wraps `NSManagedObject.validate_for_update(...)`.
     pub fn validate_for_update(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
-        let status =
-            unsafe { ffi::cd_managed_object_validate_for_update(self.as_ptr(), &raw mut out_error) };
+        let status = unsafe {
+            ffi::cd_managed_object_validate_for_update(self.as_ptr(), &raw mut out_error)
+        };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -187,8 +189,9 @@ impl NSManagedObject {
     /// Wraps `NSManagedObject.validate_for_delete(...)`.
     pub fn validate_for_delete(&self) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
-        let status =
-            unsafe { ffi::cd_managed_object_validate_for_delete(self.as_ptr(), &raw mut out_error) };
+        let status = unsafe {
+            ffi::cd_managed_object_validate_for_delete(self.as_ptr(), &raw mut out_error)
+        };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }

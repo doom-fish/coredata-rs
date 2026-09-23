@@ -184,7 +184,11 @@ impl NSPersistentStoreDescription {
     pub fn set_timeout(&self, timeout: f64) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_persistent_store_description_set_timeout(self.as_ptr(), timeout, &raw mut out_error)
+            ffi::cd_persistent_store_description_set_timeout(
+                self.as_ptr(),
+                timeout,
+                &raw mut out_error,
+            )
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });

@@ -79,7 +79,8 @@ impl NSEntityMapping {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_mapping = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_entity_mapping_new(&raw mut out_mapping, &raw mut out_error) };
+        let status =
+            unsafe { ffi::cd_entity_mapping_new(&raw mut out_mapping, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -187,7 +188,8 @@ impl NSPropertyMapping {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_mapping = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_property_mapping_new(&raw mut out_mapping, &raw mut out_error) };
+        let status =
+            unsafe { ffi::cd_property_mapping_new(&raw mut out_mapping, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }

@@ -19,12 +19,12 @@
     clippy::use_self
 )]
 
-/// Core Data batch-operation wrappers mirroring `NSBatchDeleteRequest`, `NSBatchInsertRequest`, and `NSBatchUpdateRequest`.
-pub mod batch_operation;
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 /// Async wrappers for Core Data completion-handler APIs.
 pub mod async_api;
+/// Core Data batch-operation wrappers mirroring `NSBatchDeleteRequest`, `NSBatchInsertRequest`, and `NSBatchUpdateRequest`.
+pub mod batch_operation;
 /// Core Data CloudKit mirroring wrappers.
 pub mod cloudkit_mirroring;
 /// Named Core Data constants and notification keys.

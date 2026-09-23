@@ -30,7 +30,11 @@ impl NSAtomicStoreCacheNode {
         let mut out_node = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_atomic_store_cache_node_new(object_id.as_ptr(), &raw mut out_node, &raw mut out_error)
+            ffi::cd_atomic_store_cache_node_new(
+                object_id.as_ptr(),
+                &raw mut out_node,
+                &raw mut out_error,
+            )
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });

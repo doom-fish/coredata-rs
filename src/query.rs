@@ -68,7 +68,11 @@ impl NSFetchRequest {
         let mut out_request = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_fetch_request_new(entity_name.as_ptr(), &raw mut out_request, &raw mut out_error)
+            ffi::cd_fetch_request_new(
+                entity_name.as_ptr(),
+                &raw mut out_request,
+                &raw mut out_error,
+            )
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });

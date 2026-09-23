@@ -20,9 +20,7 @@ fn cloudkit_configuration_and_event_requests_round_trip_without_loading_stores(
 
     let roundtrip = container.persistent_store_descriptions()?[0]
         .cloudkit_container_options()?
-        .ok_or_else(|| {
-            std::io::Error::other("missing CloudKit options")
-        })?;
+        .ok_or_else(|| std::io::Error::other("missing CloudKit options"))?;
     assert_eq!(
         roundtrip.container_identifier()?,
         "iCloud.com.example.coredata-rs"

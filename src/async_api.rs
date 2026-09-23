@@ -285,7 +285,9 @@ extern "C" fn fetch_history_cb(result: *mut c_void, error: *const i8, ctx: *mut 
             // SAFETY: ctx is a valid SyncCompletionPtr from AsyncCompletion::create();
             // the bridge fires this callback exactly once.
             unsafe {
-                AsyncCompletion::<crate::history::NSPersistentHistoryResult>::complete_err(ctx, msg);
+                AsyncCompletion::<crate::history::NSPersistentHistoryResult>::complete_err(
+                    ctx, msg,
+                );
             };
         } else if !result.is_null() {
             // SAFETY: result is a non-null, retained NSPersistentHistoryResult pointer

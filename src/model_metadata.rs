@@ -59,7 +59,8 @@ impl NSPropertyDescription {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_property = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status = unsafe { ffi::cd_property_description_new(&raw mut out_property, &raw mut out_error) };
+        let status =
+            unsafe { ffi::cd_property_description_new(&raw mut out_property, &raw mut out_error) };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -134,8 +135,9 @@ impl NSFetchedPropertyDescription {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_property = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status =
-            unsafe { ffi::cd_fetched_property_description_new(&raw mut out_property, &raw mut out_error) };
+        let status = unsafe {
+            ffi::cd_fetched_property_description_new(&raw mut out_property, &raw mut out_error)
+        };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -183,8 +185,9 @@ impl NSExpressionDescription {
     pub fn new() -> Result<Self, CoreDataError> {
         let mut out_property = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
-        let status =
-            unsafe { ffi::cd_expression_description_new(&raw mut out_property, &raw mut out_error) };
+        let status = unsafe {
+            ffi::cd_expression_description_new(&raw mut out_property, &raw mut out_error)
+        };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
@@ -412,7 +415,11 @@ impl NSFetchIndexDescription {
         let name = cstring_from_str(name, "fetch index description name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_fetch_index_description_set_name(self.as_ptr(), name.as_ptr(), &raw mut out_error)
+            ffi::cd_fetch_index_description_set_name(
+                self.as_ptr(),
+                name.as_ptr(),
+                &raw mut out_error,
+            )
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });

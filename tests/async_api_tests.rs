@@ -109,8 +109,13 @@ fn test_perform_save_async_empty_context_ok() {
 #[test]
 fn test_batch_insert_async_resolves() {
     let fixture = basic_model().unwrap();
-    let (container, artifact) =
-        sqlite_container("AsyncBatchInsert", &fixture.model, "async-batch-insert", false).unwrap();
+    let (container, artifact) = sqlite_container(
+        "AsyncBatchInsert",
+        &fixture.model,
+        "async-batch-insert",
+        false,
+    )
+    .unwrap();
     let bg = container.new_background_context().unwrap();
 
     let req = NSBatchInsertRequest::new(
@@ -138,8 +143,13 @@ fn test_batch_insert_async_resolves() {
 #[test]
 fn test_batch_update_async_resolves() {
     let fixture = basic_model().unwrap();
-    let (container, artifact) =
-        sqlite_container("AsyncBatchUpdate", &fixture.model, "async-batch-update", false).unwrap();
+    let (container, artifact) = sqlite_container(
+        "AsyncBatchUpdate",
+        &fixture.model,
+        "async-batch-update",
+        false,
+    )
+    .unwrap();
     let bg = container.new_background_context().unwrap();
 
     // Pre-insert a row so the update has something to act on.

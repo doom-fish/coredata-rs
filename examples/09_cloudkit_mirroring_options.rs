@@ -21,11 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let roundtrip = container.persistent_store_descriptions()?[0]
         .cloudkit_container_options()?
-        .ok_or_else(|| {
-            std::io::Error::other(
-                "missing CloudKit container options",
-            )
-        })?;
+        .ok_or_else(|| std::io::Error::other("missing CloudKit container options"))?;
     assert_eq!(
         roundtrip.container_identifier()?,
         "iCloud.com.example.coredata-rs"

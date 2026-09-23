@@ -20,7 +20,11 @@ impl NSPredicate {
         let mut out_predicate = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
-            ffi::cd_predicate_new_with_value(i32::from(value), &raw mut out_predicate, &raw mut out_error)
+            ffi::cd_predicate_new_with_value(
+                i32::from(value),
+                &raw mut out_predicate,
+                &raw mut out_error,
+            )
         };
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });

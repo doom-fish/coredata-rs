@@ -55,8 +55,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // NSBatchInsertRequest requires a SQLite-backed store. We use a temp
     // SQLite container here to demonstrate the async batch plumbing.
     let fixture2 = basic_model()?;
-    let (sqlite_container, artifact) =
-        sqlite_container("AsyncBatchExample", &fixture2.model, "async-batch-ex", false)?;
+    let (sqlite_container, artifact) = sqlite_container(
+        "AsyncBatchExample",
+        &fixture2.model,
+        "async-batch-ex",
+        false,
+    )?;
     let bg = sqlite_container.new_background_context()?;
     let insert_req = NSBatchInsertRequest::new(
         "Person",
