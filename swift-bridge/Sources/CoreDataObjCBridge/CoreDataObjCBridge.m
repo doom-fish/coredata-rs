@@ -59,7 +59,7 @@ NSPredicate *_Nullable CDXPredicateWithFormat(
     NSError *_Nullable *_Nullable error
 ) {
     @try {
-        return [NSPredicate predicateWithFormat:format argumentArray:arguments];
+        return [NSPredicate predicateWithFormat:format argumentArray:arguments ?: @[]];
     } @catch (NSException *exception) {
         CDXAssignException(exception, error);
         return nil;
