@@ -4,8 +4,8 @@ use crate::context::{NSManagedObject, NSManagedObjectContext};
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, json_cstring,
-    parse_json_ptr, take_string,
+    collect_array, cstring_from_str, error_from_status, impl_sync_object_wrapper, json_cstring,
+    parse_json_ptr, status_result, take_string,
 };
 use crate::schema::NSEntityDescription;
 use crate::value::{Value, ValuePayload};
@@ -46,7 +46,10 @@ impl NSSnapshotEventType {
     }
 }
 
-impl_object_wrapper!(NSManagedObjectID);
+impl_sync_object_wrapper!(NSManagedObjectID);
+
+type ObjectFlagGetter =
+    unsafe extern "C" fn(*mut core::ffi::c_void, *mut i32, *mut *mut core::ffi::c_char) -> i32;
 
 fn value_map_from_json_ptr(
     ptr: *mut core::ffi::c_char,
@@ -60,51 +63,77 @@ fn value_map_from_json_ptr(
 }
 
 impl NSManagedObject {
+    fn flag(&self, getter: ObjectFlagGetter) -> Result<bool, CoreDataError> {
+        let mut out_value = 0_i32;
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe { getter(self.as_ptr(), &raw mut out_value, &raw mut out_error) };
+        status_result(status, out_error)?;
+        Ok(out_value != 0)
+    }
+
     /// Wraps `NSManagedObject.managed_object_context(...)`.
     pub fn managed_object_context(&self) -> Result<Option<NSManagedObjectContext>, CoreDataError> {
-        let ptr = unsafe { ffi::cd_managed_object_get_managed_object_context(self.as_ptr()) };
-        if ptr.is_null() {
+        let mut out_context = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_get_managed_object_context(
+                self.as_ptr(),
+                &raw mut out_context,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        if out_context.is_null() {
             return Ok(None);
         }
         Ok(Some(unsafe {
-            NSManagedObjectContext::from_retained_ptr(ptr, "managed object context")?
+            NSManagedObjectContext::from_retained_ptr(out_context, "managed object context")?
         }))
     }
 
     /// Wraps `NSManagedObject.object_id(...)`.
     pub fn object_id(&self) -> Result<NSManagedObjectID, CoreDataError> {
-        let ptr = unsafe { ffi::cd_managed_object_get_object_id(self.as_ptr()) };
-        unsafe { NSManagedObjectID::from_retained_ptr(ptr, "managed object object ID") }
+        let mut out_object_id = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_get_object_id(
+                self.as_ptr(),
+                &raw mut out_object_id,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        unsafe { NSManagedObjectID::from_retained_ptr(out_object_id, "managed object object ID") }
     }
 
     /// Wraps `NSManagedObject.is_inserted(...)`.
-    pub fn is_inserted(&self) -> bool {
-        unsafe { ffi::cd_managed_object_get_inserted(self.as_ptr()) != 0 }
+    pub fn is_inserted(&self) -> Result<bool, CoreDataError> {
+        self.flag(ffi::cd_managed_object_get_inserted)
     }
 
     /// Wraps `NSManagedObject.is_updated(...)`.
-    pub fn is_updated(&self) -> bool {
-        unsafe { ffi::cd_managed_object_get_updated(self.as_ptr()) != 0 }
+    pub fn is_updated(&self) -> Result<bool, CoreDataError> {
+        self.flag(ffi::cd_managed_object_get_updated)
     }
 
     /// Wraps `NSManagedObject.is_deleted(...)`.
-    pub fn is_deleted(&self) -> bool {
-        unsafe { ffi::cd_managed_object_get_deleted(self.as_ptr()) != 0 }
+    pub fn is_deleted(&self) -> Result<bool, CoreDataError> {
+        self.flag(ffi::cd_managed_object_get_deleted)
     }
 
     /// Wraps `NSManagedObject.has_changes(...)`.
-    pub fn has_changes(&self) -> bool {
-        unsafe { ffi::cd_managed_object_get_has_changes(self.as_ptr()) != 0 }
+    pub fn has_changes(&self) -> Result<bool, CoreDataError> {
+        self.flag(ffi::cd_managed_object_get_has_changes)
     }
 
     /// Wraps `NSManagedObject.has_persistent_changed_values(...)`.
-    pub fn has_persistent_changed_values(&self) -> bool {
-        unsafe { ffi::cd_managed_object_get_has_persistent_changed_values(self.as_ptr()) != 0 }
+    pub fn has_persistent_changed_values(&self) -> Result<bool, CoreDataError> {
+        self.flag(ffi::cd_managed_object_get_has_persistent_changed_values)
     }
 
     /// Wraps `NSManagedObject.is_fault(...)`.
-    pub fn is_fault(&self) -> bool {
-        unsafe { ffi::cd_managed_object_get_fault(self.as_ptr()) != 0 }
+    pub fn is_fault(&self) -> Result<bool, CoreDataError> {
+        self.flag(ffi::cd_managed_object_get_fault)
     }
 
     /// Wraps `NSManagedObject.has_fault_for_relationship_named(...)`.
@@ -113,12 +142,18 @@ impl NSManagedObject {
         relationship_name: &str,
     ) -> Result<bool, CoreDataError> {
         let relationship_name = cstring_from_str(relationship_name, "relationship name")?;
-        Ok(unsafe {
+        let mut out_value = 0_i32;
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_managed_object_has_fault_for_relationship_named(
                 self.as_ptr(),
                 relationship_name.as_ptr(),
-            ) != 0
-        })
+                &raw mut out_value,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        Ok(out_value != 0)
     }
 
     /// Wraps `NSManagedObject.object_ids_for_relationship_named(...)`.
@@ -127,13 +162,18 @@ impl NSManagedObject {
         relationship_name: &str,
     ) -> Result<Vec<NSManagedObjectID>, CoreDataError> {
         let relationship_name = cstring_from_str(relationship_name, "relationship name")?;
-        let array_ptr = unsafe {
+        let mut out_array = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_managed_object_object_ids_for_relationship_named(
                 self.as_ptr(),
                 relationship_name.as_ptr(),
+                &raw mut out_array,
+                &raw mut out_error,
             )
         };
-        collect_array(array_ptr, "managed object relationship object IDs")
+        status_result(status, out_error)?;
+        collect_array(out_array, "managed object relationship object IDs")
     }
 
     /// Wraps `NSManagedObject.committed_values(...)`.

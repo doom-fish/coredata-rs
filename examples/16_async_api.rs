@@ -71,7 +71,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             m
         }],
     )?;
-    insert_req.set_result_type(BatchInsertRequestResultType::StatusOnly);
+    insert_req.set_result_type(BatchInsertRequestResultType::StatusOnly)?;
 
     AsyncBatchOperation::insert(&bg, &insert_req).await?;
     println!("✅ AsyncBatchOperation.insert OK");

@@ -5,8 +5,18 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::history::NSPersistentHistoryTransaction;
 use crate::managed_object::NSManagedObjectID;
-use crate::private::{collect_array, cstring_from_str, error_from_status, take_string};
+use crate::private::{
+    collect_array, cstring_from_str, error_from_status, status_result, take_string,
+};
 use crate::query::NSFetchRequest;
+
+type ObjectListGetter = unsafe extern "C" fn(
+    *mut core::ffi::c_void,
+    *mut *mut core::ffi::c_void,
+    *mut *mut core::ffi::c_char,
+) -> i32;
+type ContextAction =
+    unsafe extern "C" fn(*mut core::ffi::c_void, *mut *mut core::ffi::c_char) -> i32;
 
 impl NSManagedObjectContextConcurrencyType {
     pub(crate) const fn from_raw(raw: i32) -> Self {
@@ -19,10 +29,37 @@ impl NSManagedObjectContextConcurrencyType {
 }
 
 impl NSManagedObjectContext {
+    fn object_list(
+        &self,
+        getter: ObjectListGetter,
+        what: &str,
+    ) -> Result<Vec<NSManagedObject>, CoreDataError> {
+        let mut out_array = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe { getter(self.as_ptr(), &raw mut out_array, &raw mut out_error) };
+        status_result(status, out_error)?;
+        collect_array(out_array, what)
+    }
+
+    fn run_action(&self, action: ContextAction) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe { action(self.as_ptr(), &raw mut out_error) };
+        status_result(status, out_error)
+    }
+
     /// Wraps `NSManagedObjectContext.name(...)`.
-    pub fn name(&self) -> Option<String> {
-        let ptr = unsafe { ffi::cd_managed_object_context_get_name(self.as_ptr()) };
-        unsafe { take_string(ptr) }
+    pub fn name(&self) -> Result<Option<String>, CoreDataError> {
+        let mut out_name = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_get_name(
+                self.as_ptr(),
+                &raw mut out_name,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        Ok(unsafe { take_string(out_name) })
     }
 
     /// Mirrors `NSManagedObjectContext.name`.
@@ -47,12 +84,21 @@ impl NSManagedObjectContext {
 
     /// Wraps `NSManagedObjectContext.parent_context(...)`.
     pub fn parent_context(&self) -> Result<Option<Self>, CoreDataError> {
-        let ptr = unsafe { ffi::cd_managed_object_context_get_parent_context(self.as_ptr()) };
-        if ptr.is_null() {
+        let mut out_parent = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_get_parent_context(
+                self.as_ptr(),
+                &raw mut out_parent,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        if out_parent.is_null() {
             return Ok(None);
         }
         Ok(Some(unsafe {
-            Self::from_retained_ptr(ptr, "managed object context parent context")?
+            Self::from_retained_ptr(out_parent, "managed object context parent context")?
         }))
     }
 
@@ -81,30 +127,34 @@ impl NSManagedObjectContext {
 
     /// Wraps `NSManagedObjectContext.inserted_objects(...)`.
     pub fn inserted_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
-        let array_ptr =
-            unsafe { ffi::cd_managed_object_context_get_inserted_objects(self.as_ptr()) };
-        collect_array(array_ptr, "managed object context inserted objects")
+        self.object_list(
+            ffi::cd_managed_object_context_get_inserted_objects,
+            "managed object context inserted objects",
+        )
     }
 
     /// Wraps `NSManagedObjectContext.updated_objects(...)`.
     pub fn updated_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
-        let array_ptr =
-            unsafe { ffi::cd_managed_object_context_get_updated_objects(self.as_ptr()) };
-        collect_array(array_ptr, "managed object context updated objects")
+        self.object_list(
+            ffi::cd_managed_object_context_get_updated_objects,
+            "managed object context updated objects",
+        )
     }
 
     /// Wraps `NSManagedObjectContext.deleted_objects(...)`.
     pub fn deleted_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
-        let array_ptr =
-            unsafe { ffi::cd_managed_object_context_get_deleted_objects(self.as_ptr()) };
-        collect_array(array_ptr, "managed object context deleted objects")
+        self.object_list(
+            ffi::cd_managed_object_context_get_deleted_objects,
+            "managed object context deleted objects",
+        )
     }
 
     /// Wraps `NSManagedObjectContext.registered_objects(...)`.
     pub fn registered_objects(&self) -> Result<Vec<NSManagedObject>, CoreDataError> {
-        let array_ptr =
-            unsafe { ffi::cd_managed_object_context_get_registered_objects(self.as_ptr()) };
-        collect_array(array_ptr, "managed object context registered objects")
+        self.object_list(
+            ffi::cd_managed_object_context_get_registered_objects,
+            "managed object context registered objects",
+        )
     }
 
     /// Wraps `NSManagedObjectContext.object_registered_for_id(...)`.
@@ -112,17 +162,22 @@ impl NSManagedObjectContext {
         &self,
         object_id: &NSManagedObjectID,
     ) -> Result<Option<NSManagedObject>, CoreDataError> {
-        let ptr = unsafe {
+        let mut out_object = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_managed_object_context_object_registered_for_id(
                 self.as_ptr(),
                 object_id.as_ptr(),
+                &raw mut out_object,
+                &raw mut out_error,
             )
         };
-        if ptr.is_null() {
+        status_result(status, out_error)?;
+        if out_object.is_null() {
             return Ok(None);
         }
         Ok(Some(unsafe {
-            NSManagedObject::from_retained_ptr(ptr, "managed object registered object")?
+            NSManagedObject::from_retained_ptr(out_object, "managed object registered object")?
         }))
     }
 
@@ -131,10 +186,18 @@ impl NSManagedObjectContext {
         &self,
         object_id: &NSManagedObjectID,
     ) -> Result<NSManagedObject, CoreDataError> {
-        let ptr = unsafe {
-            ffi::cd_managed_object_context_object_with_id(self.as_ptr(), object_id.as_ptr())
+        let mut out_object = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_object_with_id(
+                self.as_ptr(),
+                object_id.as_ptr(),
+                &raw mut out_object,
+                &raw mut out_error,
+            )
         };
-        unsafe { NSManagedObject::from_retained_ptr(ptr, "managed object context object") }
+        status_result(status, out_error)?;
+        unsafe { NSManagedObject::from_retained_ptr(out_object, "managed object context object") }
     }
 
     /// Wraps `NSManagedObjectContext.existing_object(...)`.
@@ -183,43 +246,56 @@ impl NSManagedObjectContext {
     }
 
     /// Wraps `NSManagedObjectContext.refresh_object(...)`.
-    pub fn refresh_object(&self, object: &NSManagedObject, merge_changes: bool) {
-        unsafe {
+    pub fn refresh_object(
+        &self,
+        object: &NSManagedObject,
+        merge_changes: bool,
+    ) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_managed_object_context_refresh_object(
                 self.as_ptr(),
                 object.as_ptr(),
                 i32::from(merge_changes),
-            );
-        }
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
     }
 
     /// Wraps `NSManagedObjectContext.process_pending_changes(...)`.
-    pub fn process_pending_changes(&self) {
-        unsafe { ffi::cd_managed_object_context_process_pending_changes(self.as_ptr()) }
+    pub fn process_pending_changes(&self) -> Result<(), CoreDataError> {
+        self.run_action(ffi::cd_managed_object_context_process_pending_changes)
     }
 
     /// Wraps `NSManagedObjectContext.reset(...)`.
-    pub fn reset(&self) {
-        unsafe { ffi::cd_managed_object_context_reset(self.as_ptr()) }
+    pub fn reset(&self) -> Result<(), CoreDataError> {
+        self.run_action(ffi::cd_managed_object_context_reset)
     }
 
     /// Wraps `NSManagedObjectContext.rollback(...)`.
-    pub fn rollback(&self) {
-        unsafe { ffi::cd_managed_object_context_rollback(self.as_ptr()) }
+    pub fn rollback(&self) -> Result<(), CoreDataError> {
+        self.run_action(ffi::cd_managed_object_context_rollback)
     }
 
     /// Wraps `NSManagedObjectContext.refresh_all_objects(...)`.
-    pub fn refresh_all_objects(&self) {
-        unsafe { ffi::cd_managed_object_context_refresh_all_objects(self.as_ptr()) }
+    pub fn refresh_all_objects(&self) -> Result<(), CoreDataError> {
+        self.run_action(ffi::cd_managed_object_context_refresh_all_objects)
     }
 
     /// Wraps `NSManagedObjectContext.automatically_merges_changes_from_parent(...)`.
-    pub fn automatically_merges_changes_from_parent(&self) -> bool {
-        unsafe {
+    pub fn automatically_merges_changes_from_parent(&self) -> Result<bool, CoreDataError> {
+        let mut out_value = 0_i32;
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_managed_object_context_get_automatically_merges_changes_from_parent(
                 self.as_ptr(),
-            ) != 0
-        }
+                &raw mut out_value,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        Ok(out_value != 0)
     }
 
     /// Mirrors `NSManagedObjectContext.automatically_merges_changes_from_parent`.
@@ -242,9 +318,18 @@ impl NSManagedObjectContext {
     }
 
     /// Wraps `NSManagedObjectContext.transaction_author(...)`.
-    pub fn transaction_author(&self) -> Option<String> {
-        let ptr = unsafe { ffi::cd_managed_object_context_get_transaction_author(self.as_ptr()) };
-        unsafe { take_string(ptr) }
+    pub fn transaction_author(&self) -> Result<Option<String>, CoreDataError> {
+        let mut out_author = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_get_transaction_author(
+                self.as_ptr(),
+                &raw mut out_author,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        Ok(unsafe { take_string(out_author) })
     }
 
     /// Mirrors `NSManagedObjectContext.transaction_author`.

@@ -59,4 +59,6 @@ extern "C" {
         out_array: *mut *mut c_void,
         out_error: *mut *mut c_char,
     ) -> i32;
+    pub fn cd_fetch_request_get_fetch_limit(request: *mut c_void) -> u64;
+    pub fn cd_fetch_request_get_fetch_offset(request: *mut c_void) -> u64;
 }

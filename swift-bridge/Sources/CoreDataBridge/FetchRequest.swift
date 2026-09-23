@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_fetch_request_new")
@@ -16,7 +17,7 @@ public func cdFetchRequestNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -44,7 +45,7 @@ public func cdFetchRequestSetEntity(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -84,7 +85,7 @@ public func cdFetchRequestSetSortDescriptorsJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -94,7 +95,23 @@ public func cdFetchRequestSetFetchLimit(_ requestPtr: UnsafeMutableRawPointer?, 
         return
     }
     let request: NSFetchRequest<NSManagedObject> = cdBorrow(requestPtr)
-    request.fetchLimit = Int(fetchLimit)
+    request.fetchLimit = Int(min(fetchLimit, UInt64(UInt32.max)))
+}
+
+@_cdecl("cd_fetch_request_get_fetch_limit")
+public func cdFetchRequestGetFetchLimit(_ requestPtr: UnsafeMutableRawPointer?) -> UInt64 {
+    guard let request = try? cdArg(requestPtr, "fetch request") as NSFetchRequest<NSFetchRequestResult> else {
+        return 0
+    }
+    return UInt64(clamping: request.fetchLimit)
+}
+
+@_cdecl("cd_fetch_request_get_fetch_offset")
+public func cdFetchRequestGetFetchOffset(_ requestPtr: UnsafeMutableRawPointer?) -> UInt64 {
+    guard let request = try? cdArg(requestPtr, "fetch request") as NSFetchRequest<NSFetchRequestResult> else {
+        return 0
+    }
+    return UInt64(clamping: request.fetchOffset)
 }
 
 @_cdecl("cd_fetch_request_set_fetch_offset")
@@ -103,7 +120,7 @@ public func cdFetchRequestSetFetchOffset(_ requestPtr: UnsafeMutableRawPointer?,
         return
     }
     let request: NSFetchRequest<NSManagedObject> = cdBorrow(requestPtr)
-    request.fetchOffset = Int(fetchOffset)
+    request.fetchOffset = Int(clamping: fetchOffset)
 }
 
 @_cdecl("cd_fetch_request_get_result_type")
@@ -121,14 +138,16 @@ public func cdFetchRequestSetResultType(
     _ resultType: UInt64,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    guard let requestPtr else {
-        cdWriteError(cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch request"), to: outError)
-        return CDR_INVALID_ARGUMENT
+    cdStatus(outError) {
+        let request: NSFetchRequest<NSFetchRequestResult> = try cdArg(requestPtr, "fetch request")
+        let known: [NSFetchRequestResultType] = [
+            .managedObjectResultType, .managedObjectIDResultType, .dictionaryResultType, .countResultType,
+        ]
+        guard let resolved = known.first(where: { UInt64($0.rawValue) == resultType }) else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Unsupported fetch request result type \(resultType)")
+        }
+        request.resultType = resolved
     }
-    let resolvedResultType = NSFetchRequestResultType(rawValue: UInt(resultType))
-    let request: NSFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-    request.resultType = resolvedResultType
-    return CDR_OK
 }
 
 @_cdecl("cd_fetch_request_get_includes_subentities")
@@ -200,7 +219,7 @@ public func cdFetchRequestGetRelationshipKeyPathsForPrefetchingJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -219,7 +238,7 @@ public func cdFetchRequestSetRelationshipKeyPathsForPrefetchingJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -265,7 +284,7 @@ public func cdFetchRequestGetFetchBatchSize(_ requestPtr: UnsafeMutableRawPointe
         return 0
     }
     let request: NSFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-    return UInt64(request.fetchBatchSize)
+    return UInt64(clamping: request.fetchBatchSize)
 }
 
 @_cdecl("cd_fetch_request_set_fetch_batch_size")
@@ -274,7 +293,7 @@ public func cdFetchRequestSetFetchBatchSize(_ requestPtr: UnsafeMutableRawPointe
         return
     }
     let request: NSFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-    request.fetchBatchSize = Int(fetchBatchSize)
+    request.fetchBatchSize = Int(clamping: fetchBatchSize)
 }
 
 @_cdecl("cd_fetch_request_get_should_refresh_refetched_objects")
@@ -299,25 +318,19 @@ public func cdFetchRequestSetShouldRefreshRefetchedObjects(_ requestPtr: UnsafeM
 public func cdFetchRequestExecuteObjectIDs(
     _ requestPtr: UnsafeMutableRawPointer?,
     _ contextPtr: UnsafeMutableRawPointer?,
-    _ outArray: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outArray: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let requestPtr, let contextPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch request or managed object context")
+    cdStatus(outError) {
+        let request: NSFetchRequest<NSFetchRequestResult> = try cdArg(requestPtr, "fetch request")
+        guard let snapshot = try cdObjCValue({ CDXCopyObject(request, $0) }) as? NSFetchRequest<NSFetchRequestResult> else {
+            throw cdBridgeNSError(code: CDR_FAILURE, message: "Could not copy the fetch request")
         }
-        let request: NSFetchRequest<NSManagedObjectID> = cdBorrow(requestPtr)
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let originalResultType = request.resultType
-        request.resultType = .managedObjectIDResultType
-        defer {
-            request.resultType = originalResultType
+        snapshot.resultType = .managedObjectIDResultType
+        let results = try cdWithContext(contextPtr) { context in try cdFetch(snapshot, in: context) }
+        guard let objectIDs = results as? [NSManagedObjectID] else {
+            throw cdBridgeNSError(code: CDR_FAILURE, message: "The fetch did not return managed object IDs")
         }
-        let results = try context.fetch(request)
-        outArray?.pointee = cdRetain(results as NSArray)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+        outArray?.pointee = cdRetain(objectIDs as NSArray)
     }
 }

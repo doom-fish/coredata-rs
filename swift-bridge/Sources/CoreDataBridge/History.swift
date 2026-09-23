@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_persistent_history_change_request_fetch_after_token")
@@ -75,37 +76,29 @@ public func cdPersistentHistoryChangeRequestGetResultType(_ requestPtr: UnsafeMu
 }
 
 @_cdecl("cd_persistent_history_change_request_set_result_type")
-public func cdPersistentHistoryChangeRequestSetResultType(_ requestPtr: UnsafeMutableRawPointer?, _ resultType: Int64) {
-    guard let requestPtr else {
-        return
+public func cdPersistentHistoryChangeRequestSetResultType(
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ resultType: Int64,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let request: NSPersistentHistoryChangeRequest = try cdArg(requestPtr, "history change request")
+        let raw = try cdKnownRawValue(resultType, in: [0, 1, 2, 3, 4, 5], "persistent history result type")
+        request.resultType = NSPersistentHistoryResultType(rawValue: Int(raw)) ?? .transactionsAndChanges
     }
-    let request: NSPersistentHistoryChangeRequest = cdBorrow(requestPtr)
-    request.resultType = NSPersistentHistoryResultType(rawValue: Int(resultType)) ?? .transactionsAndChanges
 }
 
 @_cdecl("cd_managed_object_context_execute_persistent_history_change_request")
 public func cdManagedObjectContextExecutePersistentHistoryChangeRequest(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outResult: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let contextPtr, let requestPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or history request")
-        }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let request: NSPersistentHistoryChangeRequest = cdBorrow(requestPtr)
-        let result = try context.execute(request) as? NSPersistentHistoryResult
-        if let result {
-            outResult?.pointee = cdRetain(result)
-        } else {
-            outResult?.pointee = nil
-        }
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        let request: NSPersistentHistoryChangeRequest = try cdArg(requestPtr, "history change request")
+        let result = try cdExecuteRequest(contextPtr, request, as: NSPersistentHistoryResult.self)
+        outResult?.pointee = result.map(cdRetain)
     }
 }
 
@@ -305,7 +298,7 @@ public func cdPersistentHistoryChangeGetTombstoneJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -325,7 +318,7 @@ public func cdPersistentHistoryChangeGetUpdatedPropertiesJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 

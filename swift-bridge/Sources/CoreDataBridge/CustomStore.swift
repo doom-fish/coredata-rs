@@ -16,7 +16,7 @@ public func cdAtomicStoreCacheNodeNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -47,7 +47,7 @@ public func cdIncrementalStoreNodeNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -86,6 +86,6 @@ public func cdIncrementalStoreNodeUpdate(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }

@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 func cdValidationRulePayloads(for property: NSPropertyDescription) -> [CDValidationRulePayload] {
@@ -9,10 +10,12 @@ func cdValidationRulePayloads(for property: NSPropertyDescription) -> [CDValidat
     }
 }
 
-func cdSetValidationRules(_ rules: [CDValidationRulePayload], on property: NSPropertyDescription) {
-    let predicates = rules.map { NSPredicate(format: $0.predicateFormat) }
+func cdSetValidationRules(_ rules: [CDValidationRulePayload], on property: NSPropertyDescription) throws {
+    let predicates = try rules.map { rule in
+        try cdObjCValue { CDXPredicateWithFormat(rule.predicateFormat, nil, $0) }
+    }
     let warnings = rules.map(\.warning)
-    property.setValidationPredicates(predicates, withValidationWarnings: warnings)
+    try cdObjCCall { CDXSetValidationPredicates(property, predicates, warnings, $0) }
 }
 
 @_cdecl("cd_attribute_description_get_validation_rules_json")
@@ -30,7 +33,7 @@ public func cdAttributeDescriptionGetValidationRulesJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -46,11 +49,11 @@ public func cdAttributeDescriptionSetValidationRulesJSON(
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
         let rules = try cdDecodeJSON(rulesJSON, as: [CDValidationRulePayload].self)
-        cdSetValidationRules(rules, on: attribute)
+        try cdSetValidationRules(rules, on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -69,7 +72,7 @@ public func cdRelationshipDescriptionGetValidationRulesJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -85,11 +88,11 @@ public func cdRelationshipDescriptionSetValidationRulesJSON(
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
         let rules = try cdDecodeJSON(rulesJSON, as: [CDValidationRulePayload].self)
-        cdSetValidationRules(rules, on: relationship)
+        try cdSetValidationRules(rules, on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -98,76 +101,47 @@ public func cdManagedObjectValidateValueJSON(
     _ objectPtr: UnsafeMutableRawPointer?,
     _ key: UnsafePointer<CChar>?,
     _ valueJSON: UnsafePointer<CChar>?,
-    _ outValidatedJSON: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outValidatedJSON: CDOutString,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let objectPtr, let key else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object or validation key")
-        }
-        let object: NSManagedObject = cdBorrow(objectPtr)
+    cdStatus(outError) {
         let payload = try cdDecodeJSON(valueJSON, as: CDValuePayload.self)
-        var candidate: AnyObject? = cdFoundationValue(from: payload) as AnyObject?
-        try object.validateValue(&candidate, forKey: String(cString: key))
-        let validated = try cdValuePayload(from: candidate)
+        let validated = try cdWithManagedObject(objectPtr) { object, _ -> CDValuePayload in
+            let name = try cdAttributeKey(key, of: object)
+            var candidate: AnyObject? = cdFoundationValue(from: payload) as AnyObject?
+            try object.validateValue(&candidate, forKey: name)
+            return try cdValuePayload(from: candidate)
+        }
         outValidatedJSON?.pointee = cdCString(try cdEncodeJSON(validated))
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
     }
 }
 
 @_cdecl("cd_managed_object_validate_for_insert")
 public func cdManagedObjectValidateForInsert(
     _ objectPtr: UnsafeMutableRawPointer?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let objectPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object")
-        }
-        let object: NSManagedObject = cdBorrow(objectPtr)
-        try object.validateForInsert()
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        try cdWithManagedObject(objectPtr) { object, _ in try object.validateForInsert() }
     }
 }
 
 @_cdecl("cd_managed_object_validate_for_update")
 public func cdManagedObjectValidateForUpdate(
     _ objectPtr: UnsafeMutableRawPointer?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let objectPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object")
-        }
-        let object: NSManagedObject = cdBorrow(objectPtr)
-        try object.validateForUpdate()
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        try cdWithManagedObject(objectPtr) { object, _ in try object.validateForUpdate() }
     }
 }
 
 @_cdecl("cd_managed_object_validate_for_delete")
 public func cdManagedObjectValidateForDelete(
     _ objectPtr: UnsafeMutableRawPointer?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let objectPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object")
-        }
-        let object: NSManagedObject = cdBorrow(objectPtr)
-        try object.validateForDelete()
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        try cdWithManagedObject(objectPtr) { object, _ in try object.validateForDelete() }
     }
 }

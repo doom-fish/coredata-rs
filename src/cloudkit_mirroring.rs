@@ -8,7 +8,7 @@ use crate::persistent_container::NSPersistentStoreDescription;
 use crate::persistent_store_coordinator::NSPersistentStore;
 use crate::private::{
     collect_array, cstring_from_str, error_from_status, impl_object_wrapper, parse_error_ptr,
-    parse_json_ptr, take_string,
+    parse_json_ptr, status_result, take_string,
 };
 use crate::query::NSFetchRequest;
 use crate::store::NSPersistentStoreCoordinator;
@@ -558,13 +558,19 @@ impl NSPersistentCloudKitContainerEventRequest {
     }
 
     /// Mirrors `NSPersistentCloudKitContainerEventRequest.result_type`.
-    pub fn set_result_type(&self, result_type: NSPersistentCloudKitContainerEventResultType) {
-        unsafe {
+    pub fn set_result_type(
+        &self,
+        result_type: NSPersistentCloudKitContainerEventResultType,
+    ) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_persistent_cloudkit_event_request_set_result_type(
                 self.as_ptr(),
                 result_type.as_raw(),
-            );
-        }
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
     }
 
     /// Wraps `NSPersistentCloudKitContainerEventRequest.execute(...)`.

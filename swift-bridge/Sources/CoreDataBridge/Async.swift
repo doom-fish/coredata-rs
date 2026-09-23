@@ -8,7 +8,69 @@
 // operation naturally completes on.
 
 import CoreData
+import CoreDataObjCBridge
 import Foundation
+
+public typealias CDAsyncVoidCallback = @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void
+public typealias CDAsyncResultCallback = @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void
+
+func cdAsyncErrorJSON(_ error: Error) -> String {
+    let nsError = error as NSError
+    let reported = nsError.domain == "Foundation._GenericObjCError" ? cdSilentFailureError() : nsError
+    let payload = CDErrorPayload(domain: reported.domain, code: reported.code, message: reported.localizedDescription)
+    return (try? cdEncodeJSON(payload)) ?? reported.localizedDescription
+}
+
+func cdFail(_ cb: CDAsyncVoidCallback, _ ctx: UnsafeMutableRawPointer, _ error: Error) {
+    cdAsyncErrorJSON(error).withCString { cb($0, ctx) }
+}
+
+func cdFail(_ cb: CDAsyncResultCallback, _ ctx: UnsafeMutableRawPointer, _ error: Error) {
+    cdAsyncErrorJSON(error).withCString { cb(nil, $0, ctx) }
+}
+
+final class CDAsyncLoadState {
+    private let lock = NSLock()
+    private let expected: Int
+    private var completed = 0
+    private var firstError: Error?
+    private var fired = false
+
+    init(expected: Int) {
+        self.expected = expected
+    }
+
+    func record(_ error: Error?) -> (fire: Bool, error: Error?) {
+        lock.lock()
+        defer { lock.unlock() }
+        if firstError == nil {
+            firstError = error
+        }
+        completed += 1
+        guard completed >= expected, !fired else {
+            return (false, nil)
+        }
+        fired = true
+        return (true, firstError)
+    }
+
+    func abort() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !fired else {
+            return false
+        }
+        fired = true
+        return true
+    }
+}
+
+func cdEnsureRegisteredStoreTypes(_ descriptions: [NSPersistentStoreDescription]) throws {
+    let registered = NSPersistentStoreCoordinator.registeredStoreTypes
+    for description in descriptions where registered[description.type] == nil {
+        throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Unsupported persistent store type '\(description.type)'")
+    }
+}
 
 // ============================================================================
 // NSPersistentContainer.loadPersistentStores (completion-handler based)
@@ -19,33 +81,35 @@ import Foundation
 @_cdecl("cd_persistent_container_load_stores_async")
 public func cdPersistentContainerLoadStoresAsync(
     _ containerPtr: UnsafeMutableRawPointer?,
-    _ cb: @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ cb: CDAsyncVoidCallback,
     _ ctx: UnsafeMutableRawPointer
 ) {
-    guard let containerPtr else {
-        "Missing container".withCString { cb($0, ctx) }
-        return
-    }
-    let container: NSPersistentContainer = cdBorrow(containerPtr)
-    let expected = max(container.persistentStoreDescriptions.count, 1)
-    let lock = NSLock()
-    var firstError: String?
-    var completed = 0
-    container.loadPersistentStores { _, error in
-        lock.lock()
-        if firstError == nil, let err = error {
-            firstError = err.localizedDescription
+    do {
+        let container: NSPersistentContainer = try cdArg(containerPtr, "persistent container")
+        let descriptions = container.persistentStoreDescriptions
+        guard !descriptions.isEmpty else {
+            cb(nil, ctx)
+            return
         }
-        completed += 1
-        let done = completed >= expected
-        lock.unlock()
-        if done {
-            if let e = firstError {
-                e.withCString { cb($0, ctx) }
+        try cdEnsureRegisteredStoreTypes(descriptions)
+        let state = CDAsyncLoadState(expected: descriptions.count)
+        var exceptionError: NSError?
+        let started = CDXLoadPersistentStores(container, { _, error in
+            let outcome = state.record(error)
+            guard outcome.fire else {
+                return
+            }
+            if let error = outcome.error {
+                cdFail(cb, ctx, error)
             } else {
                 cb(nil, ctx)
             }
+        }, &exceptionError)
+        if !started, state.abort() {
+            cdFail(cb, ctx, exceptionError ?? cdSilentFailureError())
         }
+    } catch {
+        cdFail(cb, ctx, error)
     }
 }
 
@@ -59,23 +123,23 @@ public func cdPersistentContainerLoadStoresAsync(
 public func cdPersistentCloudKitContainerInitializeSchemaAsync(
     _ containerPtr: UnsafeMutableRawPointer?,
     _ optionsRawValue: UInt64,
-    _ cb: @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ cb: CDAsyncVoidCallback,
     _ ctx: UnsafeMutableRawPointer
 ) {
-    guard let containerPtr else {
-        "Missing CloudKit container".withCString { cb($0, ctx) }
+    let container: NSPersistentCloudKitContainer
+    do {
+        container = try cdArg(containerPtr, "CloudKit container")
+    } catch {
+        cdFail(cb, ctx, error)
         return
     }
-    let container: NSPersistentCloudKitContainer = cdBorrow(containerPtr)
-    let options = NSPersistentCloudKitContainerSchemaInitializationOptions(
-        rawValue: UInt(optionsRawValue)
-    )
+    let options = NSPersistentCloudKitContainerSchemaInitializationOptions(rawValue: UInt(optionsRawValue))
     DispatchQueue.global(qos: .userInitiated).async {
         do {
             try container.initializeCloudKitSchema(options: options)
             cb(nil, ctx)
         } catch {
-            error.localizedDescription.withCString { cb($0, ctx) }
+            cdFail(cb, ctx, error)
         }
     }
 }
@@ -89,20 +153,65 @@ public func cdPersistentCloudKitContainerInitializeSchemaAsync(
 @_cdecl("cd_managed_object_context_perform_save_async")
 public func cdManagedObjectContextPerformSaveAsync(
     _ contextPtr: UnsafeMutableRawPointer?,
-    _ cb: @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ cb: CDAsyncVoidCallback,
     _ ctx: UnsafeMutableRawPointer
 ) {
-    guard let contextPtr else {
-        "Missing managed object context".withCString { cb($0, ctx) }
+    let context: NSManagedObjectContext
+    do {
+        context = try cdArg(contextPtr, "managed object context")
+        try cdEnsureQueueContext(context)
+    } catch {
+        cdFail(cb, ctx, error)
         return
     }
-    let context: NSManagedObjectContext = cdBorrow(contextPtr)
     context.perform {
         do {
-            try context.save()
+            if context.hasChanges {
+                try cdEnsureSavable(context)
+                try cdObjCCall { CDXSave(context, $0) }
+            }
             cb(nil, ctx)
         } catch {
-            error.localizedDescription.withCString { cb($0, ctx) }
+            cdFail(cb, ctx, error)
+        }
+    }
+}
+
+func cdPerformRequestAsync<T: NSPersistentStoreResult>(
+    _ contextPtr: UnsafeMutableRawPointer?,
+    _ requestPtr: UnsafeMutableRawPointer?,
+    requestType: NSPersistentStoreRequest.Type,
+    resultType _: T.Type,
+    requireSQLite what: String?,
+    _ cb: CDAsyncResultCallback,
+    _ ctx: UnsafeMutableRawPointer
+) {
+    let context: NSManagedObjectContext
+    let snapshot: NSPersistentStoreRequest
+    do {
+        context = try cdArg(contextPtr, "managed object context")
+        try cdEnsureQueueContext(context)
+        let request: NSPersistentStoreRequest = try cdArg(requestPtr, "persistent store request")
+        guard request.isKind(of: requestType) else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Expected \(requestType), got \(type(of: request))")
+        }
+        snapshot = try cdSnapshotRequest(request)
+    } catch {
+        cdFail(cb, ctx, error)
+        return
+    }
+    context.perform {
+        do {
+            if let what {
+                try cdEnsureSQLiteStores(context, what)
+            }
+            let result = try cdObjCValue { CDXExecuteRequest(context, snapshot, $0) }
+            guard let typed = result as? T else {
+                throw cdBridgeNSError(code: CDR_FAILURE, message: "Unexpected result type \(type(of: result))")
+            }
+            cb(cdRetain(typed), nil, ctx)
+        } catch {
+            cdFail(cb, ctx, error)
         }
     }
 }
@@ -117,29 +226,18 @@ public func cdManagedObjectContextPerformSaveAsync(
 public func cdFetchHistoryAsync(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ cb: @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ cb: CDAsyncResultCallback,
     _ ctx: UnsafeMutableRawPointer
 ) {
-    guard let contextPtr else {
-        "Missing managed object context".withCString { cb(nil, $0, ctx) }
-        return
-    }
-    guard let requestPtr else {
-        "Missing history change request".withCString { cb(nil, $0, ctx) }
-        return
-    }
-    let context: NSManagedObjectContext = cdBorrow(contextPtr)
-    let request: NSPersistentHistoryChangeRequest = cdBorrow(requestPtr)
-    context.perform {
-        do {
-            guard let result = try context.execute(request) as? NSPersistentHistoryResult else {
-                throw cdBridgeNSError(code: CDR_FAILURE, message: "Unexpected result type from history request")
-            }
-            cb(cdRetain(result), nil, ctx)
-        } catch {
-            error.localizedDescription.withCString { cb(nil, $0, ctx) }
-        }
-    }
+    cdPerformRequestAsync(
+        contextPtr,
+        requestPtr,
+        requestType: NSPersistentHistoryChangeRequest.self,
+        resultType: NSPersistentHistoryResult.self,
+        requireSQLite: nil,
+        cb,
+        ctx
+    )
 }
 
 // ============================================================================
@@ -152,29 +250,18 @@ public func cdFetchHistoryAsync(
 public func cdBatchInsertAsync(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ cb: @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ cb: CDAsyncResultCallback,
     _ ctx: UnsafeMutableRawPointer
 ) {
-    guard let contextPtr else {
-        "Missing managed object context".withCString { cb(nil, $0, ctx) }
-        return
-    }
-    guard let requestPtr else {
-        "Missing batch insert request".withCString { cb(nil, $0, ctx) }
-        return
-    }
-    let context: NSManagedObjectContext = cdBorrow(contextPtr)
-    let request: NSBatchInsertRequest = cdBorrow(requestPtr)
-    context.perform {
-        do {
-            guard let result = try context.execute(request) as? NSBatchInsertResult else {
-                throw cdBridgeNSError(code: CDR_FAILURE, message: "Unexpected result type from batch insert")
-            }
-            cb(cdRetain(result), nil, ctx)
-        } catch {
-            error.localizedDescription.withCString { cb(nil, $0, ctx) }
-        }
-    }
+    cdPerformRequestAsync(
+        contextPtr,
+        requestPtr,
+        requestType: NSBatchInsertRequest.self,
+        resultType: NSBatchInsertResult.self,
+        requireSQLite: "Batch insert",
+        cb,
+        ctx
+    )
 }
 
 // ============================================================================
@@ -187,27 +274,16 @@ public func cdBatchInsertAsync(
 public func cdBatchUpdateAsync(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ cb: @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<CChar>?, UnsafeMutableRawPointer) -> Void,
+    _ cb: CDAsyncResultCallback,
     _ ctx: UnsafeMutableRawPointer
 ) {
-    guard let contextPtr else {
-        "Missing managed object context".withCString { cb(nil, $0, ctx) }
-        return
-    }
-    guard let requestPtr else {
-        "Missing batch update request".withCString { cb(nil, $0, ctx) }
-        return
-    }
-    let context: NSManagedObjectContext = cdBorrow(contextPtr)
-    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
-    context.perform {
-        do {
-            guard let result = try context.execute(request) as? NSBatchUpdateResult else {
-                throw cdBridgeNSError(code: CDR_FAILURE, message: "Unexpected result type from batch update")
-            }
-            cb(cdRetain(result), nil, ctx)
-        } catch {
-            error.localizedDescription.withCString { cb(nil, $0, ctx) }
-        }
-    }
+    cdPerformRequestAsync(
+        contextPtr,
+        requestPtr,
+        requestType: NSBatchUpdateRequest.self,
+        resultType: NSBatchUpdateResult.self,
+        requireSQLite: "Batch update",
+        cb,
+        ctx
+    )
 }

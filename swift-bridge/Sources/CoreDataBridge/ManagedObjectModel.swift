@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_managed_object_model_new")
@@ -28,7 +29,7 @@ public func cdManagedObjectModelFromURL(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -47,11 +48,11 @@ public func cdManagedObjectModelAddEntity(
         var entities = model.entities
         entities.removeAll { existing in existing.name == entity.name }
         entities.append(entity)
-        model.entities = entities
+        try cdTrySetValue(entities, forKey: "entities", on: model)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 

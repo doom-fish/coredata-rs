@@ -6,7 +6,8 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::managed_object::NSManagedObjectID;
 use crate::private::{
-    collect_array, error_from_status, impl_object_wrapper, parse_json_ptr, take_string,
+    collect_array, error_from_status, impl_object_wrapper, impl_sync_object_wrapper,
+    parse_json_ptr, status_result, take_string,
 };
 use crate::value::{Value, ValuePayload};
 
@@ -81,7 +82,7 @@ impl PersistentHistoryChangeType {
     }
 }
 
-impl_object_wrapper!(NSPersistentHistoryToken);
+impl_sync_object_wrapper!(NSPersistentHistoryToken);
 impl_object_wrapper!(NSPersistentHistoryChangeRequest);
 impl_object_wrapper!(NSPersistentHistoryResult);
 impl_object_wrapper!(NSPersistentHistoryTransaction);
@@ -235,13 +236,19 @@ impl NSPersistentHistoryChangeRequest {
     }
 
     /// Mirrors `NSPersistentHistoryChangeRequest.result_type`.
-    pub fn set_result_type(&self, result_type: PersistentHistoryResultType) {
-        unsafe {
+    pub fn set_result_type(
+        &self,
+        result_type: PersistentHistoryResultType,
+    ) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_persistent_history_change_request_set_result_type(
                 self.as_ptr(),
                 result_type.as_raw(),
-            );
-        }
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
     }
 
     /// Wraps `NSPersistentHistoryChangeRequest.execute(...)`.

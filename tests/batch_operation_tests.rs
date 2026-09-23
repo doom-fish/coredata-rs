@@ -24,7 +24,7 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
                 person_row("Cleo", 41),
             ],
         )?;
-        insert_request.set_result_type(BatchInsertRequestResultType::Count);
+        insert_request.set_result_type(BatchInsertRequestResultType::Count)?;
         assert_eq!(insert_request.execute(&context)?.count(), 3);
 
         let request = NSFetchRequest::new("Person")?;
@@ -39,7 +39,7 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
             String::from("age"),
             Value::from(33_i32),
         )])))?;
-        batch_update.set_result_type(BatchUpdateRequestResultType::Count);
+        batch_update.set_result_type(BatchUpdateRequestResultType::Count)?;
         assert_eq!(batch_update.execute(&context)?.count(), 1);
 
         let verification_request = NSFetchRequest::new("Person")?;
@@ -52,7 +52,7 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
         assert_eq!(updated[0].value("age")?.as_i32(), Some(33));
 
         let delete_request = NSBatchDeleteRequest::from_fetch_request(&request)?;
-        delete_request.set_result_type(BatchDeleteRequestResultType::Count);
+        delete_request.set_result_type(BatchDeleteRequestResultType::Count)?;
         assert_eq!(delete_request.execute(&context)?.count(), 3);
     }
 

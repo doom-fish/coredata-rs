@@ -92,7 +92,8 @@ extern "C" {
     pub fn cd_persistent_cloudkit_event_request_set_result_type(
         request: *mut c_void,
         result_type: i64,
-    );
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_context_execute_persistent_cloudkit_event_request(
         context: *mut c_void,
         request: *mut c_void,

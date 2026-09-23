@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 final class CDLoadTracker {
@@ -67,7 +68,7 @@ public func cdPersistentStoreDescriptionSetType(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -95,7 +96,7 @@ public func cdPersistentStoreDescriptionSetConfiguration(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -123,7 +124,7 @@ public func cdPersistentStoreDescriptionSetURL(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -151,7 +152,7 @@ public func cdPersistentStoreDescriptionSetReadOnly(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -179,7 +180,7 @@ public func cdPersistentStoreDescriptionSetTimeout(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -199,7 +200,7 @@ public func cdPersistentStoreDescriptionSQLitePragmasJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -219,7 +220,7 @@ public func cdPersistentStoreDescriptionSetSQLitePragma(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -295,7 +296,7 @@ public func cdPersistentStoreDescriptionSetOptionJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -321,7 +322,7 @@ public func cdPersistentContainerNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -378,7 +379,7 @@ public func cdPersistentContainerSetPersistentStoreDescriptions(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -386,24 +387,24 @@ public func cdPersistentContainerSetPersistentStoreDescriptions(
 public func cdPersistentContainerLoadPersistentStores(
     _ containerPtr: UnsafeMutableRawPointer?,
     _ timeoutSeconds: Int32,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let containerPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent container")
+    cdStatus(outError) {
+        let container: NSPersistentContainer = try cdArg(containerPtr, "persistent container")
+        let descriptions = container.persistentStoreDescriptions
+        guard !descriptions.isEmpty else {
+            return
         }
-        let container: NSPersistentContainer = cdBorrow(containerPtr)
-        let tracker = CDLoadTracker(expectedCount: container.persistentStoreDescriptions.count)
-        container.loadPersistentStores { _, error in
-            tracker.record(error: error as NSError?)
+        try cdEnsureRegisteredStoreTypes(descriptions)
+        let tracker = CDLoadTracker(expectedCount: descriptions.count)
+        try cdObjCCall {
+            CDXLoadPersistentStores(container, { _, error in
+                tracker.record(error: error as NSError?)
+            }, $0)
         }
         if let error = tracker.wait(timeoutSeconds: timeoutSeconds) {
             throw error
         }
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
     }
 }
 

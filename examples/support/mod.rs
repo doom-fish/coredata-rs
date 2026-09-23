@@ -191,7 +191,7 @@ pub fn in_memory_context(
     model: &NSManagedObjectModel,
 ) -> Result<(NSPersistentStoreCoordinator, NSManagedObjectContext), CoreDataError> {
     let coordinator = in_memory_coordinator(model)?;
-    let context = NSManagedObjectContext::new_main_queue()?;
+    let context = NSManagedObjectContext::new_private_queue()?;
     context.set_persistent_store_coordinator(&coordinator)?;
     Ok((coordinator, context))
 }

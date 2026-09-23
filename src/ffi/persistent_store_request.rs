@@ -33,14 +33,21 @@ extern "C" {
     ) -> *mut c_void;
     pub fn cd_persistent_store_async_result_get_operation_error_json(
         result: *mut c_void,
-    ) -> *mut c_char;
+        out_json: *mut *mut c_char,
+        out_error: *mut *mut c_char,
+    ) -> i32;
+    pub fn cd_persistent_store_result_is_asynchronous(result: *mut c_void) -> i32;
     pub fn cd_persistent_store_async_result_get_progress_fraction_completed(
         result: *mut c_void,
     ) -> f64;
     pub fn cd_persistent_store_async_result_has_progress(result: *mut c_void) -> i32;
 
     pub fn cd_asynchronous_fetch_result_get_fetch_request(result: *mut c_void) -> *mut c_void;
-    pub fn cd_asynchronous_fetch_result_get_final_result_count(result: *mut c_void) -> u64;
+    pub fn cd_asynchronous_fetch_result_get_final_result_count(
+        result: *mut c_void,
+        out_count: *mut u64,
+        out_error: *mut *mut c_char,
+    ) -> i32;
 
     pub fn cd_save_changes_request_new(
         inserted_objects: *const *mut c_void,

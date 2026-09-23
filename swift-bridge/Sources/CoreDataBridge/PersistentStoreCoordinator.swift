@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 final class CDStoreAddTracker {
@@ -27,6 +28,17 @@ final class CDStoreAddTracker {
     }
 }
 
+func cdRegisteredStoreType(_ storeType: UnsafePointer<CChar>?) throws -> String {
+    guard let storeType else {
+        throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing store type")
+    }
+    let type = String(cString: storeType)
+    guard NSPersistentStoreCoordinator.registeredStoreTypes[type] != nil else {
+        throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Unsupported persistent store type '\(type)'")
+    }
+    return type
+}
+
 @_cdecl("cd_persistent_store_coordinator_new")
 public func cdPersistentStoreCoordinatorNew(
     _ modelPtr: UnsafeMutableRawPointer?,
@@ -42,7 +54,7 @@ public func cdPersistentStoreCoordinatorNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -70,7 +82,7 @@ public func cdPersistentStoreCoordinatorSetName(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -99,23 +111,15 @@ public func cdPersistentStoreCoordinatorAddPersistentStore(
     _ configuration: UnsafePointer<CChar>?,
     _ urlPath: UnsafePointer<CChar>?,
     _ optionsJSON: UnsafePointer<CChar>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let coordinatorPtr, let storeType else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store coordinator or store type")
-        }
-        let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-        _ = try coordinator.addPersistentStore(
-            ofType: String(cString: storeType),
-            configurationName: configuration.map(String.init(cString:)),
-            at: cdURL(from: urlPath),
-            options: try cdPersistentStoreOptions(from: optionsJSON)
-        )
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        let coordinator: NSPersistentStoreCoordinator = try cdArg(coordinatorPtr, "persistent store coordinator")
+        let type = try cdRegisteredStoreType(storeType)
+        let configurationName = configuration.map(String.init(cString:))
+        let url = cdURL(from: urlPath)
+        let options = try cdPersistentStoreOptions(from: optionsJSON)
+        _ = try cdObjCValue { CDXAddPersistentStore(coordinator, type, configurationName, url, options, $0) }
     }
 }
 
@@ -124,29 +128,25 @@ public func cdPersistentStoreCoordinatorAddPersistentStoreWithDescription(
     _ coordinatorPtr: UnsafeMutableRawPointer?,
     _ descriptionPtr: UnsafeMutableRawPointer?,
     _ timeoutSeconds: Int32,
-    _ outStore: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outStore: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let coordinatorPtr, let descriptionPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store coordinator or store description")
-        }
-        let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-        let description: NSPersistentStoreDescription = cdBorrow(descriptionPtr)
+    cdStatus(outError) {
+        let coordinator: NSPersistentStoreCoordinator = try cdArg(coordinatorPtr, "persistent store coordinator")
+        let description: NSPersistentStoreDescription = try cdArg(descriptionPtr, "persistent store description")
+        try cdEnsureRegisteredStoreTypes([description])
         let tracker = CDStoreAddTracker()
-        coordinator.addPersistentStore(with: description) { addedDescription, error in
-            let store = addedDescription.url.flatMap { coordinator.persistentStore(for: $0) } ?? coordinator.persistentStores.last
-            tracker.record(store: store, error: error as NSError?)
+        try cdObjCCall {
+            CDXAddPersistentStoreWithDescription(coordinator, description, { addedDescription, error in
+                let store = addedDescription.url.flatMap { coordinator.persistentStore(for: $0) } ?? coordinator.persistentStores.last
+                tracker.record(store: store, error: error as NSError?)
+            }, $0)
         }
         let (store, error) = tracker.wait(timeoutSeconds: timeoutSeconds)
         if let error {
             throw error
         }
         outStore?.pointee = store.map(cdRetain)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
     }
 }
 
@@ -166,7 +166,7 @@ public func cdPersistentStoreCoordinatorRemovePersistentStore(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -192,6 +192,9 @@ public func cdPersistentStoreCoordinatorURLForPersistentStore(
     }
     let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
     let store: NSPersistentStore = cdBorrow(storePtr)
+    guard coordinator.persistentStores.contains(where: { $0 === store }) else {
+        return nil
+    }
     return cdCString(coordinator.url(for: store).path)
 }
 
@@ -217,15 +220,16 @@ public func cdPersistentStoreCoordinatorDestroyPersistentStore(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store coordinator, path, or store type")
         }
         let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
+        let type = try cdRegisteredStoreType(storeType)
         try coordinator.destroyPersistentStore(
             at: URL(fileURLWithPath: String(cString: path)),
-            type: NSPersistentStore.StoreType(rawValue: String(cString: storeType)),
+            type: NSPersistentStore.StoreType(rawValue: type),
             options: try cdPersistentStoreOptions(from: optionsJSON)
         )
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -262,7 +266,7 @@ public func cdPersistentStoreSetURL(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -290,7 +294,7 @@ public func cdPersistentStoreSetIdentifier(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -327,6 +331,6 @@ public func cdPersistentStoreSetReadOnly(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }

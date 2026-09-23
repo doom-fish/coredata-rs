@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_property_description_new")
@@ -30,11 +31,11 @@ public func cdPropertyDescriptionSetName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing property description or name")
         }
         let property: NSPropertyDescription = cdBorrow(propertyPtr)
-        property.name = String(cString: name)
+        try cdTrySetValue(String(cString: name), forKey: "name", on: property)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -58,11 +59,11 @@ public func cdPropertyDescriptionSetOptional(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing property description")
         }
         let property: NSPropertyDescription = cdBorrow(propertyPtr)
-        property.isOptional = optional != 0
+        try cdTrySetValue(optional != 0, forKey: "optional", on: property)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -86,11 +87,11 @@ public func cdPropertyDescriptionSetTransient(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing property description")
         }
         let property: NSPropertyDescription = cdBorrow(propertyPtr)
-        property.isTransient = transient != 0
+        try cdTrySetValue(transient != 0, forKey: "transient", on: property)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -123,11 +124,11 @@ public func cdFetchedPropertyDescriptionSetFetchRequest(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetched property description")
         }
         let property: NSFetchedPropertyDescription = cdBorrow(propertyPtr)
-        property.fetchRequest = fetchRequestPtr.map { cdBorrow($0) as NSFetchRequest<NSFetchRequestResult> }
+        try cdTrySetValue(fetchRequestPtr.map { cdBorrow($0) as NSFetchRequest<NSFetchRequestResult> }, forKey: "fetchRequest", on: property)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -160,14 +161,15 @@ public func cdExpressionDescriptionSetResultType(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing expression description")
         }
         let property: NSExpressionDescription = cdBorrow(propertyPtr)
-        guard let resultType = NSAttributeType(rawValue: UInt(resultType)) else {
+        let resultRaw = try cdKnownRawValue(resultType, in: CD_ATTRIBUTE_TYPE_RAW_VALUES, "expression result type")
+        guard let resultType = NSAttributeType(rawValue: UInt(resultRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid expression result type")
         }
-        property.expressionResultType = resultType
+        try cdTrySetValue(resultType.rawValue, forKey: "expressionResultType", on: property)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -218,11 +220,11 @@ public func cdCompositeAttributeDescriptionSetElements(
         }
         let attribute: NSCompositeAttributeDescription = cdBorrow(attributePtr)
         let elements: [NSAttributeDescription] = cdObjects(from: elementPtrs, count: count)
-        attribute.elements = elements
+        try cdTrySetValue(elements, forKey: "elements", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -237,7 +239,8 @@ public func cdFetchIndexElementDescriptionNew(
         guard let propertyPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch index element property")
         }
-        guard let collationType = NSFetchIndexElementType(rawValue: UInt(collationType)) else {
+        let collationRaw = try cdKnownRawValue(collationType, in: [0, 1], "fetch index element collation type")
+        guard let collationType = NSFetchIndexElementType(rawValue: UInt(collationRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid fetch index element collation type")
         }
         let property: NSPropertyDescription = cdBorrow(propertyPtr)
@@ -245,7 +248,7 @@ public func cdFetchIndexElementDescriptionNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -277,15 +280,16 @@ public func cdFetchIndexElementDescriptionSetCollationType(
         guard let elementPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch index element description")
         }
-        guard let collationType = NSFetchIndexElementType(rawValue: UInt(collationType)) else {
+        let collationRaw = try cdKnownRawValue(collationType, in: [0, 1], "fetch index element collation type")
+        guard let collationType = NSFetchIndexElementType(rawValue: UInt(collationRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid fetch index element collation type")
         }
         let element: NSFetchIndexElementDescription = cdBorrow(elementPtr)
-        element.collationType = collationType
+        try cdTrySetValue(collationType.rawValue, forKey: "collationType", on: element)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -309,11 +313,11 @@ public func cdFetchIndexElementDescriptionSetAscending(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch index element description")
         }
         let element: NSFetchIndexElementDescription = cdBorrow(elementPtr)
-        element.isAscending = ascending != 0
+        try cdTrySetValue(ascending != 0, forKey: "ascending", on: element)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -334,7 +338,7 @@ public func cdFetchIndexDescriptionNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -358,11 +362,11 @@ public func cdFetchIndexDescriptionSetName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch index description or name")
         }
         let index: NSFetchIndexDescription = cdBorrow(indexPtr)
-        index.name = String(cString: name)
+        try cdTrySetValue(String(cString: name), forKey: "name", on: index)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -388,10 +392,10 @@ public func cdFetchIndexDescriptionSetElements(
         }
         let index: NSFetchIndexDescription = cdBorrow(indexPtr)
         let elements: [NSFetchIndexElementDescription] = cdObjects(from: elementPtrs, count: count)
-        index.elements = elements
+        try cdTrySetValue(elements, forKey: "elements", on: index)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }

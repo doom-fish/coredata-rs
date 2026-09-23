@@ -128,7 +128,8 @@ fn test_batch_insert_async_resolves() {
         }],
     )
     .unwrap();
-    req.set_result_type(BatchInsertRequestResultType::StatusOnly);
+    req.set_result_type(BatchInsertRequestResultType::StatusOnly)
+        .unwrap();
 
     pollster::block_on(async {
         AsyncBatchOperation::insert(&bg, &req)
@@ -163,7 +164,9 @@ fn test_batch_update_async_resolves() {
         }],
     )
     .unwrap();
-    insert_req.set_result_type(BatchInsertRequestResultType::StatusOnly);
+    insert_req
+        .set_result_type(BatchInsertRequestResultType::StatusOnly)
+        .unwrap();
     pollster::block_on(async {
         AsyncBatchOperation::insert(&bg, &insert_req)
             .await
@@ -171,7 +174,9 @@ fn test_batch_update_async_resolves() {
     });
 
     let update_req = NSBatchUpdateRequest::new("Person").unwrap();
-    update_req.set_result_type(BatchUpdateRequestResultType::StatusOnly);
+    update_req
+        .set_result_type(BatchUpdateRequestResultType::StatusOnly)
+        .unwrap();
     update_req
         .set_properties_to_update(Some(&std::collections::BTreeMap::from([(
             "age".to_string(),

@@ -1,9 +1,9 @@
 use crate::context::NSManagedObjectContext;
 use crate::error::CoreDataError;
 use crate::ffi;
-use crate::private::{error_from_status, impl_object_wrapper};
+use crate::private::{error_from_status, impl_sync_object_wrapper, status_result};
 
-impl_object_wrapper!(NSQueryGenerationToken);
+impl_sync_object_wrapper!(NSQueryGenerationToken);
 
 impl NSQueryGenerationToken {
     /// Wraps `NSQueryGenerationToken.current(...)`.
@@ -16,14 +16,22 @@ impl NSQueryGenerationToken {
 impl NSManagedObjectContext {
     /// Wraps `NSManagedObjectContext.query_generation_token(...)`.
     pub fn query_generation_token(&self) -> Result<Option<NSQueryGenerationToken>, CoreDataError> {
-        let ptr =
-            unsafe { ffi::cd_managed_object_context_get_query_generation_token(self.as_ptr()) };
-        if ptr.is_null() {
+        let mut out_token = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_get_query_generation_token(
+                self.as_ptr(),
+                &raw mut out_token,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        if out_token.is_null() {
             return Ok(None);
         }
         Ok(Some(unsafe {
             NSQueryGenerationToken::from_retained_ptr(
-                ptr,
+                out_token,
                 "managed object context query generation token",
             )?
         }))

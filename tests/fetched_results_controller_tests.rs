@@ -30,7 +30,7 @@ fn fetched_results_controller_fetches_sorted_objects_and_sections(
 
     let sections = controller.sections()?;
     assert_eq!(sections.len(), 1);
-    assert_eq!(sections[0].number_of_objects(), 3);
+    assert_eq!(sections[0].number_of_objects()?, 3);
     assert_eq!(sections[0].objects()?.len(), 3);
 
     let second = controller.object_at_index_path(FetchedResultsIndexPath::new(0, 1))?;

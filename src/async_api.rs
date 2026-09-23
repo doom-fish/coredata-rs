@@ -43,12 +43,15 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::error::CoreDataError;
+use crate::error::{CoreDataError, ErrorPayload};
 
 /// Convert a raw string error into a bridge `CoreDataError`.
 #[inline]
 fn bridge_err(msg: String) -> CoreDataError {
-    CoreDataError::bridge(-2, msg)
+    serde_json::from_str::<ErrorPayload>(&msg).map_or_else(
+        |_| CoreDataError::bridge(-2, msg),
+        CoreDataError::from_payload,
+    )
 }
 
 // ============================================================================
@@ -292,15 +295,22 @@ extern "C" fn fetch_history_cb(result: *mut c_void, error: *const i8, ctx: *mut 
         } else if !result.is_null() {
             // SAFETY: result is a non-null, retained NSPersistentHistoryResult pointer
             // handed to us by the bridge; from_retained_ptr takes ownership.
-            let history_result = unsafe {
+            let converted = unsafe {
                 crate::history::NSPersistentHistoryResult::from_retained_ptr(
                     result,
                     "history result",
                 )
-                .expect("history result ptr valid")
             };
             // SAFETY: same ctx contract as the error branch above.
-            unsafe { AsyncCompletion::complete_ok(ctx, history_result) };
+            match converted {
+                Ok(history_result) => unsafe { AsyncCompletion::complete_ok(ctx, history_result) },
+                Err(error) => unsafe {
+                    AsyncCompletion::<crate::history::NSPersistentHistoryResult>::complete_err(
+                        ctx,
+                        error.message,
+                    );
+                },
+            }
         } else {
             // SAFETY: same ctx contract; nil result is treated as an error.
             unsafe {
@@ -391,15 +401,22 @@ extern "C" fn batch_insert_cb(result: *mut c_void, error: *const i8, ctx: *mut c
         } else if !result.is_null() {
             // SAFETY: result is a non-null, retained NSBatchInsertResult pointer handed to us
             // by the bridge; from_retained_ptr takes ownership.
-            let insert_result = unsafe {
+            let converted = unsafe {
                 crate::batch_operation::NSBatchInsertResult::from_retained_ptr(
                     result,
                     "batch insert result",
                 )
-                .expect("batch insert result ptr valid")
             };
             // SAFETY: same ctx contract as the error branch above.
-            unsafe { AsyncCompletion::complete_ok(ctx, insert_result) };
+            match converted {
+                Ok(insert_result) => unsafe { AsyncCompletion::complete_ok(ctx, insert_result) },
+                Err(error) => unsafe {
+                    AsyncCompletion::<crate::batch_operation::NSBatchInsertResult>::complete_err(
+                        ctx,
+                        error.message,
+                    );
+                },
+            }
         } else {
             // SAFETY: same ctx contract; nil result is treated as an error.
             unsafe {
@@ -453,15 +470,22 @@ extern "C" fn batch_update_cb(result: *mut c_void, error: *const i8, ctx: *mut c
         } else if !result.is_null() {
             // SAFETY: result is a non-null, retained NSBatchUpdateResult pointer handed to us
             // by the bridge; from_retained_ptr takes ownership.
-            let update_result = unsafe {
+            let converted = unsafe {
                 crate::batch_operation::NSBatchUpdateResult::from_retained_ptr(
                     result,
                     "batch update result",
                 )
-                .expect("batch update result ptr valid")
             };
             // SAFETY: same ctx contract as the error branch above.
-            unsafe { AsyncCompletion::complete_ok(ctx, update_result) };
+            match converted {
+                Ok(update_result) => unsafe { AsyncCompletion::complete_ok(ctx, update_result) },
+                Err(error) => unsafe {
+                    AsyncCompletion::<crate::batch_operation::NSBatchUpdateResult>::complete_err(
+                        ctx,
+                        error.message,
+                    );
+                },
+            }
         } else {
             // SAFETY: same ctx contract; nil result is treated as an error.
             unsafe {

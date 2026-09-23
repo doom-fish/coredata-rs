@@ -22,7 +22,7 @@ public func cdMappingModelInferred(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -40,7 +40,7 @@ public func cdMappingModelFromURL(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -59,7 +59,7 @@ public func cdMappingModelGetEntityMappingNamesJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -80,7 +80,7 @@ public func cdMigrationManagerNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -177,18 +177,20 @@ public func cdMigrationManagerMigrateStore(
         let sourceOptions = try cdPersistentStoreOptions(from: sourceOptionsJSON)
         let destinationOptions = try cdPersistentStoreOptions(from: destinationOptionsJSON)
         let mappingModel = mappingModelPtr.map { cdBorrow($0) as NSMappingModel }
+        let sourceType = try cdRegisteredStoreType(sourceStoreType)
+        let destinationType = try cdRegisteredStoreType(destinationStoreType)
         try manager.migrateStore(
             from: sourceURL,
-            sourceType: String(cString: sourceStoreType),
+            sourceType: sourceType,
             options: sourceOptions,
             with: mappingModel,
             toDestinationURL: destinationURL,
-            destinationType: String(cString: destinationStoreType),
+            destinationType: destinationType,
             destinationOptions: destinationOptions
         )
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }

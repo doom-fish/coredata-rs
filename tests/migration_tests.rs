@@ -21,7 +21,7 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
         source_container.set_persistent_store_descriptions(&[&source_description])?;
         source_container.load_persistent_stores()?;
 
-        let source_context = source_container.view_context()?;
+        let source_context = source_container.new_background_context()?;
         insert_person(&source_context, &fixture.source_person, "Ada", 32)?;
         source_context.save()?;
     }
@@ -55,7 +55,7 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
         destination_container.set_persistent_store_descriptions(&[&destination_description])?;
         destination_container.load_persistent_stores()?;
 
-        let destination_context = destination_container.view_context()?;
+        let destination_context = destination_container.new_background_context()?;
         let request = NSFetchRequest::new("Person")?;
         request.set_sort_descriptors(&[SortDescriptor::ascending("name")])?;
         let migrated = request.execute(&destination_context)?;

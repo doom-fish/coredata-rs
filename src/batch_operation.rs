@@ -4,7 +4,9 @@ use crate::context::NSManagedObjectContext;
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::managed_object::NSManagedObjectID;
-use crate::private::{collect_array, error_from_status, impl_object_wrapper, take_string};
+use crate::private::{
+    collect_array, error_from_status, impl_object_wrapper, status_result, take_string,
+};
 use crate::query::{NSFetchRequest, NSPredicate};
 use crate::schema::NSEntityDescription;
 use crate::value::{Value, ValuePayload};
@@ -153,8 +155,19 @@ impl NSBatchDeleteRequest {
     }
 
     /// Mirrors `NSBatchDeleteRequest.result_type`.
-    pub fn set_result_type(&self, result_type: BatchDeleteRequestResultType) {
-        unsafe { ffi::cd_batch_delete_request_set_result_type(self.as_ptr(), result_type.as_raw()) }
+    pub fn set_result_type(
+        &self,
+        result_type: BatchDeleteRequestResultType,
+    ) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_batch_delete_request_set_result_type(
+                self.as_ptr(),
+                result_type.as_raw(),
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
     }
 
     /// Wraps `NSBatchDeleteRequest.execute(...)`.
@@ -277,8 +290,19 @@ impl NSBatchInsertRequest {
     }
 
     /// Mirrors `NSBatchInsertRequest.result_type`.
-    pub fn set_result_type(&self, result_type: BatchInsertRequestResultType) {
-        unsafe { ffi::cd_batch_insert_request_set_result_type(self.as_ptr(), result_type.as_raw()) }
+    pub fn set_result_type(
+        &self,
+        result_type: BatchInsertRequestResultType,
+    ) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_batch_insert_request_set_result_type(
+                self.as_ptr(),
+                result_type.as_raw(),
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
     }
 
     /// Wraps `NSBatchInsertRequest.execute(...)`.
@@ -436,8 +460,19 @@ impl NSBatchUpdateRequest {
     }
 
     /// Mirrors `NSBatchUpdateRequest.result_type`.
-    pub fn set_result_type(&self, result_type: BatchUpdateRequestResultType) {
-        unsafe { ffi::cd_batch_update_request_set_result_type(self.as_ptr(), result_type.as_raw()) }
+    pub fn set_result_type(
+        &self,
+        result_type: BatchUpdateRequestResultType,
+    ) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_batch_update_request_set_result_type(
+                self.as_ptr(),
+                result_type.as_raw(),
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
     }
 
     /// Mirrors `NSBatchUpdateRequest.predicate`.

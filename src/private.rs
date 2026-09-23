@@ -86,6 +86,16 @@ macro_rules! impl_object_wrapper {
 
 pub(crate) use impl_object_wrapper;
 
+macro_rules! impl_sync_object_wrapper {
+    ($name:ident) => {
+        $crate::private::impl_object_wrapper!($name);
+
+        unsafe impl Sync for $name {}
+    };
+}
+
+pub(crate) use impl_sync_object_wrapper;
+
 pub(crate) fn cstring_from_str(value: &str, context: &str) -> Result<CString, CoreDataError> {
     CString::new(value).map_err(|error| {
         CoreDataError::bridge(
@@ -175,9 +185,20 @@ pub(crate) unsafe fn error_from_status(status: i32, err_msg: *mut c_char) -> Cor
     let message = match status {
         ffi::status::INVALID_ARGUMENT => "invalid argument",
         ffi::status::TIMED_OUT => "timed out waiting for Core Data",
+        ffi::status::WRONG_THREAD => "managed object context used off its queue",
+        ffi::status::OBJC_EXCEPTION => "Core Data raised an Objective-C exception",
+        ffi::status::INVALIDATED => "managed object is no longer registered with its context",
         _ => "Core Data bridge failure",
     };
     CoreDataError::bridge(i64::from(status), message)
+}
+
+pub(crate) fn status_result(status: i32, err_msg: *mut c_char) -> Result<(), CoreDataError> {
+    if status == ffi::status::OK {
+        Ok(())
+    } else {
+        Err(unsafe { error_from_status(status, err_msg) })
+    }
 }
 
 pub(crate) fn collect_array<T: FromRetainedPtr>(
@@ -195,10 +216,10 @@ pub(crate) fn collect_array<T: FromRetainedPtr>(
 
     let mut items = Vec::with_capacity(count);
     for index in 0..count {
-        let index_i32 = i32::try_from(index).map_err(|_| {
+        let index = i64::try_from(index).map_err(|_| {
             CoreDataError::bridge(-1, format!("array index overflow for {context}"))
         })?;
-        let item_ptr = unsafe { ffi::cd_array_get_object(array.as_ptr(), index_i32) };
+        let item_ptr = unsafe { ffi::cd_array_get_object(array.as_ptr(), index) };
         let item = unsafe { T::from_retained_ptr(item_ptr, context)? };
         items.push(item);
     }

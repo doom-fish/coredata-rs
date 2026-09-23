@@ -1,7 +1,10 @@
 use crate::context::{NSManagedObject, NSManagedObjectContext};
 use crate::error::CoreDataError;
 use crate::ffi;
-use crate::private::{cstring_from_str, error_from_status, impl_object_wrapper, json_cstring};
+use crate::private::{
+    cstring_from_str, error_from_status, impl_object_wrapper, impl_sync_object_wrapper,
+    json_cstring, status_result,
+};
 use crate::value::{Value, ValuePayload};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -32,8 +35,64 @@ impl SortDescriptor {
     }
 }
 
-impl_object_wrapper!(NSPredicate);
+impl_sync_object_wrapper!(NSPredicate);
 impl_object_wrapper!(NSFetchRequest);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum PredicateOperator {
+    LessThan,
+    LessThanOrEqualTo,
+    GreaterThan,
+    GreaterThanOrEqualTo,
+    EqualTo,
+    NotEqualTo,
+    Matches,
+    Like,
+    BeginsWith,
+    EndsWith,
+    Contains,
+}
+
+impl PredicateOperator {
+    const fn as_raw(self) -> u64 {
+        match self {
+            Self::LessThan => 0,
+            Self::LessThanOrEqualTo => 1,
+            Self::GreaterThan => 2,
+            Self::GreaterThanOrEqualTo => 3,
+            Self::EqualTo => 4,
+            Self::NotEqualTo => 5,
+            Self::Matches => 6,
+            Self::Like => 7,
+            Self::BeginsWith => 8,
+            Self::EndsWith => 9,
+            Self::Contains => 99,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct PredicateOptions(u64);
+
+impl PredicateOptions {
+    pub const NONE: Self = Self(0);
+    pub const CASE_INSENSITIVE: Self = Self(1);
+    pub const DIACRITIC_INSENSITIVE: Self = Self(2);
+    pub const NORMALIZED: Self = Self(4);
+
+    pub const fn bits(self) -> u64 {
+        self.0
+    }
+
+    pub const fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
+}
+
+const COMPOUND_NOT: u64 = 0;
+const COMPOUND_AND: u64 = 1;
+const COMPOUND_OR: u64 = 2;
 
 impl NSPredicate {
     /// Wraps `NSPredicate.init(...)`.
@@ -58,6 +117,65 @@ impl NSPredicate {
             return Err(unsafe { error_from_status(status, out_error) });
         }
         unsafe { Self::from_retained_ptr(out_predicate, "predicate") }
+    }
+
+    pub fn comparison(
+        key_path: &str,
+        operator: PredicateOperator,
+        value: impl Into<Value>,
+        options: PredicateOptions,
+    ) -> Result<Self, CoreDataError> {
+        let key_path = cstring_from_str(key_path, "predicate key path")?;
+        let value = ValuePayload::from(value.into());
+        let value_json = json_cstring(&value, "predicate comparison value")?;
+        let mut out_predicate = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_predicate_new_comparison(
+                key_path.as_ptr(),
+                operator.as_raw(),
+                value_json.as_ptr(),
+                options.bits(),
+                &raw mut out_predicate,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        unsafe { Self::from_retained_ptr(out_predicate, "comparison predicate") }
+    }
+
+    fn compound(compound_type: u64, predicates: &[&Self]) -> Result<Self, CoreDataError> {
+        let raw = predicates
+            .iter()
+            .map(|predicate| predicate.as_ptr())
+            .collect::<Vec<_>>();
+        let count = i32::try_from(raw.len())
+            .map_err(|_| CoreDataError::bridge(-1, "compound predicate count overflow"))?;
+        let mut out_predicate = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_predicate_new_compound(
+                compound_type,
+                raw.as_ptr(),
+                count,
+                &raw mut out_predicate,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        unsafe { Self::from_retained_ptr(out_predicate, "compound predicate") }
+    }
+
+    pub fn and(predicates: &[&Self]) -> Result<Self, CoreDataError> {
+        Self::compound(COMPOUND_AND, predicates)
+    }
+
+    pub fn or(predicates: &[&Self]) -> Result<Self, CoreDataError> {
+        Self::compound(COMPOUND_OR, predicates)
+    }
+
+    pub fn not(predicate: &Self) -> Result<Self, CoreDataError> {
+        Self::compound(COMPOUND_NOT, &[predicate])
     }
 }
 
@@ -108,6 +226,16 @@ impl NSFetchRequest {
             return Err(unsafe { error_from_status(status, out_error) });
         }
         Ok(())
+    }
+
+    pub fn fetch_limit(&self) -> usize {
+        usize::try_from(unsafe { ffi::cd_fetch_request_get_fetch_limit(self.as_ptr()) })
+            .unwrap_or(usize::MAX)
+    }
+
+    pub fn fetch_offset(&self) -> usize {
+        usize::try_from(unsafe { ffi::cd_fetch_request_get_fetch_offset(self.as_ptr()) })
+            .unwrap_or(usize::MAX)
     }
 
     /// Mirrors `NSFetchRequest.fetch_limit`.

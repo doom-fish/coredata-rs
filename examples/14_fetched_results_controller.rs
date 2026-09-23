@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let first = controller.object_at_index_path(FetchedResultsIndexPath::new(0, 0))?;
     assert_eq!(first.value("name")?.as_str(), Some("Bea"));
-    assert_eq!(controller.sections()?[0].number_of_objects(), 3);
+    assert_eq!(controller.sections()?[0].number_of_objects()?, 3);
 
     println!("✅ fetched results controller example OK");
     Ok(())

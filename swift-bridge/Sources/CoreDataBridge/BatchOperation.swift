@@ -1,5 +1,56 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
+
+func cdEnsureSQLiteStores(_ context: NSManagedObjectContext, _ what: String) throws {
+    guard let coordinator = context.persistentStoreCoordinator, !coordinator.persistentStores.isEmpty else {
+        throw cdBridgeNSError(
+            code: CDR_INVALID_ARGUMENT,
+            message: "\(what) requires a persistent store coordinator with at least one store"
+        )
+    }
+    guard coordinator.persistentStores.allSatisfy({ $0.type == NSSQLiteStoreType }) else {
+        throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "\(what) is only supported by SQLite stores")
+    }
+}
+
+func cdSnapshotRequest(_ request: NSPersistentStoreRequest) throws -> NSPersistentStoreRequest {
+    if let insert = request as? NSBatchInsertRequest {
+        let snapshot = NSBatchInsertRequest(entityName: insert.entityName, objects: insert.objectsToInsert ?? [])
+        snapshot.resultType = insert.resultType
+        snapshot.affectedStores = insert.affectedStores
+        return snapshot
+    }
+    if let update = request as? NSBatchUpdateRequest {
+        let snapshot = NSBatchUpdateRequest(entityName: update.entityName)
+        snapshot.predicate = update.predicate
+        snapshot.includesSubentities = update.includesSubentities
+        snapshot.resultType = update.resultType
+        snapshot.propertiesToUpdate = update.propertiesToUpdate
+        snapshot.affectedStores = update.affectedStores
+        return snapshot
+    }
+    let copy = try cdObjCValue { CDXCopyObject(request, $0) }
+    guard let snapshot = copy as? NSPersistentStoreRequest else {
+        throw cdBridgeNSError(code: CDR_FAILURE, message: "Could not copy the persistent store request")
+    }
+    return snapshot
+}
+
+func cdExecuteRequest<T>(
+    _ contextPtr: UnsafeMutableRawPointer?,
+    _ request: NSPersistentStoreRequest,
+    as _: T.Type,
+    requireSQLite what: String? = nil
+) throws -> T? {
+    try cdWithContext(contextPtr) { context in
+        if let what {
+            try cdEnsureSQLiteStores(context, what)
+        }
+        let result = try cdObjCValue { CDXExecuteRequest(context, request, $0) }
+        return result as? T
+    }
+}
 
 func cdFoundationObjectDictionaries(from json: UnsafePointer<CChar>?) throws -> [[String: Any]] {
     let payloads = try cdDecodeJSON(json, as: [[String: CDValuePayload]].self)
@@ -35,7 +86,7 @@ public func cdBatchDeleteRequestNewWithFetchRequest(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -70,37 +121,29 @@ public func cdBatchDeleteRequestGetResultType(_ requestPtr: UnsafeMutableRawPoin
 }
 
 @_cdecl("cd_batch_delete_request_set_result_type")
-public func cdBatchDeleteRequestSetResultType(_ requestPtr: UnsafeMutableRawPointer?, _ resultType: UInt64) {
-    guard let requestPtr else {
-        return
+public func cdBatchDeleteRequestSetResultType(
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ resultType: UInt64,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let request: NSBatchDeleteRequest = try cdArg(requestPtr, "batch delete request")
+        let raw = try cdKnownRawValue(resultType, in: [0, 1, 2], "batch delete result type")
+        request.resultType = NSBatchDeleteRequestResultType(rawValue: UInt(raw)) ?? .resultTypeStatusOnly
     }
-    let request: NSBatchDeleteRequest = cdBorrow(requestPtr)
-    request.resultType = NSBatchDeleteRequestResultType(rawValue: UInt(resultType)) ?? request.resultType
 }
 
 @_cdecl("cd_managed_object_context_execute_batch_delete_request")
 public func cdManagedObjectContextExecuteBatchDeleteRequest(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outResult: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let contextPtr, let requestPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or batch delete request")
-        }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let request: NSBatchDeleteRequest = cdBorrow(requestPtr)
-        let result = try context.execute(request) as? NSBatchDeleteResult
-        if let result {
-            outResult?.pointee = cdRetain(result)
-        } else {
-            outResult?.pointee = nil
-        }
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        let request: NSBatchDeleteRequest = try cdArg(requestPtr, "batch delete request")
+        let result = try cdExecuteRequest(contextPtr, request, as: NSBatchDeleteResult.self, requireSQLite: "Batch delete")
+        outResult?.pointee = result.map(cdRetain)
     }
 }
 
@@ -165,7 +208,7 @@ public func cdBatchInsertRequestNewWithEntityName(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -186,7 +229,7 @@ public func cdBatchInsertRequestNewWithEntity(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -218,37 +261,29 @@ public func cdBatchInsertRequestGetResultType(_ requestPtr: UnsafeMutableRawPoin
 }
 
 @_cdecl("cd_batch_insert_request_set_result_type")
-public func cdBatchInsertRequestSetResultType(_ requestPtr: UnsafeMutableRawPointer?, _ resultType: UInt64) {
-    guard let requestPtr else {
-        return
+public func cdBatchInsertRequestSetResultType(
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ resultType: UInt64,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let request: NSBatchInsertRequest = try cdArg(requestPtr, "batch insert request")
+        let raw = try cdKnownRawValue(resultType, in: [0, 1, 2], "batch insert result type")
+        request.resultType = NSBatchInsertRequestResultType(rawValue: UInt(raw)) ?? .statusOnly
     }
-    let request: NSBatchInsertRequest = cdBorrow(requestPtr)
-    request.resultType = NSBatchInsertRequestResultType(rawValue: UInt(resultType)) ?? request.resultType
 }
 
 @_cdecl("cd_managed_object_context_execute_batch_insert_request")
 public func cdManagedObjectContextExecuteBatchInsertRequest(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outResult: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let contextPtr, let requestPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or batch insert request")
-        }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let request: NSBatchInsertRequest = cdBorrow(requestPtr)
-        let result = try context.execute(request) as? NSBatchInsertResult
-        if let result {
-            outResult?.pointee = cdRetain(result)
-        } else {
-            outResult?.pointee = nil
-        }
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        let request: NSBatchInsertRequest = try cdArg(requestPtr, "batch insert request")
+        let result = try cdExecuteRequest(contextPtr, request, as: NSBatchInsertResult.self, requireSQLite: "Batch insert")
+        outResult?.pointee = result.map(cdRetain)
     }
 }
 
@@ -311,7 +346,7 @@ public func cdBatchUpdateRequestNewWithEntityName(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -361,12 +396,16 @@ public func cdBatchUpdateRequestGetResultType(_ requestPtr: UnsafeMutableRawPoin
 }
 
 @_cdecl("cd_batch_update_request_set_result_type")
-public func cdBatchUpdateRequestSetResultType(_ requestPtr: UnsafeMutableRawPointer?, _ resultType: UInt64) {
-    guard let requestPtr else {
-        return
+public func cdBatchUpdateRequestSetResultType(
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ resultType: UInt64,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let request: NSBatchUpdateRequest = try cdArg(requestPtr, "batch update request")
+        let raw = try cdKnownRawValue(resultType, in: [0, 1, 2], "batch update result type")
+        request.resultType = NSBatchUpdateRequestResultType(rawValue: UInt(raw)) ?? .statusOnlyResultType
     }
-    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
-    request.resultType = NSBatchUpdateRequestResultType(rawValue: UInt(resultType)) ?? request.resultType
 }
 
 @_cdecl("cd_batch_update_request_set_predicate")
@@ -393,7 +432,7 @@ public func cdBatchUpdateRequestSetPropertiesToUpdateJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -401,21 +440,13 @@ public func cdBatchUpdateRequestSetPropertiesToUpdateJSON(
 public func cdManagedObjectContextExecuteBatchUpdateRequest(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outResult: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let contextPtr, let requestPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or batch update request")
-        }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
-        let result = try context.execute(request) as? NSBatchUpdateResult
+    cdStatus(outError) {
+        let request: NSBatchUpdateRequest = try cdArg(requestPtr, "batch update request")
+        let result = try cdExecuteRequest(contextPtr, request, as: NSBatchUpdateResult.self, requireSQLite: "Batch update")
         outResult?.pointee = result.map(cdRetain)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
     }
 }
 

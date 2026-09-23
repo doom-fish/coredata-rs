@@ -109,8 +109,9 @@ pub use custom_store::{
 pub use error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
 pub use fetch_request::FetchRequestResultType;
 pub use fetched_results_controller::{
-    FetchedResultsIndexPath, NSFetchedResultsChangeType, NSFetchedResultsController,
-    NSFetchedResultsControllerDelegate, NSFetchedResultsSectionInfo,
+    FetchedResultsControllerDelegateRegistration, FetchedResultsIndexPath,
+    NSFetchedResultsChangeType, NSFetchedResultsController, NSFetchedResultsControllerDelegate,
+    NSFetchedResultsSectionInfo,
 };
 pub use history::{
     NSPersistentHistoryChange, NSPersistentHistoryChangeRequest, NSPersistentHistoryResult,
@@ -138,7 +139,7 @@ pub use persistent_store_request::{
     NSFetchRequestResult, NSPersistentStoreAsynchronousResult, NSPersistentStoreRequest,
     NSPersistentStoreRequestType, NSPersistentStoreResult, NSSaveChangesRequest,
 };
-pub use query::{NSFetchRequest, NSPredicate, SortDescriptor};
+pub use query::{NSFetchRequest, NSPredicate, PredicateOperator, PredicateOptions, SortDescriptor};
 pub use query_generation::NSQueryGenerationToken;
 pub use schema::{
     AttributeType, DeleteRule, NSAttributeDescription, NSEntityDescription,
@@ -179,8 +180,9 @@ pub mod prelude {
     pub use crate::error::{CoreDataError, COREDATA_BRIDGE_ERROR_DOMAIN};
     pub use crate::fetch_request::FetchRequestResultType;
     pub use crate::fetched_results_controller::{
-        FetchedResultsIndexPath, NSFetchedResultsChangeType, NSFetchedResultsController,
-        NSFetchedResultsControllerDelegate, NSFetchedResultsSectionInfo,
+        FetchedResultsControllerDelegateRegistration, FetchedResultsIndexPath,
+        NSFetchedResultsChangeType, NSFetchedResultsController, NSFetchedResultsControllerDelegate,
+        NSFetchedResultsSectionInfo,
     };
     pub use crate::history::{
         NSPersistentHistoryChange, NSPersistentHistoryChangeRequest, NSPersistentHistoryResult,
@@ -210,7 +212,9 @@ pub mod prelude {
         NSFetchRequestResult, NSPersistentStoreAsynchronousResult, NSPersistentStoreRequest,
         NSPersistentStoreRequestType, NSPersistentStoreResult, NSSaveChangesRequest,
     };
-    pub use crate::query::{NSFetchRequest, NSPredicate, SortDescriptor};
+    pub use crate::query::{
+        NSFetchRequest, NSPredicate, PredicateOperator, PredicateOptions, SortDescriptor,
+    };
     pub use crate::query_generation::NSQueryGenerationToken;
     pub use crate::schema::{
         AttributeType, DeleteRule, NSAttributeDescription, NSEntityDescription,

@@ -7,30 +7,25 @@ public func cdQueryGenerationTokenCurrent() -> UnsafeMutableRawPointer? {
 }
 
 @_cdecl("cd_managed_object_context_get_query_generation_token")
-public func cdManagedObjectContextGetQueryGenerationToken(_ contextPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let contextPtr else {
-        return nil
+public func cdManagedObjectContextGetQueryGenerationToken(
+    _ contextPtr: UnsafeMutableRawPointer?,
+    _ outToken: CDOutObject,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let token = try cdWithContext(contextPtr) { $0.queryGenerationToken }
+        outToken?.pointee = token.map(cdRetain)
     }
-    let context: NSManagedObjectContext = cdBorrow(contextPtr)
-    return context.queryGenerationToken.map(cdRetain)
 }
 
 @_cdecl("cd_managed_object_context_set_query_generation_from_token")
 public func cdManagedObjectContextSetQueryGenerationFromToken(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ tokenPtr: UnsafeMutableRawPointer?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let contextPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context")
-        }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let token = tokenPtr.map { cdBorrow($0) as NSQueryGenerationToken }
-        try context.setQueryGenerationFrom(token)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        let token: NSQueryGenerationToken? = try tokenPtr.map { try cdArg($0, "query generation token") }
+        try cdWithContext(contextPtr) { try $0.setQueryGenerationFrom(token) }
     }
 }

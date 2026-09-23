@@ -7,8 +7,8 @@ extern "C" {
     pub fn cd_retain_object(ptr: *mut c_void) -> *mut c_void;
     pub fn cd_release_object(ptr: *mut c_void);
 
-    pub fn cd_array_count(array: *mut c_void) -> i32;
-    pub fn cd_array_get_object(array: *mut c_void, index: i32) -> *mut c_void;
+    pub fn cd_array_count(array: *mut c_void) -> i64;
+    pub fn cd_array_get_object(array: *mut c_void, index: i64) -> *mut c_void;
 
     pub fn cd_managed_object_model_new(
         out_model: *mut *mut c_void,
@@ -180,7 +180,11 @@ extern "C" {
         coordinator: *mut c_void,
         out_error: *mut *mut c_char,
     ) -> i32;
-    pub fn cd_managed_object_context_has_changes(context: *mut c_void) -> i32;
+    pub fn cd_managed_object_context_has_changes(
+        context: *mut c_void,
+        out_value: *mut i32,
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_context_save(context: *mut c_void, out_error: *mut *mut c_char)
         -> i32;
     pub fn cd_managed_object_context_insert_object(
@@ -188,17 +192,23 @@ extern "C" {
         object: *mut c_void,
         out_error: *mut *mut c_char,
     ) -> i32;
-    pub fn cd_managed_object_context_delete_object(context: *mut c_void, object: *mut c_void);
+    pub fn cd_managed_object_context_delete_object(
+        context: *mut c_void,
+        object: *mut c_void,
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_context_perform(
         context: *mut c_void,
         callback: VoidCallback,
         refcon: *mut c_void,
-    );
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_context_perform_and_wait(
         context: *mut c_void,
         callback: VoidCallback,
         refcon: *mut c_void,
-    );
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_context_execute_fetch_request(
         context: *mut c_void,
         request: *mut c_void,
@@ -212,7 +222,11 @@ extern "C" {
         out_object: *mut *mut c_void,
         out_error: *mut *mut c_char,
     ) -> i32;
-    pub fn cd_managed_object_entity(object: *mut c_void) -> *mut c_void;
+    pub fn cd_managed_object_entity(
+        object: *mut c_void,
+        out_entity: *mut *mut c_void,
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_set_value_json(
         object: *mut c_void,
         key: *const c_char,
@@ -324,4 +338,7 @@ pub mod status {
     pub const INVALID_ARGUMENT: i32 = -1;
     pub const FAILURE: i32 = -2;
     pub const TIMED_OUT: i32 = -3;
+    pub const WRONG_THREAD: i32 = -4;
+    pub const OBJC_EXCEPTION: i32 = -5;
+    pub const INVALIDATED: i32 = -6;
 }

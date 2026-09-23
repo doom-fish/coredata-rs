@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 person_row("Cleo", 41),
             ],
         )?;
-        insert_request.set_result_type(BatchInsertRequestResultType::Count);
+        insert_request.set_result_type(BatchInsertRequestResultType::Count)?;
         let insert_result = insert_request.execute(&context)?;
         assert_eq!(insert_result.count(), 3);
 
@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             String::from("age"),
             Value::from(33_i32),
         )])))?;
-        batch_update.set_result_type(BatchUpdateRequestResultType::Count);
+        batch_update.set_result_type(BatchUpdateRequestResultType::Count)?;
         let update_result = batch_update.execute(&context)?;
         assert_eq!(update_result.count(), 1);
 
@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(updated[0].value("age")?.as_i32(), Some(33));
 
         let delete_request = NSBatchDeleteRequest::from_fetch_request(&count_request)?;
-        delete_request.set_result_type(BatchDeleteRequestResultType::Count);
+        delete_request.set_result_type(BatchDeleteRequestResultType::Count)?;
         let delete_result = delete_request.execute(&context)?;
         assert_eq!(delete_result.count(), 3);
     }

@@ -14,7 +14,11 @@ extern "C" {
     ) -> i32;
     pub fn cd_batch_delete_request_get_fetch_request(request: *mut c_void) -> *mut c_void;
     pub fn cd_batch_delete_request_get_result_type(request: *mut c_void) -> u64;
-    pub fn cd_batch_delete_request_set_result_type(request: *mut c_void, result_type: u64);
+    pub fn cd_batch_delete_request_set_result_type(
+        request: *mut c_void,
+        result_type: u64,
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_context_execute_batch_delete_request(
         context: *mut c_void,
         request: *mut c_void,
@@ -41,7 +45,11 @@ extern "C" {
     pub fn cd_batch_insert_request_get_entity_name(request: *mut c_void) -> *mut c_char;
     pub fn cd_batch_insert_request_get_entity(request: *mut c_void) -> *mut c_void;
     pub fn cd_batch_insert_request_get_result_type(request: *mut c_void) -> u64;
-    pub fn cd_batch_insert_request_set_result_type(request: *mut c_void, result_type: u64);
+    pub fn cd_batch_insert_request_set_result_type(
+        request: *mut c_void,
+        result_type: u64,
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_managed_object_context_execute_batch_insert_request(
         context: *mut c_void,
         request: *mut c_void,
@@ -66,7 +74,11 @@ extern "C" {
         includes_subentities: i32,
     );
     pub fn cd_batch_update_request_get_result_type(request: *mut c_void) -> u64;
-    pub fn cd_batch_update_request_set_result_type(request: *mut c_void, result_type: u64);
+    pub fn cd_batch_update_request_set_result_type(
+        request: *mut c_void,
+        result_type: u64,
+        out_error: *mut *mut c_char,
+    ) -> i32;
     pub fn cd_batch_update_request_set_predicate(request: *mut c_void, predicate: *mut c_void);
     pub fn cd_batch_update_request_set_properties_to_update_json(
         request: *mut c_void,

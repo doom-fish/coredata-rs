@@ -20,4 +20,19 @@ extern "C" {
         out_result: *mut i32,
         out_error: *mut *mut c_char,
     ) -> i32;
+    pub fn cd_predicate_new_comparison(
+        key_path: *const c_char,
+        operator_type: u64,
+        value_json: *const c_char,
+        options: u64,
+        out_predicate: *mut *mut c_void,
+        out_error: *mut *mut c_char,
+    ) -> i32;
+    pub fn cd_predicate_new_compound(
+        compound_type: u64,
+        predicates: *const *mut c_void,
+        count: i32,
+        out_predicate: *mut *mut c_void,
+        out_error: *mut *mut c_char,
+    ) -> i32;
 }

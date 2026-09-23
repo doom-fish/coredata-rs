@@ -11,7 +11,9 @@ use crate::ffi;
 use crate::history::NSPersistentHistoryResult;
 use crate::managed_object::NSManagedObjectID;
 use crate::persistent_store_coordinator::NSPersistentStore;
-use crate::private::{collect_array, error_from_status, impl_object_wrapper, parse_error_ptr};
+use crate::private::{
+    collect_array, error_from_status, impl_object_wrapper, parse_error_ptr, status_result,
+};
 use crate::query::NSFetchRequest;
 
 /// Mirrors `NSFetchRequestResult`.
@@ -124,6 +126,12 @@ impl NSPersistentStoreResult {
     pub fn as_asynchronous_result(
         &self,
     ) -> Result<NSPersistentStoreAsynchronousResult, CoreDataError> {
+        if unsafe { ffi::cd_persistent_store_result_is_asynchronous(self.as_ptr()) } == 0 {
+            return Err(CoreDataError::bridge(
+                i64::from(ffi::status::INVALID_ARGUMENT),
+                "persistent store result is not an asynchronous result",
+            ));
+        }
         clone_retained_wrapper(self.as_ptr(), "persistent store asynchronous result")
     }
 }
@@ -143,14 +151,21 @@ impl NSPersistentStoreAsynchronousResult {
     }
 
     /// Wraps `NSPersistentStoreAsynchronousResult.operation_error(...)`.
-    pub fn operation_error(&self) -> Option<CoreDataError> {
-        let ptr = unsafe {
-            ffi::cd_persistent_store_async_result_get_operation_error_json(self.as_ptr())
+    pub fn operation_error(&self) -> Result<Option<CoreDataError>, CoreDataError> {
+        let mut out_json = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_persistent_store_async_result_get_operation_error_json(
+                self.as_ptr(),
+                &raw mut out_json,
+                &raw mut out_error,
+            )
         };
-        if ptr.is_null() {
-            return None;
+        status_result(status, out_error)?;
+        if out_json.is_null() {
+            return Ok(None);
         }
-        Some(unsafe { parse_error_ptr(ptr) })
+        Ok(Some(unsafe { parse_error_ptr(out_json) }))
     }
 
     /// Wraps `NSPersistentStoreAsynchronousResult.progress_fraction_completed(...)`.
@@ -251,8 +266,19 @@ impl NSAsynchronousFetchResult {
     }
 
     /// Wraps `NSAsynchronousFetchResult.final_result_count(...)`.
-    pub fn final_result_count(&self) -> usize {
-        unsafe { ffi::cd_asynchronous_fetch_result_get_final_result_count(self.as_ptr()) as usize }
+    pub fn final_result_count(&self) -> Result<usize, CoreDataError> {
+        let mut out_count = 0_u64;
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_asynchronous_fetch_result_get_final_result_count(
+                self.as_ptr(),
+                &raw mut out_count,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        usize::try_from(out_count)
+            .map_err(|_| CoreDataError::bridge(-1, "asynchronous fetch result count overflow"))
     }
 }
 

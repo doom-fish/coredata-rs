@@ -16,6 +16,6 @@ fn managed_object_supports_entity_lookup_and_value_round_trip(
     assert_eq!(person.entity()?.name()?, "Person");
     assert_eq!(person.value("name")?.as_str(), Some("Bea"));
     assert_eq!(person.value("age")?.as_i64(), Some(25));
-    assert!(!person.is_deleted());
+    assert!(!person.is_deleted()?);
     Ok(())
 }

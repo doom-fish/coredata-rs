@@ -36,7 +36,7 @@ fn cloudkit_configuration_and_event_requests_round_trip_without_loading_stores(
         request.result_type(),
         NSPersistentCloudKitContainerEventResultType::Events
     ));
-    request.set_result_type(NSPersistentCloudKitContainerEventResultType::CountEvents);
+    request.set_result_type(NSPersistentCloudKitContainerEventResultType::CountEvents)?;
     assert!(matches!(
         request.result_type(),
         NSPersistentCloudKitContainerEventResultType::CountEvents

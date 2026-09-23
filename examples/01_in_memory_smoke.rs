@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let context = NSManagedObjectContext::new_main_queue()?;
     context.set_persistent_store_coordinator(&coordinator)?;
 
-    context.perform_and_wait(|ctx| -> Result<(), CoreDataError> {
+    context.perform_and_wait(move |ctx| -> Result<(), CoreDataError> {
         for (name, age) in [("Ada", 32_i32), ("Bea", 25_i32), ("Cleo", 41_i32)] {
             let object = NSManagedObject::new(&person, None)?;
             ctx.insert(&object)?;
@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             object.set_value("age", age)?;
         }
 
-        if !ctx.has_changes() {
+        if !ctx.has_changes()? {
             return Err(CoreDataError {
                 domain: COREDATA_BRIDGE_ERROR_DOMAIN.into(),
                 code: -1,
@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Ok(())
-    })?;
+    })??;
 
     println!("✅ coredata insert + fetch OK");
     Ok(())

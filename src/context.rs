@@ -3,8 +3,8 @@ use core::ffi::c_void;
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, json_cstring,
-    parse_json_ptr,
+    collect_array, cstring_from_str, error_from_status, impl_sync_object_wrapper, json_cstring,
+    parse_json_ptr, status_result,
 };
 use crate::query::NSFetchRequest;
 use crate::schema::NSEntityDescription;
@@ -34,8 +34,8 @@ impl NSManagedObjectContextConcurrencyType {
     }
 }
 
-impl_object_wrapper!(NSManagedObjectContext);
-impl_object_wrapper!(NSManagedObject);
+impl_sync_object_wrapper!(NSManagedObjectContext);
+impl_sync_object_wrapper!(NSManagedObject);
 
 type AsyncPerformCallback = Box<dyn FnOnce(NSManagedObjectContext) + Send + 'static>;
 
@@ -46,7 +46,8 @@ struct PerformState {
 
 struct PerformAndWaitState<F, R>
 where
-    F: FnOnce(NSManagedObjectContext) -> R,
+    F: FnOnce(NSManagedObjectContext) -> R + Send,
+    R: Send,
 {
     callback: Option<F>,
     context: NSManagedObjectContext,
@@ -66,7 +67,8 @@ unsafe extern "C" fn perform_trampoline(refcon: *mut c_void) {
 
 unsafe extern "C" fn perform_and_wait_trampoline<F, R>(refcon: *mut c_void)
 where
-    F: FnOnce(NSManagedObjectContext) -> R,
+    F: FnOnce(NSManagedObjectContext) -> R + Send,
+    R: Send,
 {
     catch_user_panic("perform_and_wait_trampoline", || {
         // SAFETY: refcon is addr_of_mut!(state) cast to *mut c_void from perform_and_wait().
@@ -134,8 +136,18 @@ impl NSManagedObjectContext {
     }
 
     /// Wraps `NSManagedObjectContext.has_changes(...)`.
-    pub fn has_changes(&self) -> bool {
-        unsafe { ffi::cd_managed_object_context_has_changes(self.as_ptr()) != 0 }
+    pub fn has_changes(&self) -> Result<bool, CoreDataError> {
+        let mut out_value = 0_i32;
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_has_changes(
+                self.as_ptr(),
+                &raw mut out_value,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        Ok(out_value != 0)
     }
 
     /// Wraps `NSManagedObjectContext.save(...)`.
@@ -143,10 +155,7 @@ impl NSManagedObjectContext {
         let mut out_error = core::ptr::null_mut();
         let status =
             unsafe { ffi::cd_managed_object_context_save(self.as_ptr(), &raw mut out_error) };
-        if status != ffi::status::OK {
-            return Err(unsafe { error_from_status(status, out_error) });
-        }
-        Ok(())
+        status_result(status, out_error)
     }
 
     /// Wraps `NSManagedObjectContext.insert(...)`.
@@ -159,57 +168,71 @@ impl NSManagedObjectContext {
                 &raw mut out_error,
             )
         };
+        status_result(status, out_error)
+    }
+
+    /// Wraps `NSManagedObjectContext.delete(...)`.
+    pub fn delete(&self, object: &NSManagedObject) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_delete_object(
+                self.as_ptr(),
+                object.as_ptr(),
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
+    }
+
+    /// Wraps `NSManagedObjectContext.perform(...)`.
+    pub fn perform<F>(&self, callback: F) -> Result<(), CoreDataError>
+    where
+        F: FnOnce(NSManagedObjectContext) + Send + 'static,
+    {
+        let state = Box::into_raw(Box::new(PerformState {
+            callback: Some(Box::new(callback) as AsyncPerformCallback),
+            context: self.clone(),
+        }));
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_perform(
+                self.as_ptr(),
+                perform_trampoline,
+                state.cast(),
+                &raw mut out_error,
+            )
+        };
         if status != ffi::status::OK {
+            drop(unsafe { Box::from_raw(state) });
             return Err(unsafe { error_from_status(status, out_error) });
         }
         Ok(())
     }
 
-    /// Wraps `NSManagedObjectContext.delete(...)`.
-    pub fn delete(&self, object: &NSManagedObject) {
-        unsafe {
-            ffi::cd_managed_object_context_delete_object(self.as_ptr(), object.as_ptr());
-        }
-    }
-
-    /// Wraps `NSManagedObjectContext.perform(...)`.
-    pub fn perform<F>(&self, callback: F)
-    where
-        F: FnOnce(NSManagedObjectContext) + Send + 'static,
-    {
-        let state = Box::new(PerformState {
-            callback: Some(Box::new(callback) as AsyncPerformCallback),
-            context: self.clone(),
-        });
-        unsafe {
-            ffi::cd_managed_object_context_perform(
-                self.as_ptr(),
-                perform_trampoline,
-                Box::into_raw(state).cast(),
-            );
-        }
-    }
-
     /// Wraps `NSManagedObjectContext.perform_and_wait(...)`.
-    pub fn perform_and_wait<F, R>(&self, callback: F) -> R
+    pub fn perform_and_wait<F, R>(&self, callback: F) -> Result<R, CoreDataError>
     where
-        F: FnOnce(NSManagedObjectContext) -> R,
+        F: FnOnce(NSManagedObjectContext) -> R + Send,
+        R: Send,
     {
         let mut state = PerformAndWaitState {
             callback: Some(callback),
             context: self.clone(),
             result: None,
         };
-        unsafe {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
             ffi::cd_managed_object_context_perform_and_wait(
                 self.as_ptr(),
                 perform_and_wait_trampoline::<F, R>,
                 core::ptr::addr_of_mut!(state).cast(),
-            );
-        }
-        state
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        Ok(state
             .result
-            .expect("perform_and_wait callback did not return a value")
+            .expect("perform_and_wait callback did not return a value"))
     }
 
     /// Wraps `NSManagedObjectContext.fetch(...)`.
@@ -224,9 +247,7 @@ impl NSManagedObjectContext {
                 &raw mut out_error,
             )
         };
-        if status != ffi::status::OK {
-            return Err(unsafe { error_from_status(status, out_error) });
-        }
+        status_result(status, out_error)?;
         collect_array(out_array, "fetch results")
     }
 }
@@ -255,8 +276,13 @@ impl NSManagedObject {
 
     /// Wraps `NSManagedObject.entity(...)`.
     pub fn entity(&self) -> Result<NSEntityDescription, CoreDataError> {
-        let ptr = unsafe { ffi::cd_managed_object_entity(self.as_ptr()) };
-        unsafe { NSEntityDescription::from_retained_ptr(ptr, "managed object entity") }
+        let mut out_entity = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_entity(self.as_ptr(), &raw mut out_entity, &raw mut out_error)
+        };
+        status_result(status, out_error)?;
+        unsafe { NSEntityDescription::from_retained_ptr(out_entity, "managed object entity") }
     }
 
     /// Mirrors `NSManagedObject.value`.

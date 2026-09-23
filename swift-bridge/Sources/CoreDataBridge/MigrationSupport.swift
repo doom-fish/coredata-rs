@@ -34,7 +34,7 @@ public func cdEntityMappingSetName(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -57,7 +57,8 @@ public func cdEntityMappingSetMappingType(
         guard let mappingPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity mapping")
         }
-        guard let mappingType = NSEntityMappingType(rawValue: UInt(mappingType)) else {
+        let mappingRaw = try cdKnownRawValue(mappingType, in: [0, 1, 2, 3, 4, 5], "entity mapping type")
+        guard let mappingType = NSEntityMappingType(rawValue: UInt(mappingRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid entity mapping type")
         }
         let mapping: NSEntityMapping = cdBorrow(mappingPtr)
@@ -65,7 +66,7 @@ public func cdEntityMappingSetMappingType(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -93,7 +94,7 @@ public func cdEntityMappingSetSourceEntityName(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -121,7 +122,7 @@ public func cdEntityMappingSetDestinationEntityName(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -158,7 +159,7 @@ public func cdPropertyMappingSetName(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -184,7 +185,7 @@ public func cdManagedObjectModelReferenceNewWithModel(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -233,7 +234,7 @@ public func cdMigrationStageSetLabel(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -252,7 +253,7 @@ public func cdLightweightMigrationStageNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -274,7 +275,7 @@ public func cdLightweightMigrationStageGetVersionChecksumsJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -301,7 +302,7 @@ public func cdCustomMigrationStageNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -339,7 +340,7 @@ public func cdStagedMigrationManagerNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 

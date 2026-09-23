@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_entity_description_new")
@@ -14,20 +15,24 @@ public func cdEntityDescriptionNew(
 public func cdEntityDescriptionEntityForName(
     _ name: UnsafePointer<CChar>?,
     _ contextPtr: UnsafeMutableRawPointer?,
-    _ outEntity: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outEntity: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let name, let contextPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity name or managed object context")
+    cdStatus(outError) {
+        guard let name else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity name")
         }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let entity = NSEntityDescription.entity(forEntityName: String(cString: name), in: context)
+        let entityName = String(cString: name)
+        let entity = try cdWithContext(contextPtr) { context -> NSEntityDescription? in
+            guard let coordinator = context.persistentStoreCoordinator else {
+                throw cdBridgeNSError(
+                    code: CDR_INVALID_ARGUMENT,
+                    message: "The managed object context has no persistent store coordinator or parent context"
+                )
+            }
+            return coordinator.managedObjectModel.entitiesByName[entityName]
+        }
         outEntity?.pointee = entity.map(cdRetain)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
     }
 }
 
@@ -35,20 +40,31 @@ public func cdEntityDescriptionEntityForName(
 public func cdEntityDescriptionInsertNewObjectForName(
     _ name: UnsafePointer<CChar>?,
     _ contextPtr: UnsafeMutableRawPointer?,
-    _ outObject: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outObject: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let name, let contextPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity name or managed object context")
+    cdStatus(outError) {
+        guard let name else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity name")
         }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let object = NSEntityDescription.insertNewObject(forEntityName: String(cString: name), into: context)
-        outObject?.pointee = cdRetain(object)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+        let entityName = String(cString: name)
+        outObject?.pointee = try cdWithContext(contextPtr) { context in
+            guard let coordinator = context.persistentStoreCoordinator else {
+                throw cdBridgeNSError(
+                    code: CDR_INVALID_ARGUMENT,
+                    message: "The managed object context has no persistent store coordinator or parent context"
+                )
+            }
+            guard let entity = coordinator.managedObjectModel.entitiesByName[entityName] else {
+                throw cdBridgeNSError(
+                    code: CDR_INVALID_ARGUMENT,
+                    message: "The managed object model has no entity named '\(entityName)'"
+                )
+            }
+            try cdEnsureInstantiable(entity, in: context)
+            let object = try cdObjCValue { CDXInsertNewObjectForEntityName(entityName, context, $0) }
+            return cdRetainManagedObject(object, in: context)
+        }
     }
 }
 
@@ -84,11 +100,11 @@ public func cdEntityDescriptionSetName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity or entity name")
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
-        entity.name = String(cString: name)
+        try cdTrySetValue(String(cString: name), forKey: "name", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -112,11 +128,11 @@ public func cdEntityDescriptionSetManagedObjectClassName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity or class name")
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
-        entity.managedObjectClassName = String(cString: name)
+        try cdTrySetValue(String(cString: name), forKey: "managedObjectClassName", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -140,11 +156,11 @@ public func cdEntityDescriptionSetAbstract(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity")
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
-        entity.isAbstract = abstractFlag != 0
+        try cdTrySetValue(abstractFlag != 0, forKey: "abstract", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -164,7 +180,7 @@ public func cdEntityDescriptionGetUserInfoJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -179,11 +195,11 @@ public func cdEntityDescriptionSetUserInfoJSON(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity")
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
-        entity.userInfo = try cdStringDictionary(from: userInfoJSON)
+        try cdTrySetValue(try cdStringDictionary(from: userInfoJSON), forKey: "userInfo", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -216,11 +232,11 @@ public func cdEntityDescriptionSetVersionHashModifier(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity")
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
-        entity.versionHashModifier = cdOptionalString(modifier)
+        try cdTrySetValue(cdOptionalString(modifier), forKey: "versionHashModifier", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -244,11 +260,11 @@ public func cdEntityDescriptionSetRenamingIdentifier(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity")
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
-        entity.renamingIdentifier = cdOptionalString(identifier)
+        try cdTrySetValue(cdOptionalString(identifier), forKey: "renamingIdentifier", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -278,7 +294,7 @@ public func cdEntityDescriptionGetUniquenessConstraintsJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -294,11 +310,11 @@ public func cdEntityDescriptionSetUniquenessConstraintsJSON(
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
         let constraints = try cdStringMatrix(from: constraintsJSON)
-        entity.uniquenessConstraints = constraints.map { $0.map { $0 as NSString } }
+        try cdTrySetValue(constraints.map { $0.map { $0 as NSString } }, forKey: "uniquenessConstraints", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -317,11 +333,11 @@ public func cdEntityDescriptionAddAttribute(
         var properties = entity.properties
         properties.removeAll { existing in existing.name == attribute.name }
         properties.append(attribute)
-        entity.properties = properties
+        try cdTrySetValue(properties, forKey: "properties", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -340,11 +356,11 @@ public func cdEntityDescriptionAddRelationship(
         var properties = entity.properties
         properties.removeAll { existing in existing.name == relationship.name }
         properties.append(relationship)
-        entity.properties = properties
+        try cdTrySetValue(properties, forKey: "properties", on: entity)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -430,11 +446,11 @@ public func cdAttributeDescriptionSetName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute or attribute name")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.name = String(cString: name)
+        try cdTrySetValue(String(cString: name), forKey: "name", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -458,11 +474,11 @@ public func cdAttributeDescriptionSetOptional(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.isOptional = optional != 0
+        try cdTrySetValue(optional != 0, forKey: "optional", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -486,11 +502,11 @@ public func cdAttributeDescriptionSetTransient(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.isTransient = transient != 0
+        try cdTrySetValue(transient != 0, forKey: "transient", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -513,15 +529,16 @@ public func cdAttributeDescriptionSetAttributeType(
         guard let attributePtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
-        guard let type = NSAttributeType(rawValue: UInt(attributeType)) else {
+        let typeRaw = try cdKnownRawValue(attributeType, in: CD_ATTRIBUTE_TYPE_RAW_VALUES, "attribute type")
+        guard let type = NSAttributeType(rawValue: UInt(typeRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid attribute type: \(attributeType)")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.attributeType = type
+        try cdTrySetValue(type.rawValue, forKey: "attributeType", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -545,11 +562,11 @@ public func cdAttributeDescriptionSetAttributeValueClassName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.attributeValueClassName = cdOptionalString(className)
+        try cdTrySetValue(cdOptionalString(className), forKey: "attributeValueClassName", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -569,7 +586,7 @@ public func cdAttributeDescriptionGetDefaultValueJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -585,11 +602,11 @@ public func cdAttributeDescriptionSetDefaultValueJSON(
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
         let payload = try cdDecodeJSON(valueJSON, as: CDValuePayload.self)
-        attribute.defaultValue = cdFoundationValue(from: payload)
+        try cdTrySetValue(cdFoundationValue(from: payload), forKey: "defaultValue", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -613,11 +630,11 @@ public func cdAttributeDescriptionSetValueTransformerName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.valueTransformerName = cdOptionalString(name)
+        try cdTrySetValue(cdOptionalString(name), forKey: "valueTransformerName", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -641,11 +658,11 @@ public func cdAttributeDescriptionSetAllowsExternalBinaryDataStorage(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.allowsExternalBinaryDataStorage = allowsExternalStorage != 0
+        try cdTrySetValue(allowsExternalStorage != 0, forKey: "allowsExternalBinaryDataStorage", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -669,11 +686,11 @@ public func cdAttributeDescriptionSetPreservesValueInHistoryOnDeletion(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.preservesValueInHistoryOnDeletion = preservesValue != 0
+        try cdTrySetValue(preservesValue != 0, forKey: "preservesValueInHistoryOnDeletion", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -697,10 +714,10 @@ public func cdAttributeDescriptionSetAllowsCloudEncryption(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing attribute")
         }
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
-        attribute.allowsCloudEncryption = allowsEncryption != 0
+        try cdTrySetValue(allowsEncryption != 0, forKey: "allowsCloudEncryption", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }

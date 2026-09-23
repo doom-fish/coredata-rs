@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_relationship_description_new")
@@ -30,11 +31,11 @@ public func cdRelationshipDescriptionSetName(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship or relationship name")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.name = String(cString: name)
+        try cdTrySetValue(String(cString: name), forKey: "name", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -58,11 +59,11 @@ public func cdRelationshipDescriptionSetOptional(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.isOptional = optional != 0
+        try cdTrySetValue(optional != 0, forKey: "optional", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -86,11 +87,11 @@ public func cdRelationshipDescriptionSetTransient(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.isTransient = transient != 0
+        try cdTrySetValue(transient != 0, forKey: "transient", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -114,11 +115,11 @@ public func cdRelationshipDescriptionSetDestinationEntity(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.destinationEntity = entityPtr.map { cdBorrow($0) as NSEntityDescription }
+        try cdTrySetValue(entityPtr.map { cdBorrow($0) as NSEntityDescription }, forKey: "destinationEntity", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -142,11 +143,11 @@ public func cdRelationshipDescriptionSetInverseRelationship(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.inverseRelationship = inverseRelationshipPtr.map { cdBorrow($0) as NSRelationshipDescription }
+        try cdTrySetValue(inverseRelationshipPtr.map { cdBorrow($0) as NSRelationshipDescription }, forKey: "inverseRelationship", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -156,7 +157,7 @@ public func cdRelationshipDescriptionGetMinCount(_ relationshipPtr: UnsafeMutabl
         return 0
     }
     let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-    return UInt64(relationship.minCount)
+    return UInt64(clamping: relationship.minCount)
 }
 
 @_cdecl("cd_relationship_description_set_min_count")
@@ -170,11 +171,14 @@ public func cdRelationshipDescriptionSetMinCount(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.minCount = Int(minCount)
+        guard let count = Int(exactly: minCount) else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Relationship minimum count \(minCount) is too large")
+        }
+        try cdTrySetValue(count, forKey: "minCount", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -184,7 +188,7 @@ public func cdRelationshipDescriptionGetMaxCount(_ relationshipPtr: UnsafeMutabl
         return 0
     }
     let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-    return UInt64(relationship.maxCount)
+    return UInt64(clamping: relationship.maxCount)
 }
 
 @_cdecl("cd_relationship_description_set_max_count")
@@ -198,11 +202,14 @@ public func cdRelationshipDescriptionSetMaxCount(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.maxCount = Int(maxCount)
+        guard let count = Int(exactly: maxCount) else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Relationship maximum count \(maxCount) is too large")
+        }
+        try cdTrySetValue(count, forKey: "maxCount", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -225,15 +232,16 @@ public func cdRelationshipDescriptionSetDeleteRule(
         guard let relationshipPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
-        guard let deleteRule = NSDeleteRule(rawValue: UInt(deleteRule)) else {
+        let ruleRaw = try cdKnownRawValue(deleteRule, in: [0, 1, 2, 3], "delete rule")
+        guard let deleteRule = NSDeleteRule(rawValue: UInt(ruleRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid delete rule: \(deleteRule)")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.deleteRule = deleteRule
+        try cdTrySetValue(deleteRule.rawValue, forKey: "deleteRule", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -266,11 +274,11 @@ public func cdRelationshipDescriptionSetOrdered(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
         }
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        relationship.isOrdered = ordered != 0
+        try cdTrySetValue(ordered != 0, forKey: "ordered", on: relationship)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 

@@ -1,4 +1,5 @@
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_persistent_store_request_get_affected_stores")
@@ -29,7 +30,7 @@ public func cdPersistentStoreRequestSetAffectedStores(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -57,7 +58,7 @@ public func cdAsynchronousFetchRequestNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -88,68 +89,95 @@ public func cdAsynchronousFetchRequestSetEstimatedResultCount(
         return
     }
     let request: NSAsynchronousFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-    request.estimatedResultCount = Int(estimatedResultCount)
+    request.estimatedResultCount = Int(clamping: estimatedResultCount)
 }
 
 @_cdecl("cd_managed_object_context_execute_asynchronous_fetch_request")
 public func cdManagedObjectContextExecuteAsynchronousFetchRequest(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outResult: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let contextPtr, let requestPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or asynchronous fetch request")
+    cdStatus(outError) {
+        let request: NSAsynchronousFetchRequest<NSFetchRequestResult> = try cdArg(requestPtr, "asynchronous fetch request")
+        let context: NSManagedObjectContext = try cdArg(contextPtr, "managed object context")
+        guard let inner = try cdObjCValue({ CDXCopyObject(request.fetchRequest, $0) }) as? NSFetchRequest<NSFetchRequestResult> else {
+            throw cdBridgeNSError(code: CDR_FAILURE, message: "Could not copy the fetch request")
         }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let request: NSAsynchronousFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-        let result = try context.execute(request) as? NSAsynchronousFetchResult<NSFetchRequestResult>
-        outResult?.pointee = result.map(cdRetain)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+        let snapshot = NSAsynchronousFetchRequest(fetchRequest: inner, completionBlock: nil)
+        snapshot.estimatedResultCount = request.estimatedResultCount
+        try cdOnContextQueue(context) {
+            try cdEnsureFetchable(inner, in: context)
+        }
+        let result = try cdExecuteRequest(contextPtr, snapshot, as: NSAsynchronousFetchResult<NSFetchRequestResult>.self)
+        outResult?.pointee = result.map { cdRetainContextBound($0, in: context) }
     }
+}
+
+func cdWithAsyncResult<T>(
+    _ resultPtr: UnsafeMutableRawPointer?,
+    _ body: (NSPersistentStoreAsynchronousResult) throws -> T
+) throws -> T {
+    guard let resultPtr else {
+        throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing asynchronous result")
+    }
+    let box = cdBorrowBox(resultPtr)
+    guard let result = box.object as? NSPersistentStoreAsynchronousResult else {
+        throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Expected an asynchronous persistent store result")
+    }
+    if let bound = box as? CDContextBoundBox {
+        return try cdOnContextQueue(bound.context) { try body(result) }
+    }
+    return try cdOnContextQueue(result.managedObjectContext) { try body(result) }
+}
+
+@_cdecl("cd_persistent_store_result_is_asynchronous")
+public func cdPersistentStoreResultIsAsynchronous(_ resultPtr: UnsafeMutableRawPointer?) -> Int32 {
+    guard let resultPtr else {
+        return 0
+    }
+    return cdBorrowBox(resultPtr).object is NSPersistentStoreAsynchronousResult ? 1 : 0
 }
 
 @_cdecl("cd_persistent_store_async_result_get_managed_object_context")
 public func cdPersistentStoreAsyncResultGetManagedObjectContext(_ resultPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let resultPtr else {
+    guard let resultPtr, let result = cdBorrowBox(resultPtr).object as? NSPersistentStoreAsynchronousResult else {
         return nil
     }
-    let result: NSPersistentStoreAsynchronousResult = cdBorrow(resultPtr)
     return cdRetain(result.managedObjectContext)
 }
 
 @_cdecl("cd_persistent_store_async_result_get_operation_error_json")
-public func cdPersistentStoreAsyncResultGetOperationErrorJSON(_ resultPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
-    guard let resultPtr else {
-        return nil
+public func cdPersistentStoreAsyncResultGetOperationErrorJSON(
+    _ resultPtr: UnsafeMutableRawPointer?,
+    _ outJSON: CDOutString,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let operationError = try cdWithAsyncResult(resultPtr) { $0.operationError as NSError? }
+        guard let operationError else {
+            outJSON?.pointee = nil
+            return
+        }
+        let payload = CDErrorPayload(domain: operationError.domain, code: operationError.code, message: operationError.localizedDescription)
+        outJSON?.pointee = cdCString(try cdEncodeJSON(payload))
     }
-    let result: NSPersistentStoreAsynchronousResult = cdBorrow(resultPtr)
-    guard let error = result.operationError as NSError? else {
-        return nil
-    }
-    let payload = CDErrorPayload(domain: error.domain, code: error.code, message: error.localizedDescription)
-    return (try? cdEncodeJSON(payload)).flatMap(cdCString)
 }
 
 @_cdecl("cd_persistent_store_async_result_get_progress_fraction_completed")
 public func cdPersistentStoreAsyncResultGetProgressFractionCompleted(_ resultPtr: UnsafeMutableRawPointer?) -> Double {
-    guard let resultPtr else {
+    guard let resultPtr, let result = cdBorrowBox(resultPtr).object as? NSPersistentStoreAsynchronousResult else {
         return 0
     }
-    let result: NSPersistentStoreAsynchronousResult = cdBorrow(resultPtr)
     return result.progress?.fractionCompleted ?? 0
 }
 
 @_cdecl("cd_persistent_store_async_result_has_progress")
 public func cdPersistentStoreAsyncResultHasProgress(_ resultPtr: UnsafeMutableRawPointer?) -> Int32 {
-    guard let resultPtr else {
+    guard let resultPtr, let result = cdBorrowBox(resultPtr).object as? NSPersistentStoreAsynchronousResult else {
         return 0
     }
-    let result: NSPersistentStoreAsynchronousResult = cdBorrow(resultPtr)
     return result.progress == nil ? 0 : 1
 }
 
@@ -163,12 +191,54 @@ public func cdAsynchronousFetchResultGetFetchRequest(_ resultPtr: UnsafeMutableR
 }
 
 @_cdecl("cd_asynchronous_fetch_result_get_final_result_count")
-public func cdAsynchronousFetchResultGetFinalResultCount(_ resultPtr: UnsafeMutableRawPointer?) -> UInt64 {
-    guard let resultPtr else {
-        return 0
+public func cdAsynchronousFetchResultGetFinalResultCount(
+    _ resultPtr: UnsafeMutableRawPointer?,
+    _ outCount: UnsafeMutablePointer<UInt64>?,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let count = try cdWithAsyncResult(resultPtr) { result -> Int in
+            guard let fetchResult = result as? NSAsynchronousFetchResult<NSFetchRequestResult> else {
+                throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Expected an asynchronous fetch result")
+            }
+            return fetchResult.finalResult?.count ?? 0
+        }
+        outCount?.pointee = UInt64(clamping: count)
     }
-    let result: NSAsynchronousFetchResult<NSFetchRequestResult> = cdBorrow(resultPtr)
-    return UInt64(result.finalResult?.count ?? 0)
+}
+
+private let cdSaveChangesBoxesKey = UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1)
+
+final class CDSaveChangesBoxes: NSObject {
+    let inserted: [CDManagedObjectBox]
+    let updated: [CDManagedObjectBox]
+    let deleted: [CDManagedObjectBox]
+    let locked: [CDManagedObjectBox]
+
+    init(inserted: [CDManagedObjectBox], updated: [CDManagedObjectBox], deleted: [CDManagedObjectBox], locked: [CDManagedObjectBox]) {
+        self.inserted = inserted
+        self.updated = updated
+        self.deleted = deleted
+        self.locked = locked
+    }
+}
+
+func cdUniqueManagedObjectBoxes(
+    _ pointers: UnsafePointer<UnsafeMutableRawPointer?>?,
+    _ count: Int32
+) throws -> [CDManagedObjectBox] {
+    guard count >= 0, count == 0 || pointers != nil else {
+        throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid managed object list")
+    }
+    var seen = Set<ObjectIdentifier>()
+    var boxes: [CDManagedObjectBox] = []
+    for index in 0..<Int(count) {
+        let box = try cdManagedObjectBox(pointers?[index])
+        if seen.insert(ObjectIdentifier(box.managedObject)).inserted {
+            boxes.append(box)
+        }
+    }
+    return boxes
 }
 
 @_cdecl("cd_save_changes_request_new")
@@ -181,68 +251,61 @@ public func cdSaveChangesRequestNew(
     _ deletedCount: Int32,
     _ lockedObjectPtrs: UnsafePointer<UnsafeMutableRawPointer?>?,
     _ lockedCount: Int32,
-    _ outRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outRequest: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        let inserted: Set<NSManagedObject> = Set(cdObjects(from: insertedObjectPtrs, count: insertedCount))
-        let updated: Set<NSManagedObject> = Set(cdObjects(from: updatedObjectPtrs, count: updatedCount))
-        let deleted: Set<NSManagedObject> = Set(cdObjects(from: deletedObjectPtrs, count: deletedCount))
-        let locked: Set<NSManagedObject> = Set(cdObjects(from: lockedObjectPtrs, count: lockedCount))
-        outRequest?.pointee = cdRetain(NSSaveChangesRequest(
-            inserted: inserted.isEmpty ? nil : inserted,
-            updated: updated.isEmpty ? nil : updated,
-            deleted: deleted.isEmpty ? nil : deleted,
-            locked: locked.isEmpty ? nil : locked
-        ))
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
+    cdStatus(outError) {
+        let boxes = CDSaveChangesBoxes(
+            inserted: try cdUniqueManagedObjectBoxes(insertedObjectPtrs, insertedCount),
+            updated: try cdUniqueManagedObjectBoxes(updatedObjectPtrs, updatedCount),
+            deleted: try cdUniqueManagedObjectBoxes(deletedObjectPtrs, deletedCount),
+            locked: try cdUniqueManagedObjectBoxes(lockedObjectPtrs, lockedCount)
+        )
+        func objects(_ list: [CDManagedObjectBox]) -> Set<NSManagedObject>? {
+            list.isEmpty ? nil : Set(list.map(\.managedObject))
+        }
+        let request = NSSaveChangesRequest(
+            inserted: objects(boxes.inserted),
+            updated: objects(boxes.updated),
+            deleted: objects(boxes.deleted),
+            locked: objects(boxes.locked)
+        )
+        objc_setAssociatedObject(request, cdSaveChangesBoxesKey, boxes, .OBJC_ASSOCIATION_RETAIN)
+        outRequest?.pointee = cdRetain(request)
     }
 }
 
-private func cdRetainedManagedObjectArray(_ objects: Set<NSManagedObject>?) -> UnsafeMutableRawPointer? {
-    guard let objects else {
+private func cdSaveChangesBoxList(
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ select: (CDSaveChangesBoxes) -> [CDManagedObjectBox]
+) -> UnsafeMutableRawPointer? {
+    guard let requestPtr,
+          let request = cdBorrowBox(requestPtr).object as? NSSaveChangesRequest,
+          let boxes = objc_getAssociatedObject(request, cdSaveChangesBoxesKey) as? CDSaveChangesBoxes
+    else {
         return nil
     }
-    return cdRetain(Array(objects) as NSArray)
+    return cdRetain(select(boxes) as NSArray)
 }
 
 @_cdecl("cd_save_changes_request_get_inserted_objects")
 public func cdSaveChangesRequestGetInsertedObjects(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let requestPtr else {
-        return nil
-    }
-    let request: NSSaveChangesRequest = cdBorrow(requestPtr)
-    return cdRetainedManagedObjectArray(request.insertedObjects)
+    cdSaveChangesBoxList(requestPtr) { $0.inserted }
 }
 
 @_cdecl("cd_save_changes_request_get_updated_objects")
 public func cdSaveChangesRequestGetUpdatedObjects(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let requestPtr else {
-        return nil
-    }
-    let request: NSSaveChangesRequest = cdBorrow(requestPtr)
-    return cdRetainedManagedObjectArray(request.updatedObjects)
+    cdSaveChangesBoxList(requestPtr) { $0.updated }
 }
 
 @_cdecl("cd_save_changes_request_get_deleted_objects")
 public func cdSaveChangesRequestGetDeletedObjects(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let requestPtr else {
-        return nil
-    }
-    let request: NSSaveChangesRequest = cdBorrow(requestPtr)
-    return cdRetainedManagedObjectArray(request.deletedObjects)
+    cdSaveChangesBoxList(requestPtr) { $0.deleted }
 }
 
 @_cdecl("cd_save_changes_request_get_locked_objects")
 public func cdSaveChangesRequestGetLockedObjects(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let requestPtr else {
-        return nil
-    }
-    let request: NSSaveChangesRequest = cdBorrow(requestPtr)
-    return cdRetainedManagedObjectArray(request.lockedObjects)
+    cdSaveChangesBoxList(requestPtr) { $0.locked }
 }
 
 @_cdecl("cd_fetch_request_expression_new")
@@ -250,25 +313,18 @@ public func cdFetchRequestExpressionNew(
     _ fetchRequestPtr: UnsafeMutableRawPointer?,
     _ contextPtr: UnsafeMutableRawPointer?,
     _ countOnly: Int32,
-    _ outExpression: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outExpression: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let fetchRequestPtr, let contextPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch request or managed object context")
-        }
-        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = cdBorrow(fetchRequestPtr)
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
+    cdStatus(outError) {
+        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = try cdArg(fetchRequestPtr, "fetch request")
+        let context: NSManagedObjectContext = try cdArg(contextPtr, "managed object context")
         let expression = NSFetchRequestExpression.expression(
             forFetch: NSExpression(forConstantValue: fetchRequest),
             context: NSExpression(forConstantValue: context),
             countOnly: countOnly != 0
         )
         outExpression?.pointee = cdRetain(expression)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
     }
 }
 

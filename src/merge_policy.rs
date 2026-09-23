@@ -3,7 +3,9 @@
 use crate::context::NSManagedObjectContext;
 use crate::error::CoreDataError;
 use crate::ffi;
-use crate::private::{error_from_status, impl_object_wrapper};
+use crate::private::{
+    error_from_status, impl_object_wrapper, impl_sync_object_wrapper, status_result,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -47,7 +49,7 @@ impl MergePolicyType {
     }
 }
 
-impl_object_wrapper!(NSMergePolicy);
+impl_sync_object_wrapper!(NSMergePolicy);
 impl_object_wrapper!(NSMergeConflict);
 impl_object_wrapper!(NSConstraintConflict);
 
@@ -104,8 +106,19 @@ impl NSMergePolicy {
 impl NSManagedObjectContext {
     /// Wraps `NSManagedObjectContext.merge_policy(...)`.
     pub fn merge_policy(&self) -> Result<NSMergePolicy, CoreDataError> {
-        let ptr = unsafe { ffi::cd_managed_object_context_get_merge_policy(self.as_ptr()) };
-        unsafe { NSMergePolicy::from_retained_ptr(ptr, "managed object context merge policy") }
+        let mut out_policy = core::ptr::null_mut();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_managed_object_context_get_merge_policy(
+                self.as_ptr(),
+                &raw mut out_policy,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        unsafe {
+            NSMergePolicy::from_retained_ptr(out_policy, "managed object context merge policy")
+        }
     }
 
     /// Mirrors `NSManagedObjectContext.merge_policy`.

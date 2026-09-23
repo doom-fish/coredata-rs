@@ -14,7 +14,12 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "CoreDataObjCBridge",
+            path: "Sources/CoreDataObjCBridge",
+            publicHeadersPath: "include"),
+        .target(
             name: "CoreDataBridge",
+            dependencies: ["CoreDataObjCBridge"],
             path: "Sources/CoreDataBridge",
             publicHeadersPath: "include")
     ]

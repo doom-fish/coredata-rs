@@ -1,5 +1,6 @@
 import CloudKit
 import CoreData
+import CoreDataObjCBridge
 import Foundation
 
 @_cdecl("cd_persistent_cloudkit_container_options_new")
@@ -16,7 +17,7 @@ public func cdPersistentCloudKitContainerOptionsNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -48,7 +49,8 @@ public func cdPersistentCloudKitContainerOptionsSetDatabaseScope(
         guard let optionsPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing CloudKit container options")
         }
-        guard let scope = CKDatabase.Scope(rawValue: Int(databaseScope)) else {
+        let scopeRaw = try cdKnownRawValue(databaseScope, in: [1, 2, 3], "CloudKit database scope")
+        guard let scope = CKDatabase.Scope(rawValue: Int(scopeRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid CloudKit database scope: \(databaseScope)")
         }
         let options: NSPersistentCloudKitContainerOptions = cdBorrow(optionsPtr)
@@ -56,7 +58,7 @@ public func cdPersistentCloudKitContainerOptionsSetDatabaseScope(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -84,7 +86,7 @@ public func cdPersistentStoreDescriptionSetCloudKitContainerOptions(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -105,7 +107,7 @@ public func cdPersistentCloudKitContainerNew(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -162,7 +164,7 @@ public func cdPersistentCloudKitContainerSetPersistentStoreDescriptions(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -187,7 +189,7 @@ public func cdPersistentCloudKitContainerLoadPersistentStores(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -225,7 +227,7 @@ public func cdPersistentCloudKitContainerInitializeSchema(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
@@ -308,33 +310,29 @@ public func cdPersistentCloudKitEventRequestGetResultType(_ requestPtr: UnsafeMu
 }
 
 @_cdecl("cd_persistent_cloudkit_event_request_set_result_type")
-public func cdPersistentCloudKitEventRequestSetResultType(_ requestPtr: UnsafeMutableRawPointer?, _ resultType: Int64) {
-    guard let requestPtr else {
-        return
+public func cdPersistentCloudKitEventRequestSetResultType(
+    _ requestPtr: UnsafeMutableRawPointer?,
+    _ resultType: Int64,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        let request: NSPersistentCloudKitContainerEventRequest = try cdArg(requestPtr, "CloudKit event request")
+        let raw = try cdKnownRawValue(resultType, in: [0, 1], "CloudKit event result type")
+        request.resultType = NSPersistentCloudKitContainerEventResult.ResultType(rawValue: Int(raw)) ?? .events
     }
-    let request: NSPersistentCloudKitContainerEventRequest = cdBorrow(requestPtr)
-    request.resultType = NSPersistentCloudKitContainerEventResult.ResultType(rawValue: Int(resultType)) ?? request.resultType
 }
 
 @_cdecl("cd_managed_object_context_execute_persistent_cloudkit_event_request")
 public func cdManagedObjectContextExecutePersistentCloudKitEventRequest(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ requestPtr: UnsafeMutableRawPointer?,
-    _ outResult: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ outResult: CDOutObject,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let contextPtr, let requestPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object context or CloudKit event request")
-        }
-        let context: NSManagedObjectContext = cdBorrow(contextPtr)
-        let request: NSPersistentCloudKitContainerEventRequest = cdBorrow(requestPtr)
-        let result = try context.execute(request) as? NSPersistentCloudKitContainerEventResult
+    cdStatus(outError) {
+        let request: NSPersistentCloudKitContainerEventRequest = try cdArg(requestPtr, "CloudKit event request")
+        let result = try cdExecuteRequest(contextPtr, request, as: NSPersistentCloudKitContainerEventResult.self)
         outResult?.pointee = result.map(cdRetain)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return Int32(error.code)
     }
 }
 
@@ -375,7 +373,7 @@ public func cdPersistentCloudKitEventResultGetCountsJSON(
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
-        return Int32(error.code)
+        return cdErrorStatus(error)
     }
 }
 
