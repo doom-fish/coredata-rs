@@ -361,3 +361,118 @@ public func cdStagedMigrationManagerGetContainer(_ managerPtr: UnsafeMutableRawP
     let manager: NSStagedMigrationManager = cdBorrow(managerPtr)
     return manager.container.map(cdRetain)
 }
+
+public typealias CDMigrationHandlerCallback = @convention(c) (
+    UnsafeMutableRawPointer?,
+    UnsafeMutableRawPointer?,
+    UnsafeMutableRawPointer?
+) -> UnsafeMutablePointer<CChar>?
+
+private let cdWillMigrateHandlerKey = UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1)
+private let cdDidMigrateHandlerKey = UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1)
+
+final class CDMigrationHandlerBox: NSObject {
+    let token: UnsafeMutableRawPointer
+    private let release: CDVoidCallback
+
+    init(token: UnsafeMutableRawPointer, release: @escaping CDVoidCallback) {
+        self.token = token
+        self.release = release
+    }
+
+    deinit {
+        release(token)
+    }
+}
+
+func cdErrorFromPayloadJSON(_ json: UnsafeMutablePointer<CChar>) -> NSError {
+    defer { free(json) }
+    guard let payload = try? cdDecodeJSON(json, as: CDErrorPayload.self) else {
+        return cdBridgeNSError(code: CDR_FAILURE, message: "Migration handler failed")
+    }
+    return NSError(
+        domain: payload.domain,
+        code: payload.code,
+        userInfo: [NSLocalizedDescriptionKey: payload.message]
+    )
+}
+
+@_cdecl("cd_string_copy")
+public func cdStringCopy(_ string: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    string.flatMap { strdup($0) }
+}
+
+@_cdecl("cd_custom_migration_stage_set_handler")
+public func cdCustomMigrationStageSetHandler(
+    _ stagePtr: UnsafeMutableRawPointer?,
+    _ didMigrate: Int32,
+    _ token: UnsafeMutableRawPointer?,
+    _ callback: @escaping CDMigrationHandlerCallback,
+    _ release: @escaping CDVoidCallback,
+    _ outError: CDOutError
+) -> Int32 {
+    guard let token else {
+        cdWriteError(cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing handler context"), to: outError)
+        return CDR_INVALID_ARGUMENT
+    }
+    let holder = CDMigrationHandlerBox(token: token, release: release)
+    return cdStatus(outError) {
+        guard #available(macOS 14.0, *) else {
+            throw cdUnavailableFeatureError("NSCustomMigrationStage")
+        }
+        let stage: NSCustomMigrationStage = try cdArg(stagePtr, "custom migration stage")
+        let handler: (NSStagedMigrationManager, NSCustomMigrationStage) throws -> Void = { manager, current in
+            if let errorJSON = callback(holder.token, cdRetain(manager), cdRetain(current)) {
+                throw cdErrorFromPayloadJSON(errorJSON)
+            }
+        }
+        let key = didMigrate != 0 ? cdDidMigrateHandlerKey : cdWillMigrateHandlerKey
+        objc_setAssociatedObject(stage, key, holder, .OBJC_ASSOCIATION_RETAIN)
+        if didMigrate != 0 {
+            stage.didMigrateHandler = handler
+        } else {
+            stage.willMigrateHandler = handler
+        }
+    }
+}
+
+@_cdecl("cd_custom_migration_stage_clear_handler")
+public func cdCustomMigrationStageClearHandler(
+    _ stagePtr: UnsafeMutableRawPointer?,
+    _ didMigrate: Int32,
+    _ token: UnsafeMutableRawPointer?,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        guard #available(macOS 14.0, *) else {
+            throw cdUnavailableFeatureError("NSCustomMigrationStage")
+        }
+        let stage: NSCustomMigrationStage = try cdArg(stagePtr, "custom migration stage")
+        let key = didMigrate != 0 ? cdDidMigrateHandlerKey : cdWillMigrateHandlerKey
+        guard let current = objc_getAssociatedObject(stage, key) as? CDMigrationHandlerBox, current.token == token else {
+            return
+        }
+        if didMigrate != 0 {
+            stage.didMigrateHandler = nil
+        } else {
+            stage.willMigrateHandler = nil
+        }
+        objc_setAssociatedObject(stage, key, nil, .OBJC_ASSOCIATION_RETAIN)
+    }
+}
+
+@_cdecl("cd_persistent_store_description_set_staged_migration_manager")
+public func cdPersistentStoreDescriptionSetStagedMigrationManager(
+    _ descriptionPtr: UnsafeMutableRawPointer?,
+    _ managerPtr: UnsafeMutableRawPointer?,
+    _ outError: CDOutError
+) -> Int32 {
+    cdStatus(outError) {
+        guard #available(macOS 14.0, *) else {
+            throw cdUnavailableFeatureError("NSStagedMigrationManager")
+        }
+        let description: NSPersistentStoreDescription = try cdArg(descriptionPtr, "persistent store description")
+        let manager: NSStagedMigrationManager? = try managerPtr.map { try cdArg($0, "staged migration manager") }
+        description.setOption(manager, forKey: NSPersistentStoreStagedMigrationManagerOptionKey)
+    }
+}

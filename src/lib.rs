@@ -122,9 +122,9 @@ pub use managed_object::{NSManagedObjectID, NSSnapshotEventType};
 pub use merge_policy::{MergePolicyType, NSConstraintConflict, NSMergeConflict, NSMergePolicy};
 pub use migration::{migration_expression_keys, NSMappingModel, NSMigrationManager};
 pub use migration_support::{
-    NSCustomMigrationStage, NSEntityMapping, NSEntityMappingType, NSEntityMigrationPolicy,
-    NSLightweightMigrationStage, NSManagedObjectModelReference, NSMigrationStage,
-    NSPropertyMapping, NSStagedMigrationManager,
+    CustomMigrationStageHandlerRegistration, NSCustomMigrationStage, NSEntityMapping,
+    NSEntityMappingType, NSEntityMigrationPolicy, NSLightweightMigrationStage,
+    NSManagedObjectModelReference, NSMigrationStage, NSPropertyMapping, NSStagedMigrationManager,
 };
 pub use model::NSManagedObjectModel;
 pub use model_metadata::{
@@ -195,9 +195,10 @@ pub mod prelude {
     };
     pub use crate::migration::{migration_expression_keys, NSMappingModel, NSMigrationManager};
     pub use crate::migration_support::{
-        NSCustomMigrationStage, NSEntityMapping, NSEntityMappingType, NSEntityMigrationPolicy,
-        NSLightweightMigrationStage, NSManagedObjectModelReference, NSMigrationStage,
-        NSPropertyMapping, NSStagedMigrationManager,
+        CustomMigrationStageHandlerRegistration, NSCustomMigrationStage, NSEntityMapping,
+        NSEntityMappingType, NSEntityMigrationPolicy, NSLightweightMigrationStage,
+        NSManagedObjectModelReference, NSMigrationStage, NSPropertyMapping,
+        NSStagedMigrationManager,
     };
     pub use crate::model::NSManagedObjectModel;
     pub use crate::model_metadata::{

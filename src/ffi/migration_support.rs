@@ -87,4 +87,30 @@ extern "C" {
     ) -> i32;
     pub fn cd_staged_migration_manager_get_stages(manager: *mut c_void) -> *mut c_void;
     pub fn cd_staged_migration_manager_get_container(manager: *mut c_void) -> *mut c_void;
+    pub fn cd_string_copy(string: *const c_char) -> *mut c_char;
+    pub fn cd_custom_migration_stage_set_handler(
+        stage: *mut c_void,
+        did_migrate: i32,
+        context: *mut c_void,
+        callback: MigrationHandlerCallback,
+        release: unsafe extern "C" fn(*mut c_void),
+        out_error: *mut *mut c_char,
+    ) -> i32;
+    pub fn cd_custom_migration_stage_clear_handler(
+        stage: *mut c_void,
+        did_migrate: i32,
+        context: *mut c_void,
+        out_error: *mut *mut c_char,
+    ) -> i32;
+    pub fn cd_persistent_store_description_set_staged_migration_manager(
+        description: *mut c_void,
+        manager: *mut c_void,
+        out_error: *mut *mut c_char,
+    ) -> i32;
 }
+
+pub type MigrationHandlerCallback = unsafe extern "C" fn(
+    context: *mut c_void,
+    manager: *mut c_void,
+    stage: *mut c_void,
+) -> *mut c_char;

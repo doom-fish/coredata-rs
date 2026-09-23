@@ -1,15 +1,106 @@
 #![allow(dead_code)]
 
-use core::ffi::c_void;
+use core::ffi::{c_char, c_void};
+use core::fmt;
 
-use crate::error::CoreDataError;
+use doom_fish_utils::callback_context::CallbackContext;
+use doom_fish_utils::panic_safe::catch_user_panic_result;
+
+use crate::error::{CoreDataError, ErrorPayload};
 use crate::ffi;
 use crate::model::NSManagedObjectModel;
+use crate::persistent_container::NSPersistentStoreDescription;
 use crate::private::{
     collect_array, cstring_from_str, error_from_status, impl_object_wrapper, json_cstring,
-    parse_json_ptr, take_string,
+    parse_json_ptr, status_result, take_string,
 };
 use crate::store::NSPersistentContainer;
+
+type MigrationHandler = Box<
+    dyn Fn(&NSStagedMigrationManager, &NSCustomMigrationStage) -> Result<(), CoreDataError>
+        + Send
+        + Sync,
+>;
+type MigrationHandlerContext = CallbackContext<MigrationHandler>;
+
+fn handler_error(error: &CoreDataError) -> *mut c_char {
+    let payload = ErrorPayload {
+        domain: error.domain.clone(),
+        code: error.code,
+        message: error.message.clone(),
+    };
+    json_cstring(&payload, "migration handler error").map_or(core::ptr::null_mut(), |json| unsafe {
+        ffi::cd_string_copy(json.as_ptr())
+    })
+}
+
+unsafe extern "C" fn migration_handler_trampoline(
+    context: *mut c_void,
+    manager: *mut c_void,
+    stage: *mut c_void,
+) -> *mut c_char {
+    let manager = unsafe {
+        NSStagedMigrationManager::from_retained_ptr(manager, "migration handler manager")
+    };
+    let stage =
+        unsafe { NSCustomMigrationStage::from_retained_ptr(stage, "migration handler stage") };
+    let (Ok(manager), Ok(stage)) = (manager, stage) else {
+        return handler_error(&CoreDataError::bridge(
+            i64::from(ffi::status::FAILURE),
+            "migration handler received no manager or stage",
+        ));
+    };
+    let outcome = unsafe {
+        MigrationHandlerContext::with(context, "NSCustomMigrationStage handler", |handler| {
+            catch_user_panic_result("NSCustomMigrationStage handler", || {
+                handler(&manager, &stage)
+            })
+        })
+    };
+    match outcome {
+        None | Some(Some(Ok(()))) => core::ptr::null_mut(),
+        Some(None) => handler_error(&CoreDataError::bridge(
+            i64::from(ffi::status::FAILURE),
+            "migration handler panicked",
+        )),
+        Some(Some(Err(error))) => handler_error(&error),
+    }
+}
+
+#[must_use = "the handler is removed when the registration is dropped"]
+pub struct CustomMigrationStageHandlerRegistration {
+    stage: NSCustomMigrationStage,
+    did_migrate: bool,
+    context: MigrationHandlerContext,
+}
+
+impl fmt::Debug for CustomMigrationStageHandlerRegistration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CustomMigrationStageHandlerRegistration")
+            .field("stage", &self.stage)
+            .field("did_migrate", &self.did_migrate)
+            .field("active", &self.context.is_active())
+            .finish()
+    }
+}
+
+impl Drop for CustomMigrationStageHandlerRegistration {
+    fn drop(&mut self) {
+        self.context.deactivate();
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_custom_migration_stage_clear_handler(
+                self.stage.as_ptr(),
+                i32::from(self.did_migrate),
+                self.context.as_ptr(),
+                &raw mut out_error,
+            )
+        };
+        if status != ffi::status::OK {
+            drop(unsafe { error_from_status(status, out_error) });
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -395,6 +486,74 @@ impl NSCustomMigrationStage {
     /// Wraps `NSCustomMigrationStage.as_migration_stage(...)`.
     pub fn as_migration_stage(&self) -> Result<NSMigrationStage, CoreDataError> {
         clone_retained_wrapper(self.as_ptr(), "migration stage")
+    }
+
+    pub fn set_will_migrate_handler<F>(
+        &self,
+        handler: F,
+    ) -> Result<CustomMigrationStageHandlerRegistration, CoreDataError>
+    where
+        F: Fn(&NSStagedMigrationManager, &Self) -> Result<(), CoreDataError>
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.set_handler(false, Box::new(handler))
+    }
+
+    pub fn set_did_migrate_handler<F>(
+        &self,
+        handler: F,
+    ) -> Result<CustomMigrationStageHandlerRegistration, CoreDataError>
+    where
+        F: Fn(&NSStagedMigrationManager, &Self) -> Result<(), CoreDataError>
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.set_handler(true, Box::new(handler))
+    }
+
+    fn set_handler(
+        &self,
+        did_migrate: bool,
+        handler: MigrationHandler,
+    ) -> Result<CustomMigrationStageHandlerRegistration, CoreDataError> {
+        let context = MigrationHandlerContext::new(handler);
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_custom_migration_stage_set_handler(
+                self.as_ptr(),
+                i32::from(did_migrate),
+                context.retained_ptr(),
+                migration_handler_trampoline,
+                MigrationHandlerContext::RELEASE,
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)?;
+        Ok(CustomMigrationStageHandlerRegistration {
+            stage: self.clone(),
+            did_migrate,
+            context,
+        })
+    }
+}
+
+impl NSPersistentStoreDescription {
+    pub fn set_staged_migration_manager(
+        &self,
+        manager: Option<&NSStagedMigrationManager>,
+    ) -> Result<(), CoreDataError> {
+        let mut out_error = core::ptr::null_mut();
+        let status = unsafe {
+            ffi::cd_persistent_store_description_set_staged_migration_manager(
+                self.as_ptr(),
+                manager.map_or(core::ptr::null_mut(), NSStagedMigrationManager::as_ptr),
+                &raw mut out_error,
+            )
+        };
+        status_result(status, out_error)
     }
 }
 
