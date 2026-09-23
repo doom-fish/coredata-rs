@@ -43,6 +43,12 @@ fn test_load_stores_async_ok() {
             .await
             .expect("async load should succeed");
     });
+    let stores = container
+        .persistent_store_coordinator()
+        .unwrap()
+        .persistent_stores()
+        .unwrap();
+    assert_eq!(stores.len(), 1);
 }
 
 /// Error path: calling load on an already-loaded in-memory container either
@@ -59,9 +65,12 @@ fn test_load_stores_async_resolves() {
             .await
             .expect("first async load should succeed");
         // Second load — may succeed or error; we just confirm it resolves.
-        let _result = AsyncPersistentContainer(&container)
+        let result = AsyncPersistentContainer(&container)
             .load_persistent_stores()
             .await;
+        if let Err(error) = result {
+            assert_eq!(error.domain, "NSCocoaErrorDomain", "{error}");
+        }
     });
 }
 
@@ -86,6 +95,11 @@ fn test_perform_save_async_ok() {
             .await
             .expect("async save should succeed");
     });
+    assert!(!ctx.has_changes().unwrap());
+    assert_eq!(
+        ctx.count(&NSFetchRequest::new("Person").unwrap()).unwrap(),
+        1
+    );
 }
 
 /// An empty context (nothing to save) should also resolve without error.
@@ -101,6 +115,7 @@ fn test_perform_save_async_empty_context_ok() {
             .await
             .expect("save on empty context should be a no-op");
     });
+    assert!(!ctx.has_changes().unwrap());
 }
 
 // ── AsyncBatchOperation ───────────────────────────────────────────────────────
@@ -136,6 +151,12 @@ fn test_batch_insert_async_resolves() {
             .await
             .expect("async batch insert should succeed on SQLite store");
     });
+    let reader = container.new_background_context().unwrap();
+    let people = reader
+        .fetch(&NSFetchRequest::new("Person").unwrap())
+        .unwrap();
+    assert_eq!(people.len(), 1);
+    assert_eq!(people[0].value("name").unwrap().as_str(), Some("Dave"));
 
     artifact.cleanup();
 }
@@ -189,6 +210,68 @@ fn test_batch_update_async_resolves() {
             .await
             .expect("async batch update should succeed on SQLite store");
     });
+    let reader = container.new_background_context().unwrap();
+    let people = reader
+        .fetch(&NSFetchRequest::new("Person").unwrap())
+        .unwrap();
+    assert_eq!(people.len(), 1);
+    assert_eq!(people[0].value("age").unwrap().as_i64(), Some(31));
 
     artifact.cleanup();
+}
+
+#[test]
+fn test_load_stores_async_without_descriptions_completes() {
+    let fixture = basic_model().unwrap();
+    let container = NSPersistentContainer::new("AsyncNoDescriptions", &fixture.model).unwrap();
+    container.set_persistent_store_descriptions(&[]).unwrap();
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let future = AsyncPersistentContainer(&container).load_persistent_stores();
+    std::thread::spawn(move || {
+        let _ = sender.send(pollster::block_on(future));
+    });
+    let result = receiver
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .expect("loading zero store descriptions must complete");
+    assert!(result.is_ok(), "{result:?}");
+}
+
+#[test]
+fn test_load_stores_async_reports_unsupported_store_type() {
+    let fixture = basic_model().unwrap();
+    let container = NSPersistentContainer::new("AsyncBogusStore", &fixture.model).unwrap();
+    let description = NSPersistentStoreDescription::new().unwrap();
+    description.set_store_type("Bogus").unwrap();
+    container
+        .set_persistent_store_descriptions(&[&description])
+        .unwrap();
+    let error = pollster::block_on(AsyncPersistentContainer(&container).load_persistent_stores())
+        .expect_err("an unsupported store type must fail");
+    assert_eq!(error.domain, COREDATA_BRIDGE_ERROR_DOMAIN);
+    assert_eq!(error.code, -1);
+}
+
+#[test]
+fn test_perform_save_async_reports_the_store_error() {
+    let fixture = basic_model().unwrap();
+    let coordinator = NSPersistentStoreCoordinator::new(&fixture.model).unwrap();
+    let ctx = NSManagedObjectContext::new_private_queue().unwrap();
+    ctx.set_persistent_store_coordinator(&coordinator).unwrap();
+    NSManagedObject::new(&fixture.person, Some(&ctx)).unwrap();
+    let error = pollster::block_on(AsyncManagedObjectContext(&ctx).perform_save())
+        .expect_err("saving without a store must fail");
+    assert_eq!(error.domain, COREDATA_BRIDGE_ERROR_DOMAIN);
+    assert_eq!(error.code, -1);
+}
+
+#[test]
+fn test_batch_insert_async_rejects_non_sqlite_stores() {
+    let fixture = basic_model().unwrap();
+    let container = in_memory_container("AsyncBatchInMemory", &fixture.model).unwrap();
+    let ctx = container.new_background_context().unwrap();
+    let request = NSBatchInsertRequest::new("Person", &[person_row("Eve", 30)]).unwrap();
+    let error = pollster::block_on(AsyncBatchOperation::insert(&ctx, &request))
+        .expect_err("batch insert needs a SQLite store");
+    assert_eq!(error.domain, COREDATA_BRIDGE_ERROR_DOMAIN);
+    assert_eq!(error.code, -1);
 }
