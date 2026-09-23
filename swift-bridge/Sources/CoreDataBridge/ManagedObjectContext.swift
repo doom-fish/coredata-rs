@@ -43,9 +43,6 @@ func cdEnsureFetchable(_ request: NSFetchRequest<NSFetchRequestResult>, in conte
             message: "The managed object context has no persistent store coordinator or parent context"
         )
     }
-    if request.entity != nil {
-        return
-    }
     guard let entityName = request.entityName else {
         throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "The fetch request has no entity")
     }
