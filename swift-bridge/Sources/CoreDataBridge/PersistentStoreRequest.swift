@@ -54,7 +54,7 @@ public func cdAsynchronousFetchRequestNew(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch request")
         }
         let fetchRequest: NSFetchRequest<NSFetchRequestResult> = cdBorrow(fetchRequestPtr)
-        outRequest?.pointee = cdRetain(NSAsynchronousFetchRequest(fetchRequest: fetchRequest, completionBlock: nil))
+        outRequest?.pointee = cdRetain(NSAsynchronousFetchRequest(fetchRequest: cdCopyFetchRequest(fetchRequest), completionBlock: nil))
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -68,7 +68,7 @@ public func cdAsynchronousFetchRequestGetFetchRequest(_ requestPtr: UnsafeMutabl
         return nil
     }
     let request: NSAsynchronousFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-    return cdRetain(request.fetchRequest)
+    return cdRetain(cdCopyFetchRequest(request.fetchRequest))
 }
 
 @_cdecl("cd_asynchronous_fetch_request_get_estimated_result_count")
@@ -102,15 +102,11 @@ public func cdManagedObjectContextExecuteAsynchronousFetchRequest(
     cdStatus(outError) {
         let request: NSAsynchronousFetchRequest<NSFetchRequestResult> = try cdArg(requestPtr, "asynchronous fetch request")
         let context: NSManagedObjectContext = try cdArg(contextPtr, "managed object context")
-        guard let inner = try cdObjCValue({ CDXCopyObject(request.fetchRequest, $0) }) as? NSFetchRequest<NSFetchRequestResult> else {
-            throw cdBridgeNSError(code: CDR_FAILURE, message: "Could not copy the fetch request")
-        }
-        let snapshot = NSAsynchronousFetchRequest(fetchRequest: inner, completionBlock: nil)
-        snapshot.estimatedResultCount = request.estimatedResultCount
+        let inner = request.fetchRequest
         try cdOnContextQueue(context) {
             try cdEnsureFetchable(inner, in: context)
         }
-        let result = try cdExecuteRequest(contextPtr, snapshot, as: NSAsynchronousFetchResult<NSFetchRequestResult>.self)
+        let result = try cdExecuteRequest(contextPtr, request, as: NSAsynchronousFetchResult<NSFetchRequestResult>.self)
         outResult?.pointee = result.map { cdRetainContextBound($0, in: context) }
     }
 }
@@ -183,11 +179,13 @@ public func cdPersistentStoreAsyncResultHasProgress(_ resultPtr: UnsafeMutableRa
 
 @_cdecl("cd_asynchronous_fetch_result_get_fetch_request")
 public func cdAsynchronousFetchResultGetFetchRequest(_ resultPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let resultPtr else {
-        return nil
+    let snapshot = try? cdWithAsyncResult(resultPtr) { result -> NSAsynchronousFetchRequest<NSFetchRequestResult> in
+        guard let fetchResult = result as? NSAsynchronousFetchResult<NSFetchRequestResult> else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Expected an asynchronous fetch result")
+        }
+        return cdCopyAsynchronousFetchRequest(fetchResult.fetchRequest)
     }
-    let result: NSAsynchronousFetchResult<NSFetchRequestResult> = cdBorrow(resultPtr)
-    return cdRetain(result.fetchRequest)
+    return snapshot.map(cdRetain)
 }
 
 @_cdecl("cd_asynchronous_fetch_result_get_final_result_count")
@@ -275,6 +273,20 @@ public func cdSaveChangesRequestNew(
     }
 }
 
+func cdCopySaveChangesRequest(_ request: NSSaveChangesRequest) -> NSSaveChangesRequest {
+    let copy = NSSaveChangesRequest(
+        inserted: request.insertedObjects,
+        updated: request.updatedObjects,
+        deleted: request.deletedObjects,
+        locked: request.lockedObjects
+    )
+    if let boxes = objc_getAssociatedObject(request, cdSaveChangesBoxesKey) {
+        objc_setAssociatedObject(copy, cdSaveChangesBoxesKey, boxes, .OBJC_ASSOCIATION_RETAIN)
+    }
+    copy.affectedStores = request.affectedStores
+    return copy
+}
+
 private func cdSaveChangesBoxList(
     _ requestPtr: UnsafeMutableRawPointer?,
     _ select: (CDSaveChangesBoxes) -> [CDManagedObjectBox]
@@ -320,7 +332,7 @@ public func cdFetchRequestExpressionNew(
         let fetchRequest: NSFetchRequest<NSFetchRequestResult> = try cdArg(fetchRequestPtr, "fetch request")
         let context: NSManagedObjectContext = try cdArg(contextPtr, "managed object context")
         let expression = NSFetchRequestExpression.expression(
-            forFetch: NSExpression(forConstantValue: fetchRequest),
+            forFetch: NSExpression(forConstantValue: cdCopyFetchRequest(fetchRequest)),
             context: NSExpression(forConstantValue: context),
             countOnly: countOnly != 0
         )

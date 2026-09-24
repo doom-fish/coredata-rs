@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     insert_person(&context, &fixture.person, "Cleo", 41)?;
     context.save()?;
 
-    let request = NSFetchRequest::new("Person")?;
+    let mut request = NSFetchRequest::new("Person")?;
     request.set_sort_descriptors(&[SortDescriptor::ascending("age")])?;
 
     let controller = NSFetchedResultsController::new(&request, &context, None, None)?;

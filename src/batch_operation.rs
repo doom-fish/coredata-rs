@@ -5,7 +5,8 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::managed_object::NSManagedObjectID;
 use crate::private::{
-    collect_array, error_from_status, impl_object_wrapper, status_result, take_string,
+    collect_array, error_from_status, impl_copied_object_wrapper, impl_shared_object_wrapper,
+    status_result, take_string,
 };
 use crate::query::{NSFetchRequest, NSPredicate};
 use crate::schema::NSEntityDescription;
@@ -79,10 +80,10 @@ impl BatchInsertRequestResultType {
     }
 }
 
-impl_object_wrapper!(NSBatchDeleteRequest);
-impl_object_wrapper!(NSBatchDeleteResult);
-impl_object_wrapper!(NSBatchInsertRequest);
-impl_object_wrapper!(NSBatchInsertResult);
+impl_copied_object_wrapper!(NSBatchDeleteRequest);
+impl_shared_object_wrapper!(NSBatchDeleteResult);
+impl_copied_object_wrapper!(NSBatchInsertRequest);
+impl_shared_object_wrapper!(NSBatchInsertResult);
 
 fn encode_object_rows(
     objects: &[BTreeMap<String, Value>],
@@ -156,7 +157,7 @@ impl NSBatchDeleteRequest {
 
     /// Mirrors `NSBatchDeleteRequest.result_type`.
     pub fn set_result_type(
-        &self,
+        &mut self,
         result_type: BatchDeleteRequestResultType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -271,17 +272,6 @@ impl NSBatchInsertRequest {
             .ok_or_else(|| CoreDataError::bridge(-1, "batch insert entity name was nil"))
     }
 
-    /// Wraps `NSBatchInsertRequest.entity(...)`.
-    pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
-        let ptr = unsafe { ffi::cd_batch_insert_request_get_entity(self.as_ptr()) };
-        if ptr.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(unsafe {
-            NSEntityDescription::from_retained_ptr(ptr, "batch insert request entity")?
-        }))
-    }
-
     /// Wraps `NSBatchInsertRequest.result_type(...)`.
     pub fn result_type(&self) -> BatchInsertRequestResultType {
         BatchInsertRequestResultType::from_raw(unsafe {
@@ -291,7 +281,7 @@ impl NSBatchInsertRequest {
 
     /// Mirrors `NSBatchInsertRequest.result_type`.
     pub fn set_result_type(
-        &self,
+        &mut self,
         result_type: BatchInsertRequestResultType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -386,8 +376,8 @@ impl BatchUpdateRequestResultType {
     }
 }
 
-impl_object_wrapper!(NSBatchUpdateRequest);
-impl_object_wrapper!(NSBatchUpdateResult);
+impl_copied_object_wrapper!(NSBatchUpdateRequest);
+impl_shared_object_wrapper!(NSBatchUpdateResult);
 
 fn encode_update_properties(
     properties: &BTreeMap<String, Value>,
@@ -426,24 +416,13 @@ impl NSBatchUpdateRequest {
             .ok_or_else(|| CoreDataError::bridge(-1, "batch update entity name was nil"))
     }
 
-    /// Wraps `NSBatchUpdateRequest.entity(...)`.
-    pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
-        let ptr = unsafe { ffi::cd_batch_update_request_get_entity(self.as_ptr()) };
-        if ptr.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(unsafe {
-            NSEntityDescription::from_retained_ptr(ptr, "batch update request entity")?
-        }))
-    }
-
     /// Wraps `NSBatchUpdateRequest.includes_subentities(...)`.
     pub fn includes_subentities(&self) -> bool {
         unsafe { ffi::cd_batch_update_request_get_includes_subentities(self.as_ptr()) != 0 }
     }
 
     /// Mirrors `NSBatchUpdateRequest.includes_subentities`.
-    pub fn set_includes_subentities(&self, includes_subentities: bool) {
+    pub fn set_includes_subentities(&mut self, includes_subentities: bool) {
         unsafe {
             ffi::cd_batch_update_request_set_includes_subentities(
                 self.as_ptr(),
@@ -461,7 +440,7 @@ impl NSBatchUpdateRequest {
 
     /// Mirrors `NSBatchUpdateRequest.result_type`.
     pub fn set_result_type(
-        &self,
+        &mut self,
         result_type: BatchUpdateRequestResultType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -476,7 +455,7 @@ impl NSBatchUpdateRequest {
     }
 
     /// Mirrors `NSBatchUpdateRequest.predicate`.
-    pub fn set_predicate(&self, predicate: Option<&NSPredicate>) {
+    pub fn set_predicate(&mut self, predicate: Option<&NSPredicate>) {
         unsafe {
             ffi::cd_batch_update_request_set_predicate(
                 self.as_ptr(),
@@ -487,7 +466,7 @@ impl NSBatchUpdateRequest {
 
     /// Mirrors `NSBatchUpdateRequest.properties_to_update`.
     pub fn set_properties_to_update(
-        &self,
+        &mut self,
         properties_to_update: Option<&BTreeMap<String, Value>>,
     ) -> Result<(), CoreDataError> {
         let properties_to_update = properties_to_update

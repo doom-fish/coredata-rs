@@ -70,7 +70,7 @@ extern "C" {
         out_error: *mut *mut c_char,
     ) -> i32;
 
-    pub fn cd_managed_object_id_get_entity(object_id: *mut c_void) -> *mut c_void;
+    pub fn cd_managed_object_id_get_entity_name(object_id: *mut c_void) -> *mut c_char;
     pub fn cd_managed_object_id_get_temporary(object_id: *mut c_void) -> i32;
     pub fn cd_managed_object_id_get_uri(object_id: *mut c_void) -> *mut c_char;
 }

@@ -9,6 +9,18 @@ BOOL CDXSetValueForKey(id object, id _Nullable value, NSString *key, NSError *_N
 
 id _Nullable CDXCopyObject(id object, NSError *_Nullable *_Nullable error);
 
+NSFetchIndexElementDescription *_Nullable CDXNewFetchIndexElement(
+    NSPropertyDescription *property,
+    NSFetchIndexElementType collationType,
+    NSError *_Nullable *_Nullable error
+);
+
+NSFetchIndexDescription *_Nullable CDXNewFetchIndexDescription(
+    NSString *name,
+    NSArray<NSFetchIndexElementDescription *> *elements,
+    NSError *_Nullable *_Nullable error
+);
+
 BOOL CDXValueForKey(
     id object,
     NSString *key,

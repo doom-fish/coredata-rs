@@ -8,7 +8,7 @@ use support::*;
 #[test]
 fn validation_rules_and_object_validation_report_failures() -> Result<(), Box<dyn std::error::Error>>
 {
-    let fixture = basic_model()?;
+    let mut fixture = basic_model()?;
     fixture
         .name
         .set_validation_rules(&[ValidationRule::new("SELF != nil", "Name required")])?;

@@ -22,8 +22,8 @@ fn unloaded_in_memory_container(
     name: &str,
     model: &NSManagedObjectModel,
 ) -> Result<NSPersistentContainer, CoreDataError> {
-    let container = NSPersistentContainer::new(name, model)?;
-    let description = NSPersistentStoreDescription::new()?;
+    let mut container = NSPersistentContainer::new(name, model)?;
+    let mut description = NSPersistentStoreDescription::new()?;
     description.set_store_type(store_types::IN_MEMORY)?;
     description.set_should_add_asynchronously(false);
     container.set_persistent_store_descriptions(&[&description])?;
@@ -85,7 +85,7 @@ fn test_perform_save_async_ok() {
     // queue when pollster::block_on runs on the main thread.
     let ctx = container.new_background_context().unwrap();
 
-    let person = NSManagedObject::new(&fixture.person, Some(&ctx)).unwrap();
+    let person = NSManagedObject::new(&fixture.person, &ctx).unwrap();
     person.set_value("name", "Charlie").unwrap();
     person.set_value("age", 40_i32).unwrap();
 
@@ -133,7 +133,7 @@ fn test_batch_insert_async_resolves() {
     .unwrap();
     let bg = container.new_background_context().unwrap();
 
-    let req = NSBatchInsertRequest::new(
+    let mut req = NSBatchInsertRequest::new(
         "Person",
         &[{
             let mut m = std::collections::BTreeMap::new();
@@ -175,7 +175,7 @@ fn test_batch_update_async_resolves() {
     let bg = container.new_background_context().unwrap();
 
     // Pre-insert a row so the update has something to act on.
-    let insert_req = NSBatchInsertRequest::new(
+    let mut insert_req = NSBatchInsertRequest::new(
         "Person",
         &[{
             let mut m = std::collections::BTreeMap::new();
@@ -194,7 +194,7 @@ fn test_batch_update_async_resolves() {
             .expect("pre-insert for update test should succeed");
     });
 
-    let update_req = NSBatchUpdateRequest::new("Person").unwrap();
+    let mut update_req = NSBatchUpdateRequest::new("Person").unwrap();
     update_req
         .set_result_type(BatchUpdateRequestResultType::StatusOnly)
         .unwrap();
@@ -223,7 +223,7 @@ fn test_batch_update_async_resolves() {
 #[test]
 fn test_load_stores_async_without_descriptions_completes() {
     let fixture = basic_model().unwrap();
-    let container = NSPersistentContainer::new("AsyncNoDescriptions", &fixture.model).unwrap();
+    let mut container = NSPersistentContainer::new("AsyncNoDescriptions", &fixture.model).unwrap();
     container.set_persistent_store_descriptions(&[]).unwrap();
     let (sender, receiver) = std::sync::mpsc::channel();
     let future = AsyncPersistentContainer(&container).load_persistent_stores();
@@ -239,8 +239,8 @@ fn test_load_stores_async_without_descriptions_completes() {
 #[test]
 fn test_load_stores_async_reports_unsupported_store_type() {
     let fixture = basic_model().unwrap();
-    let container = NSPersistentContainer::new("AsyncBogusStore", &fixture.model).unwrap();
-    let description = NSPersistentStoreDescription::new().unwrap();
+    let mut container = NSPersistentContainer::new("AsyncBogusStore", &fixture.model).unwrap();
+    let mut description = NSPersistentStoreDescription::new().unwrap();
     description.set_store_type("Bogus").unwrap();
     container
         .set_persistent_store_descriptions(&[&description])
@@ -257,7 +257,7 @@ fn test_perform_save_async_reports_the_store_error() {
     let coordinator = NSPersistentStoreCoordinator::new(&fixture.model).unwrap();
     let ctx = NSManagedObjectContext::new_private_queue().unwrap();
     ctx.set_persistent_store_coordinator(&coordinator).unwrap();
-    NSManagedObject::new(&fixture.person, Some(&ctx)).unwrap();
+    NSManagedObject::new(&fixture.person, &ctx).unwrap();
     let error = pollster::block_on(AsyncManagedObjectContext(&ctx).perform_save())
         .expect_err("saving without a store must fail");
     assert_eq!(error.domain, COREDATA_BRIDGE_ERROR_DOMAIN);

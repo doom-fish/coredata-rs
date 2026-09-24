@@ -7,13 +7,13 @@ use crate::history::NSPersistentHistoryToken;
 use crate::model::NSManagedObjectModel;
 use crate::persistent_container::NSPersistentStoreDescription;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, json_cstring,
-    opt_cstring_ptr, path_cstring, take_string,
+    borrowed_ptr, collect_array, cstring_from_str, error_from_status, impl_sync_object_wrapper,
+    json_cstring, opt_cstring_ptr, path_cstring, take_string, Borrowed,
 };
 use crate::store::{NSPersistentStoreCoordinator, PersistentStoreOptions};
 use crate::value::ValuePayload;
 
-impl_object_wrapper!(NSPersistentStore);
+impl_sync_object_wrapper!(NSPersistentStore);
 
 fn encode_options_json(
     options: Option<&PersistentStoreOptions>,
@@ -57,12 +57,12 @@ impl NSPersistentStoreCoordinator {
     }
 
     /// Wraps `NSPersistentStoreCoordinator.managed_object_model(...)`.
-    pub fn managed_object_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
+    pub fn managed_object_model(
+        &self,
+    ) -> Result<Borrowed<'_, NSManagedObjectModel>, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_persistent_store_coordinator_managed_object_model(self.as_ptr()) };
-        unsafe {
-            NSManagedObjectModel::from_retained_ptr(ptr, "persistent store coordinator model")
-        }
+        unsafe { borrowed_ptr(ptr, "persistent store coordinator model") }
     }
 
     /// Wraps `NSPersistentStoreCoordinator.persistent_stores(...)`.

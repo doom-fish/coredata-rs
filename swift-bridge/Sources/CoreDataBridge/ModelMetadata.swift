@@ -110,7 +110,7 @@ public func cdFetchedPropertyDescriptionGetFetchRequest(_ propertyPtr: UnsafeMut
         return nil
     }
     let property: NSFetchedPropertyDescription = cdBorrow(propertyPtr)
-    return property.fetchRequest.map(cdRetain)
+    return property.fetchRequest.map { cdRetain(cdCopyFetchRequest($0)) }
 }
 
 @_cdecl("cd_fetched_property_description_set_fetch_request")
@@ -124,7 +124,8 @@ public func cdFetchedPropertyDescriptionSetFetchRequest(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetched property description")
         }
         let property: NSFetchedPropertyDescription = cdBorrow(propertyPtr)
-        try cdTrySetValue(fetchRequestPtr.map { cdBorrow($0) as NSFetchRequest<NSFetchRequestResult> }, forKey: "fetchRequest", on: property)
+        let fetchRequest = fetchRequestPtr.map { cdCopyFetchRequest(cdBorrow($0) as NSFetchRequest<NSFetchRequestResult>) }
+        try cdTrySetValue(fetchRequest, forKey: "fetchRequest", on: property)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -220,7 +221,8 @@ public func cdCompositeAttributeDescriptionSetElements(
         }
         let attribute: NSCompositeAttributeDescription = cdBorrow(attributePtr)
         let elements: [NSAttributeDescription] = cdObjects(from: elementPtrs, count: count)
-        try cdTrySetValue(elements, forKey: "elements", on: attribute)
+        let copies = try elements.map { try cdCopyProperty($0) }
+        try cdTrySetValue(copies, forKey: "elements", on: attribute)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -243,8 +245,11 @@ public func cdFetchIndexElementDescriptionNew(
         guard let collationType = NSFetchIndexElementType(rawValue: UInt(collationRaw)) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Invalid fetch index element collation type")
         }
-        let property: NSPropertyDescription = cdBorrow(propertyPtr)
-        outElement?.pointee = cdRetain(NSFetchIndexElementDescription(property: property, collationType: collationType))
+        guard let attribute = cdBorrowBox(propertyPtr).object as? NSAttributeDescription else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "A fetch index element needs an attribute")
+        }
+        let property = try cdCopyProperty(attribute)
+        outElement?.pointee = cdRetain(try cdObjCValue { CDXNewFetchIndexElement(property, collationType, $0) })
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -333,8 +338,8 @@ public func cdFetchIndexDescriptionNew(
         guard let name else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch index description name")
         }
-        let elements: [NSFetchIndexElementDescription] = cdObjects(from: elementPtrs, count: count)
-        outIndex?.pointee = cdRetain(NSFetchIndexDescription(name: String(cString: name), elements: elements))
+        let elements = try cdCopyIndexElements(cdObjects(from: elementPtrs, count: count))
+        outIndex?.pointee = cdRetain(try cdObjCValue { CDXNewFetchIndexDescription(String(cString: name), elements, $0) })
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -391,7 +396,7 @@ public func cdFetchIndexDescriptionSetElements(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch index description")
         }
         let index: NSFetchIndexDescription = cdBorrow(indexPtr)
-        let elements: [NSFetchIndexElementDescription] = cdObjects(from: elementPtrs, count: count)
+        let elements = try cdCopyIndexElements(cdObjects(from: elementPtrs, count: count))
         try cdTrySetValue(elements, forKey: "elements", on: index)
         return CDR_OK
     } catch let error as NSError {

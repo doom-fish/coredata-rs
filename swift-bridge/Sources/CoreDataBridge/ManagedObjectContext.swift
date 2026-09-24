@@ -56,7 +56,8 @@ func cdEnsureFetchable(_ request: NSFetchRequest<NSFetchRequestResult>, in conte
 
 func cdFetch(_ request: NSFetchRequest<NSFetchRequestResult>, in context: NSManagedObjectContext) throws -> [Any] {
     try cdEnsureFetchable(request, in: context)
-    return try cdObjCValue { CDXExecuteFetchRequest(context, request, $0) }
+    let snapshot = cdCopyFetchRequest(request)
+    return try cdObjCValue { CDXExecuteFetchRequest(context, snapshot, $0) }
 }
 
 @_cdecl("cd_managed_object_context_new")
@@ -381,8 +382,9 @@ public func cdManagedObjectContextCountForFetchRequest(
         let request: NSFetchRequest<NSFetchRequestResult> = try cdArg(requestPtr, "fetch request")
         let count = try cdWithContext(contextPtr) { context -> UInt in
             try cdEnsureFetchable(request, in: context)
+            let snapshot = cdCopyFetchRequest(request)
             var count: UInt = 0
-            try cdObjCCall { CDXCountForFetchRequest(context, request, &count, $0) }
+            try cdObjCCall { CDXCountForFetchRequest(context, snapshot, &count, $0) }
             return count
         }
         outCount?.pointee = UInt64(count)

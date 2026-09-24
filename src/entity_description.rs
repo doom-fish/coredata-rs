@@ -6,17 +6,18 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::model::NSManagedObjectModel;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, json_cstring, parse_json_ptr, take_string,
+    collect_borrowed, cstring_from_str, error_from_status, json_cstring, optional_borrowed_ptr,
+    parse_json_ptr, take_string, Borrowed,
 };
 use crate::schema::{NSAttributeDescription, NSEntityDescription, NSRelationshipDescription};
 use crate::value::{Value, ValuePayload};
 
 impl NSEntityDescription {
     /// Wraps `NSEntityDescription.entity_for_name(...)`.
-    pub fn entity_for_name(
+    pub fn entity_for_name<'a>(
         name: &str,
-        context: &NSManagedObjectContext,
-    ) -> Result<Option<Self>, CoreDataError> {
+        context: &'a NSManagedObjectContext,
+    ) -> Result<Option<Borrowed<'a, Self>>, CoreDataError> {
         let name = cstring_from_str(name, "entity description lookup name")?;
         let mut out_entity = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -31,12 +32,7 @@ impl NSEntityDescription {
         if status != ffi::status::OK {
             return Err(unsafe { error_from_status(status, out_error) });
         }
-        if out_entity.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(unsafe {
-            Self::from_retained_ptr(out_entity, "entity description lookup")?
-        }))
+        unsafe { optional_borrowed_ptr(out_entity, "entity description lookup") }
     }
 
     /// Wraps `NSEntityDescription.insert_new_object_for_name(...)`.
@@ -62,9 +58,11 @@ impl NSEntityDescription {
     }
 
     /// Wraps `NSEntityDescription.managed_object_model(...)`.
-    pub fn managed_object_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
+    pub fn managed_object_model(
+        &self,
+    ) -> Result<Option<Borrowed<'_, NSManagedObjectModel>>, CoreDataError> {
         let ptr = unsafe { ffi::cd_entity_description_get_managed_object_model(self.as_ptr()) };
-        unsafe { NSManagedObjectModel::from_retained_ptr(ptr, "entity description model") }
+        unsafe { optional_borrowed_ptr(ptr, "entity description model") }
     }
 
     /// Wraps `NSEntityDescription.is_abstract(...)`.
@@ -73,7 +71,7 @@ impl NSEntityDescription {
     }
 
     /// Mirrors `NSEntityDescription.abstract`.
-    pub fn set_abstract(&self, abstract_flag: bool) -> Result<(), CoreDataError> {
+    pub fn set_abstract(&mut self, abstract_flag: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_entity_description_set_abstract(
@@ -106,7 +104,10 @@ impl NSEntityDescription {
     }
 
     /// Mirrors `NSEntityDescription.user_info`.
-    pub fn set_user_info(&self, user_info: &BTreeMap<String, String>) -> Result<(), CoreDataError> {
+    pub fn set_user_info(
+        &mut self,
+        user_info: &BTreeMap<String, String>,
+    ) -> Result<(), CoreDataError> {
         let user_info_json = json_cstring(user_info, "entity description user info")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -136,7 +137,10 @@ impl NSEntityDescription {
     }
 
     /// Mirrors `NSEntityDescription.version_hash_modifier`.
-    pub fn set_version_hash_modifier(&self, modifier: Option<&str>) -> Result<(), CoreDataError> {
+    pub fn set_version_hash_modifier(
+        &mut self,
+        modifier: Option<&str>,
+    ) -> Result<(), CoreDataError> {
         let modifier = modifier
             .map(|value| cstring_from_str(value, "entity version hash modifier"))
             .transpose()?;
@@ -163,7 +167,10 @@ impl NSEntityDescription {
     }
 
     /// Mirrors `NSEntityDescription.renaming_identifier`.
-    pub fn set_renaming_identifier(&self, identifier: Option<&str>) -> Result<(), CoreDataError> {
+    pub fn set_renaming_identifier(
+        &mut self,
+        identifier: Option<&str>,
+    ) -> Result<(), CoreDataError> {
         let identifier = identifier
             .map(|value| cstring_from_str(value, "entity renaming identifier"))
             .transpose()?;
@@ -202,7 +209,7 @@ impl NSEntityDescription {
 
     /// Mirrors `NSEntityDescription.uniqueness_constraints`.
     pub fn set_uniqueness_constraints(
-        &self,
+        &mut self,
         constraints: &[Vec<String>],
     ) -> Result<(), CoreDataError> {
         let constraints_json = json_cstring(constraints, "entity uniqueness constraints")?;
@@ -224,14 +231,14 @@ impl NSEntityDescription {
     pub fn relationships_with_destination_entity(
         &self,
         destination_entity: &NSEntityDescription,
-    ) -> Result<Vec<NSRelationshipDescription>, CoreDataError> {
+    ) -> Result<Vec<Borrowed<'_, NSRelationshipDescription>>, CoreDataError> {
         let array_ptr = unsafe {
             ffi::cd_entity_description_relationships_with_destination_entity(
                 self.as_ptr(),
                 destination_entity.as_ptr(),
             )
         };
-        collect_array(array_ptr, "entity relationships with destination entity")
+        collect_borrowed(array_ptr, "entity relationships with destination entity")
     }
 
     /// Wraps `NSEntityDescription.is_kind_of_entity(...)`.
@@ -252,7 +259,7 @@ impl NSAttributeDescription {
 
     /// Mirrors `NSAttributeDescription.attribute_value_class_name`.
     pub fn set_attribute_value_class_name(
-        &self,
+        &mut self,
         class_name: Option<&str>,
     ) -> Result<(), CoreDataError> {
         let class_name = class_name
@@ -293,7 +300,7 @@ impl NSAttributeDescription {
     }
 
     /// Mirrors `NSAttributeDescription.default_value`.
-    pub fn set_default_value(&self, value: impl Into<Value>) -> Result<(), CoreDataError> {
+    pub fn set_default_value(&mut self, value: impl Into<Value>) -> Result<(), CoreDataError> {
         let payload = ValuePayload::from(value.into());
         let value_json = json_cstring(&payload, "attribute default value")?;
         let mut out_error = core::ptr::null_mut();
@@ -318,7 +325,7 @@ impl NSAttributeDescription {
     }
 
     /// Mirrors `NSAttributeDescription.value_transformer_name`.
-    pub fn set_value_transformer_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
+    pub fn set_value_transformer_name(&mut self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "attribute value transformer name"))
             .transpose()?;
@@ -347,7 +354,7 @@ impl NSAttributeDescription {
 
     /// Mirrors `NSAttributeDescription.allows_external_binary_data_storage`.
     pub fn set_allows_external_binary_data_storage(
-        &self,
+        &mut self,
         allows_external_storage: bool,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -374,7 +381,7 @@ impl NSAttributeDescription {
 
     /// Mirrors `NSAttributeDescription.preserves_value_in_history_on_deletion`.
     pub fn set_preserves_value_in_history_on_deletion(
-        &self,
+        &mut self,
         preserves_value: bool,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -398,7 +405,7 @@ impl NSAttributeDescription {
 
     /// Mirrors `NSAttributeDescription.allows_cloud_encryption`.
     pub fn set_allows_cloud_encryption(
-        &self,
+        &mut self,
         allows_encryption: bool,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();

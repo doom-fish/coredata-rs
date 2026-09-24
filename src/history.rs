@@ -6,8 +6,8 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::managed_object::NSManagedObjectID;
 use crate::private::{
-    collect_array, error_from_status, impl_object_wrapper, impl_sync_object_wrapper,
-    parse_json_ptr, status_result, take_string,
+    collect_array, error_from_status, impl_copied_object_wrapper, impl_shared_object_wrapper,
+    impl_sync_object_wrapper, parse_json_ptr, status_result, take_string,
 };
 use crate::value::{Value, ValuePayload};
 
@@ -83,10 +83,10 @@ impl PersistentHistoryChangeType {
 }
 
 impl_sync_object_wrapper!(NSPersistentHistoryToken);
-impl_object_wrapper!(NSPersistentHistoryChangeRequest);
-impl_object_wrapper!(NSPersistentHistoryResult);
-impl_object_wrapper!(NSPersistentHistoryTransaction);
-impl_object_wrapper!(NSPersistentHistoryChange);
+impl_copied_object_wrapper!(NSPersistentHistoryChangeRequest);
+impl_shared_object_wrapper!(NSPersistentHistoryResult);
+impl_shared_object_wrapper!(NSPersistentHistoryTransaction);
+impl_shared_object_wrapper!(NSPersistentHistoryChange);
 
 fn seconds_since_epoch(time: SystemTime) -> Result<f64, CoreDataError> {
     time.duration_since(UNIX_EPOCH)
@@ -237,7 +237,7 @@ impl NSPersistentHistoryChangeRequest {
 
     /// Mirrors `NSPersistentHistoryChangeRequest.result_type`.
     pub fn set_result_type(
-        &self,
+        &mut self,
         result_type: PersistentHistoryResultType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();

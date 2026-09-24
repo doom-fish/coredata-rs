@@ -7,7 +7,8 @@ use support::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = basic_model()?;
-    let person = NSManagedObject::new(&fixture.person, None)?;
+    let (_coordinator, context) = in_memory_context(&fixture.model)?;
+    let person = NSManagedObject::new(&fixture.person, &context)?;
     person.set_value("name", "Bea")?;
     person.set_value("age", 25_i32)?;
 

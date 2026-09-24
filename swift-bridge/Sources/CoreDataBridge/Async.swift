@@ -195,7 +195,7 @@ func cdPerformRequestAsync<T: NSPersistentStoreResult>(
         guard request.isKind(of: requestType) else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Expected \(requestType), got \(type(of: request))")
         }
-        snapshot = try cdSnapshotRequest(request)
+        snapshot = try cdCopyRequest(request)
     } catch {
         cdFail(cb, ctx, error)
         return

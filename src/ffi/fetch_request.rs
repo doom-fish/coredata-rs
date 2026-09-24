@@ -1,12 +1,6 @@
 use core::ffi::{c_char, c_void};
 
 extern "C" {
-    pub fn cd_fetch_request_get_entity(request: *mut c_void) -> *mut c_void;
-    pub fn cd_fetch_request_set_entity(
-        request: *mut c_void,
-        entity: *mut c_void,
-        out_error: *mut *mut c_char,
-    ) -> i32;
     pub fn cd_fetch_request_get_entity_name(request: *mut c_void) -> *mut c_char;
     pub fn cd_fetch_request_get_result_type(request: *mut c_void) -> u64;
     pub fn cd_fetch_request_set_result_type(

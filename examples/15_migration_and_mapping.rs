@@ -11,9 +11,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let destination_artifact = SqliteStoreArtifact::new("migration-example-destination")?;
 
     {
-        let source_container =
+        let mut source_container =
             NSPersistentContainer::new("MigrationExampleSource", &fixture.source_model)?;
-        let source_description = NSPersistentStoreDescription::with_url(&source_artifact.path)?;
+        let mut source_description = NSPersistentStoreDescription::with_url(&source_artifact.path)?;
         source_description.set_store_type(store_types::SQLITE)?;
         source_description.set_should_add_asynchronously(false);
         source_container.set_persistent_store_descriptions(&[&source_description])?;
@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mapping_model =
         NSMappingModel::inferred(&fixture.source_model, &fixture.destination_model)?;
-    let migration_manager =
+    let mut migration_manager =
         NSMigrationManager::new(&fixture.source_model, &fixture.destination_model)?;
     migration_manager.set_uses_store_specific_migration_manager(false);
     migration_manager.migrate_store(
@@ -40,9 +40,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     {
-        let destination_container =
+        let mut destination_container =
             NSPersistentContainer::new("MigrationExampleDestination", &fixture.destination_model)?;
-        let destination_description =
+        let mut destination_description =
             NSPersistentStoreDescription::with_url(&destination_artifact.path)?;
         destination_description.set_store_type(store_types::SQLITE)?;
         destination_description.set_should_add_asynchronously(false);
@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         destination_container.load_persistent_stores()?;
 
         let destination_context = destination_container.view_context()?;
-        let request = NSFetchRequest::new("Person")?;
+        let mut request = NSFetchRequest::new("Person")?;
         request.set_sort_descriptors(&[SortDescriptor::ascending("name")])?;
         let migrated = request.execute(&destination_context)?;
         assert_eq!(migrated.len(), 1);

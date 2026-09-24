@@ -6,7 +6,7 @@ use coredata::prelude::*;
 use support::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let fixture = basic_model()?;
+    let mut fixture = basic_model()?;
     fixture
         .name
         .set_validation_rules(&[ValidationRule::new("SELF != nil", "Name required")])?;

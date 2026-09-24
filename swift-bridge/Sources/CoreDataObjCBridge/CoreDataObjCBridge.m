@@ -38,6 +38,32 @@ id _Nullable CDXCopyObject(id object, NSError *_Nullable *_Nullable error) {
     }
 }
 
+NSFetchIndexElementDescription *_Nullable CDXNewFetchIndexElement(
+    NSPropertyDescription *property,
+    NSFetchIndexElementType collationType,
+    NSError *_Nullable *_Nullable error
+) {
+    @try {
+        return [[NSFetchIndexElementDescription alloc] initWithProperty:property collationType:collationType];
+    } @catch (NSException *exception) {
+        CDXAssignException(exception, error);
+        return nil;
+    }
+}
+
+NSFetchIndexDescription *_Nullable CDXNewFetchIndexDescription(
+    NSString *name,
+    NSArray<NSFetchIndexElementDescription *> *elements,
+    NSError *_Nullable *_Nullable error
+) {
+    @try {
+        return [[NSFetchIndexDescription alloc] initWithName:name elements:elements];
+    } @catch (NSException *exception) {
+        CDXAssignException(exception, error);
+        return nil;
+    }
+}
+
 BOOL CDXValueForKey(
     id object,
     NSString *key,

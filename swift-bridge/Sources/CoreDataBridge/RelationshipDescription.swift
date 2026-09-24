@@ -104,22 +104,28 @@ public func cdRelationshipDescriptionGetDestinationEntity(_ relationshipPtr: Uns
     return relationship.destinationEntity.map(cdRetain)
 }
 
-@_cdecl("cd_relationship_description_set_destination_entity")
-public func cdRelationshipDescriptionSetDestinationEntity(
+@_cdecl("cd_relationship_description_get_destination_entity_name")
+public func cdRelationshipDescriptionGetDestinationEntityName(_ relationshipPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+    guard let relationshipPtr else {
+        return nil
+    }
+    let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
+    return cdDestinationEntityName(relationship).flatMap { cdCString($0) }
+}
+
+@_cdecl("cd_relationship_description_set_destination_entity_name")
+public func cdRelationshipDescriptionSetDestinationEntityName(
     _ relationshipPtr: UnsafeMutableRawPointer?,
-    _ entityPtr: UnsafeMutableRawPointer?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ entityName: UnsafePointer<CChar>?,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let relationshipPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
-        }
-        let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        try cdTrySetValue(entityPtr.map { cdBorrow($0) as NSEntityDescription }, forKey: "destinationEntity", on: relationship)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+    cdStatus(outError) {
+        let relationship: NSRelationshipDescription = try cdArg(relationshipPtr, "relationship")
+        cdSetRelationshipNames(
+            relationship,
+            destination: cdOptionalString(entityName),
+            inverse: cdInverseRelationshipName(relationship)
+        )
     }
 }
 
@@ -132,22 +138,28 @@ public func cdRelationshipDescriptionGetInverseRelationship(_ relationshipPtr: U
     return relationship.inverseRelationship.map(cdRetain)
 }
 
-@_cdecl("cd_relationship_description_set_inverse_relationship")
-public func cdRelationshipDescriptionSetInverseRelationship(
+@_cdecl("cd_relationship_description_get_inverse_relationship_name")
+public func cdRelationshipDescriptionGetInverseRelationshipName(_ relationshipPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
+    guard let relationshipPtr else {
+        return nil
+    }
+    let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
+    return cdInverseRelationshipName(relationship).flatMap { cdCString($0) }
+}
+
+@_cdecl("cd_relationship_description_set_inverse_relationship_name")
+public func cdRelationshipDescriptionSetInverseRelationshipName(
     _ relationshipPtr: UnsafeMutableRawPointer?,
-    _ inverseRelationshipPtr: UnsafeMutableRawPointer?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+    _ relationshipName: UnsafePointer<CChar>?,
+    _ outError: CDOutError
 ) -> Int32 {
-    do {
-        guard let relationshipPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing relationship")
-        }
-        let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
-        try cdTrySetValue(inverseRelationshipPtr.map { cdBorrow($0) as NSRelationshipDescription }, forKey: "inverseRelationship", on: relationship)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+    cdStatus(outError) {
+        let relationship: NSRelationshipDescription = try cdArg(relationshipPtr, "relationship")
+        cdSetRelationshipNames(
+            relationship,
+            destination: cdDestinationEntityName(relationship),
+            inverse: cdOptionalString(relationshipName)
+        )
     }
 }
 

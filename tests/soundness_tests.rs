@@ -79,7 +79,7 @@ fn main_queue_context_and_its_objects_refuse_use_off_the_main_thread() -> TestRe
     assert_eq!(bridge_code(view_context.save()), WRONG_THREAD);
     assert_eq!(bridge_code(view_context.name()), WRONG_THREAD);
     assert_eq!(
-        bridge_code(NSManagedObject::new(&fixture.person, Some(&view_context))),
+        bridge_code(NSManagedObject::new(&fixture.person, &view_context)),
         WRONG_THREAD
     );
     assert_eq!(
@@ -87,9 +87,10 @@ fn main_queue_context_and_its_objects_refuse_use_off_the_main_thread() -> TestRe
         WRONG_THREAD
     );
 
-    let unowned = NSManagedObject::new(&fixture.person, None)?;
-    assert_eq!(bridge_code(view_context.insert(&unowned)), WRONG_THREAD);
-    assert!(unowned.managed_object_context()?.is_none());
+    let background = container.new_background_context()?;
+    let object = NSManagedObject::new(&fixture.person, &background)?;
+    assert_eq!(bridge_code(view_context.insert(&object)), WRONG_THREAD);
+    assert!(object.managed_object_context()?.is_some());
     Ok(())
 }
 
@@ -222,10 +223,9 @@ fn cross_context_operations_return_errors() -> TestResult {
         INVALID_ARGUMENT
     );
 
-    let unowned = NSManagedObject::new(&fixture.person, None)?;
-    assert_eq!(bridge_code(first.delete(&unowned)), INVALID_ARGUMENT);
-    first.insert(&unowned)?;
-    assert_eq!(bridge_code(second.insert(&unowned)), INVALID_ARGUMENT);
+    let other = NSManagedObject::new(&fixture.person, &first)?;
+    first.insert(&other)?;
+    assert_eq!(bridge_code(second.insert(&other)), INVALID_ARGUMENT);
     assert!(first.inserted_objects()?.len() >= 2);
     Ok(())
 }
@@ -270,7 +270,7 @@ fn unknown_entities_and_attributes_return_errors() -> TestResult {
         INVALID_ARGUMENT
     );
 
-    let bad_key_path = NSFetchRequest::new("Person")?;
+    let mut bad_key_path = NSFetchRequest::new("Person")?;
     bad_key_path.set_predicate(Some(&NSPredicate::from_format("bogus == 1", &[])?));
     assert_eq!(bridge_code(context.fetch(&bad_key_path)), OBJC_EXCEPTION);
     Ok(())
@@ -394,7 +394,7 @@ fn argument_based_predicates_keep_values_out_of_the_format() -> TestResult {
     insert_named(&context, "Bea")?;
     insert_named(&context, hostile)?;
     context.save()?;
-    let request = NSFetchRequest::new("Person")?;
+    let mut request = NSFetchRequest::new("Person")?;
     request.set_predicate(Some(&equals));
     let matches = context.fetch(&request)?;
     assert_eq!(matches.len(), 1);
@@ -404,7 +404,7 @@ fn argument_based_predicates_keep_values_out_of_the_format() -> TestResult {
 
 #[test]
 fn invalid_validation_rules_return_errors() -> TestResult {
-    let fixture = basic_model()?;
+    let mut fixture = basic_model()?;
     assert_eq!(
         bridge_code(
             fixture
@@ -429,31 +429,13 @@ fn invalid_validation_rules_return_errors() -> TestResult {
 }
 
 #[test]
-fn editing_a_model_in_use_returns_errors() -> TestResult {
-    let fixture = basic_model()?;
-    let _container = in_memory_container("ImmutableModel", &fixture.model)?;
-    assert_eq!(
-        bridge_code(fixture.person.set_name("Renamed")),
-        OBJC_EXCEPTION
-    );
-    assert_eq!(bridge_code(fixture.age.set_optional(true)), OBJC_EXCEPTION);
-    let extra = NSAttributeDescription::new("extra", AttributeType::String)?;
-    assert_eq!(
-        bridge_code(fixture.person.add_attribute(&extra)),
-        OBJC_EXCEPTION
-    );
-    assert_eq!(fixture.person.name()?, "Person");
-    Ok(())
-}
-
-#[test]
 fn unknown_enum_values_are_rejected() -> TestResult {
-    let attribute = NSAttributeDescription::new("value", AttributeType::String)?;
+    let mut attribute = NSAttributeDescription::new("value", AttributeType::String)?;
     assert_eq!(
         bridge_code(attribute.set_attribute_type(AttributeType::Unknown(12_345))),
         INVALID_ARGUMENT
     );
-    let relationship = NSRelationshipDescription::new("link")?;
+    let mut relationship = NSRelationshipDescription::new("link")?;
     assert_eq!(
         bridge_code(relationship.set_delete_rule(DeleteRule::Unknown(9))),
         INVALID_ARGUMENT
@@ -466,18 +448,18 @@ fn unknown_enum_values_are_rejected() -> TestResult {
         bridge_code(NSMergePolicy::new(MergePolicyType::Unknown(99))),
         INVALID_ARGUMENT
     );
-    let request = NSFetchRequest::new("Person")?;
+    let mut request = NSFetchRequest::new("Person")?;
     assert_eq!(
         bridge_code(request.set_result_type(FetchRequestResultType::Unknown(99))),
         INVALID_ARGUMENT
     );
-    let history =
+    let mut history =
         NSPersistentHistoryChangeRequest::fetch_history_after_date(std::time::UNIX_EPOCH)?;
     assert_eq!(
         bridge_code(history.set_result_type(PersistentHistoryResultType::Unknown(99))),
         INVALID_ARGUMENT
     );
-    let batch = NSBatchUpdateRequest::new("Person")?;
+    let mut batch = NSBatchUpdateRequest::new("Person")?;
     assert_eq!(
         bridge_code(batch.set_result_type(BatchUpdateRequestResultType::Unknown(99))),
         INVALID_ARGUMENT
@@ -494,7 +476,7 @@ fn oversized_fetch_limits_are_clamped_instead_of_trapping() -> TestResult {
     insert_named(&context, "Bea")?;
     context.save()?;
 
-    let request = NSFetchRequest::new("Person")?;
+    let mut request = NSFetchRequest::new("Person")?;
     request.set_fetch_limit(usize::MAX)?;
     assert_eq!(request.fetch_limit(), u32::MAX as usize);
     assert_eq!(context.fetch(&request)?.len(), 2);
@@ -526,7 +508,7 @@ fn non_object_result_types_return_errors_from_fetch() -> TestResult {
     insert_named(&context, "Ada")?;
     context.save()?;
 
-    let request = NSFetchRequest::new("Person")?;
+    let mut request = NSFetchRequest::new("Person")?;
     request.set_result_type(FetchRequestResultType::Dictionary)?;
     assert_eq!(bridge_code(context.fetch(&request)), INVALID_ARGUMENT);
     request.set_result_type(FetchRequestResultType::ManagedObjectId)?;
@@ -563,7 +545,7 @@ fn store_and_request_misuse_returns_errors() -> TestResult {
         )),
         INVALID_ARGUMENT
     );
-    let unknown = NSFetchRequest::new("Nope")?;
+    let mut unknown = NSFetchRequest::new("Nope")?;
     unknown.set_sort_descriptors(&[SortDescriptor::ascending("name")])?;
     assert_eq!(
         bridge_code(NSFetchedResultsController::new(
@@ -572,7 +554,7 @@ fn store_and_request_misuse_returns_errors() -> TestResult {
         INVALID_ARGUMENT
     );
 
-    let sorted = NSFetchRequest::new("Person")?;
+    let mut sorted = NSFetchRequest::new("Person")?;
     sorted.set_sort_descriptors(&[SortDescriptor::ascending("name")])?;
     let sectioned = NSFetchedResultsController::new(&sorted, &context, Some("bogus"), None)?;
     assert_eq!(bridge_code(sectioned.perform_fetch()), OBJC_EXCEPTION);
@@ -582,7 +564,7 @@ fn store_and_request_misuse_returns_errors() -> TestResult {
 #[test]
 fn loading_a_container_without_store_descriptions_completes_immediately() -> TestResult {
     let fixture = basic_model()?;
-    let container = NSPersistentContainer::new("NoDescriptions", &fixture.model)?;
+    let mut container = NSPersistentContainer::new("NoDescriptions", &fixture.model)?;
     container.set_persistent_store_descriptions(&[])?;
     let started = Instant::now();
     container.load_persistent_stores()?;
@@ -593,8 +575,8 @@ fn loading_a_container_without_store_descriptions_completes_immediately() -> Tes
 #[test]
 fn unsupported_store_types_fail_to_load_without_aborting() -> TestResult {
     let fixture = basic_model()?;
-    let container = NSPersistentContainer::new("BogusStore", &fixture.model)?;
-    let description = NSPersistentStoreDescription::new()?;
+    let mut container = NSPersistentContainer::new("BogusStore", &fixture.model)?;
+    let mut description = NSPersistentStoreDescription::new()?;
     description.set_store_type("Bogus")?;
     description.set_should_add_asynchronously(false);
     container.set_persistent_store_descriptions(&[&description])?;
@@ -673,7 +655,7 @@ impl NSFetchedResultsControllerDelegate for PanickingDelegate {
 fn sorted_controller(
     context: &NSManagedObjectContext,
 ) -> Result<NSFetchedResultsController, CoreDataError> {
-    let request = NSFetchRequest::new("Person")?;
+    let mut request = NSFetchRequest::new("Person")?;
     request.set_sort_descriptors(&[SortDescriptor::ascending("name")])?;
     let controller = NSFetchedResultsController::new(&request, context, None, None)?;
     controller.perform_fetch()?;

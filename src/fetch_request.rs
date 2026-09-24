@@ -4,7 +4,6 @@ use crate::ffi;
 use crate::managed_object::NSManagedObjectID;
 use crate::private::{collect_array, error_from_status, json_cstring, parse_json_ptr, take_string};
 use crate::query::NSFetchRequest;
-use crate::schema::NSEntityDescription;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -45,33 +44,6 @@ impl FetchRequestResultType {
 }
 
 impl NSFetchRequest {
-    /// Wraps `NSFetchRequest.entity(...)`.
-    pub fn entity(&self) -> Result<Option<NSEntityDescription>, CoreDataError> {
-        let ptr = unsafe { ffi::cd_fetch_request_get_entity(self.as_ptr()) };
-        if ptr.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(unsafe {
-            NSEntityDescription::from_retained_ptr(ptr, "fetch request entity")?
-        }))
-    }
-
-    /// Mirrors `NSFetchRequest.entity`.
-    pub fn set_entity(&self, entity: Option<&NSEntityDescription>) -> Result<(), CoreDataError> {
-        let mut out_error = core::ptr::null_mut();
-        let status = unsafe {
-            ffi::cd_fetch_request_set_entity(
-                self.as_ptr(),
-                entity.map_or(core::ptr::null_mut(), NSEntityDescription::as_ptr),
-                &raw mut out_error,
-            )
-        };
-        if status != ffi::status::OK {
-            return Err(unsafe { error_from_status(status, out_error) });
-        }
-        Ok(())
-    }
-
     /// Wraps `NSFetchRequest.entity_name(...)`.
     pub fn entity_name(&self) -> Option<String> {
         let ptr = unsafe { ffi::cd_fetch_request_get_entity_name(self.as_ptr()) };
@@ -87,7 +59,7 @@ impl NSFetchRequest {
 
     /// Mirrors `NSFetchRequest.result_type`.
     pub fn set_result_type(
-        &self,
+        &mut self,
         result_type: FetchRequestResultType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -110,7 +82,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.includes_subentities`.
-    pub fn set_includes_subentities(&self, includes_subentities: bool) {
+    pub fn set_includes_subentities(&mut self, includes_subentities: bool) {
         unsafe {
             ffi::cd_fetch_request_set_includes_subentities(
                 self.as_ptr(),
@@ -125,7 +97,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.includes_property_values`.
-    pub fn set_includes_property_values(&self, includes_property_values: bool) {
+    pub fn set_includes_property_values(&mut self, includes_property_values: bool) {
         unsafe {
             ffi::cd_fetch_request_set_includes_property_values(
                 self.as_ptr(),
@@ -140,7 +112,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.returns_objects_as_faults`.
-    pub fn set_returns_objects_as_faults(&self, returns_objects_as_faults: bool) {
+    pub fn set_returns_objects_as_faults(&mut self, returns_objects_as_faults: bool) {
         unsafe {
             ffi::cd_fetch_request_set_returns_objects_as_faults(
                 self.as_ptr(),
@@ -168,7 +140,7 @@ impl NSFetchRequest {
 
     /// Mirrors `NSFetchRequest.relationship_key_paths_for_prefetching`.
     pub fn set_relationship_key_paths_for_prefetching(
-        &self,
+        &mut self,
         key_paths: &[impl AsRef<str>],
     ) -> Result<(), CoreDataError> {
         let key_paths = key_paths
@@ -196,7 +168,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.includes_pending_changes`.
-    pub fn set_includes_pending_changes(&self, includes_pending_changes: bool) {
+    pub fn set_includes_pending_changes(&mut self, includes_pending_changes: bool) {
         unsafe {
             ffi::cd_fetch_request_set_includes_pending_changes(
                 self.as_ptr(),
@@ -211,7 +183,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.returns_distinct_results`.
-    pub fn set_returns_distinct_results(&self, returns_distinct_results: bool) {
+    pub fn set_returns_distinct_results(&mut self, returns_distinct_results: bool) {
         unsafe {
             ffi::cd_fetch_request_set_returns_distinct_results(
                 self.as_ptr(),
@@ -226,7 +198,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.fetch_batch_size`.
-    pub fn set_fetch_batch_size(&self, fetch_batch_size: usize) -> Result<(), CoreDataError> {
+    pub fn set_fetch_batch_size(&mut self, fetch_batch_size: usize) -> Result<(), CoreDataError> {
         let fetch_batch_size = u64::try_from(fetch_batch_size)
             .map_err(|_| CoreDataError::bridge(-1, "fetch batch size overflow"))?;
         unsafe { ffi::cd_fetch_request_set_fetch_batch_size(self.as_ptr(), fetch_batch_size) }
@@ -239,7 +211,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.should_refresh_refetched_objects`.
-    pub fn set_should_refresh_refetched_objects(&self, should_refresh: bool) {
+    pub fn set_should_refresh_refetched_objects(&mut self, should_refresh: bool) {
         unsafe {
             ffi::cd_fetch_request_set_should_refresh_refetched_objects(
                 self.as_ptr(),

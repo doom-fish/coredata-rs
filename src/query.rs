@@ -2,7 +2,7 @@ use crate::context::{NSManagedObject, NSManagedObjectContext};
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::private::{
-    cstring_from_str, error_from_status, impl_object_wrapper, impl_sync_object_wrapper,
+    cstring_from_str, error_from_status, impl_copied_object_wrapper, impl_sync_object_wrapper,
     json_cstring, status_result,
 };
 use crate::value::{Value, ValuePayload};
@@ -36,7 +36,7 @@ impl SortDescriptor {
 }
 
 impl_sync_object_wrapper!(NSPredicate);
-impl_object_wrapper!(NSFetchRequest);
+impl_copied_object_wrapper!(NSFetchRequest);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -199,7 +199,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.predicate`.
-    pub fn set_predicate(&self, predicate: Option<&NSPredicate>) {
+    pub fn set_predicate(&mut self, predicate: Option<&NSPredicate>) {
         unsafe {
             ffi::cd_fetch_request_set_predicate(
                 self.as_ptr(),
@@ -210,7 +210,7 @@ impl NSFetchRequest {
 
     /// Mirrors `NSFetchRequest.sort_descriptors`.
     pub fn set_sort_descriptors(
-        &self,
+        &mut self,
         descriptors: &[SortDescriptor],
     ) -> Result<(), CoreDataError> {
         let descriptors_json = json_cstring(descriptors, "sort descriptors")?;
@@ -239,7 +239,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.fetch_limit`.
-    pub fn set_fetch_limit(&self, fetch_limit: usize) -> Result<(), CoreDataError> {
+    pub fn set_fetch_limit(&mut self, fetch_limit: usize) -> Result<(), CoreDataError> {
         let fetch_limit = u64::try_from(fetch_limit)
             .map_err(|_| CoreDataError::bridge(-1, "fetch limit overflow"))?;
         unsafe {
@@ -249,7 +249,7 @@ impl NSFetchRequest {
     }
 
     /// Mirrors `NSFetchRequest.fetch_offset`.
-    pub fn set_fetch_offset(&self, fetch_offset: usize) -> Result<(), CoreDataError> {
+    pub fn set_fetch_offset(&mut self, fetch_offset: usize) -> Result<(), CoreDataError> {
         let fetch_offset = u64::try_from(fetch_offset)
             .map_err(|_| CoreDataError::bridge(-1, "fetch offset overflow"))?;
         unsafe {

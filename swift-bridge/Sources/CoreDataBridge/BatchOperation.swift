@@ -14,29 +14,6 @@ func cdEnsureSQLiteStores(_ context: NSManagedObjectContext, _ what: String) thr
     }
 }
 
-func cdSnapshotRequest(_ request: NSPersistentStoreRequest) throws -> NSPersistentStoreRequest {
-    if let insert = request as? NSBatchInsertRequest {
-        let snapshot = NSBatchInsertRequest(entityName: insert.entityName, objects: insert.objectsToInsert ?? [])
-        snapshot.resultType = insert.resultType
-        snapshot.affectedStores = insert.affectedStores
-        return snapshot
-    }
-    if let update = request as? NSBatchUpdateRequest {
-        let snapshot = NSBatchUpdateRequest(entityName: update.entityName)
-        snapshot.predicate = update.predicate
-        snapshot.includesSubentities = update.includesSubentities
-        snapshot.resultType = update.resultType
-        snapshot.propertiesToUpdate = update.propertiesToUpdate
-        snapshot.affectedStores = update.affectedStores
-        return snapshot
-    }
-    let copy = try cdObjCValue { CDXCopyObject(request, $0) }
-    guard let snapshot = copy as? NSPersistentStoreRequest else {
-        throw cdBridgeNSError(code: CDR_FAILURE, message: "Could not copy the persistent store request")
-    }
-    return snapshot
-}
-
 func cdExecuteRequest<T>(
     _ contextPtr: UnsafeMutableRawPointer?,
     _ request: NSPersistentStoreRequest,
@@ -47,7 +24,8 @@ func cdExecuteRequest<T>(
         if let what {
             try cdEnsureSQLiteStores(context, what)
         }
-        let result = try cdObjCValue { CDXExecuteRequest(context, request, $0) }
+        let snapshot = try cdCopyRequest(request)
+        let result = try cdObjCValue { CDXExecuteRequest(context, snapshot, $0) }
         return result as? T
     }
 }
@@ -82,7 +60,7 @@ public func cdBatchDeleteRequestNewWithFetchRequest(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch request")
         }
         let fetchRequest: NSFetchRequest<NSFetchRequestResult> = cdBorrow(fetchRequestPtr)
-        outRequest?.pointee = cdRetain(NSBatchDeleteRequest(fetchRequest: fetchRequest))
+        outRequest?.pointee = cdRetain(NSBatchDeleteRequest(fetchRequest: cdCopyFetchRequest(fetchRequest)))
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -108,7 +86,7 @@ public func cdBatchDeleteRequestGetFetchRequest(_ requestPtr: UnsafeMutableRawPo
         return nil
     }
     let request: NSBatchDeleteRequest = cdBorrow(requestPtr)
-    return cdRetain(request.fetchRequest)
+    return cdRetain(cdCopyFetchRequest(request.fetchRequest))
 }
 
 @_cdecl("cd_batch_delete_request_get_result_type")
@@ -224,8 +202,11 @@ public func cdBatchInsertRequestNewWithEntity(
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing entity")
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
+        guard let entityName = entity.name else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "The entity has no name")
+        }
         let dictionaries = try cdFoundationObjectDictionaries(from: objectsJSON)
-        outRequest?.pointee = cdRetain(NSBatchInsertRequest(entity: entity, objects: dictionaries))
+        outRequest?.pointee = cdRetain(NSBatchInsertRequest(entityName: entityName, objects: dictionaries))
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -240,15 +221,6 @@ public func cdBatchInsertRequestGetEntityName(_ requestPtr: UnsafeMutableRawPoin
     }
     let request: NSBatchInsertRequest = cdBorrow(requestPtr)
     return cdCString(request.entityName)
-}
-
-@_cdecl("cd_batch_insert_request_get_entity")
-public func cdBatchInsertRequestGetEntity(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let requestPtr else {
-        return nil
-    }
-    let request: NSBatchInsertRequest = cdBorrow(requestPtr)
-    return request.entity.map(cdRetain)
 }
 
 @_cdecl("cd_batch_insert_request_get_result_type")
@@ -357,15 +329,6 @@ public func cdBatchUpdateRequestGetEntityName(_ requestPtr: UnsafeMutableRawPoin
     }
     let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
     return cdCString(request.entityName)
-}
-
-@_cdecl("cd_batch_update_request_get_entity")
-public func cdBatchUpdateRequestGetEntity(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let requestPtr else {
-        return nil
-    }
-    let request: NSBatchUpdateRequest = cdBorrow(requestPtr)
-    return cdRetain(request.entity)
 }
 
 @_cdecl("cd_batch_update_request_get_includes_subentities")

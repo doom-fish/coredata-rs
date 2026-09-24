@@ -19,7 +19,10 @@ Core Data contexts and managed objects are confined to their context's queue. Th
 - A main-queue context (for example `NSPersistentContainer::view_context`) and its objects can only be used on the main thread. Calls from any other thread return an error with code `bridge_error_codes::WRONG_THREAD`; use a private-queue context such as `new_background_context` for background work.
 - `perform_and_wait` runs a closure on the context's queue and returns its result. The closure and the result must be `Send`, because on a main-queue context the closure runs on the main thread. Called off the main thread on a main-queue context, it waits until the main thread runs the main queue, so it only returns in a process whose main thread runs a run loop. `perform` schedules a closure without waiting.
 - A managed-object handle keeps its context alive. Once the object leaves its context (the context was reset or rolled back, or the object was deleted and saved), value and state calls return `bridge_error_codes::INVALIDATED`; `managed_object_context` returns `None` and `object_id` still works.
-- Configuration objects (models, entity and property descriptions, fetch requests, store descriptions, batch and history requests) are `Send` but not `Sync`, and their clones share one Objective-C object. Configure each one from one thread at a time. Asynchronous APIs copy the request they are given before they queue it.
+- Configuration objects (models, entity, property, relationship and fetch-index descriptions, fetch, batch, history, CloudKit event and save requests, store descriptions, CloudKit container options, mapping, migration and stage objects, containers) are `Send` but not `Sync`, and each handle owns its own Objective-C object. Setters take `&mut self`. `Clone` makes an independent copy for models, entity and property descriptions, fetch-index descriptions, requests and store descriptions; the other configuration types are not `Clone`.
+- Adding an attribute or relationship to an entity, or an entity to a model, copies it. So does handing a model, store description or request to Core Data (containers, coordinators, migration managers, model references, fetched-results controllers, request execution). Later edits to your handle never reach an object that Core Data or another handle uses. Relationships name their destination entity and inverse relationship; the model links them when the entities are added.
+- Children, and objects that Core Data owns, are returned as read-only `Borrowed<'_, T>` views tied to their parent, for example `model.entities()`, `entity.attributes()`, `container.managed_object_model()` and `object.entity()`. Call `clone()` on a view to get an independent, editable copy. `NSManagedObject::new` uses the entity with the same name in the context's model.
+- `NSPersistentStoreCoordinator` and `NSPersistentStore` are `Send + Sync`; their operations run on the coordinator's queue.
 
 ## Errors
 
@@ -75,26 +78,23 @@ The context-based futures run their work with `perform` on the context's queue. 
 use coredata::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let model = NSManagedObjectModel::new()?;
-    let person = NSEntityDescription::named("Person")?;
+    let mut person = NSEntityDescription::named("Person")?;
     person.set_managed_object_class_name("NSManagedObject")?;
+    person.add_attribute(&NSAttributeDescription::new("name", AttributeType::String)?)?;
+    person.add_attribute(&NSAttributeDescription::new("age", AttributeType::Integer32)?)?;
 
-    let name = NSAttributeDescription::new("name", AttributeType::String)?;
-    let age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
-    person.add_attribute(&name)?;
-    person.add_attribute(&age)?;
+    let mut model = NSManagedObjectModel::new()?;
     model.add_entity(&person)?;
 
-    let container = NSPersistentContainer::new("Example", &model)?;
-    let description = NSPersistentStoreDescription::new()?;
+    let mut container = NSPersistentContainer::new("Example", &model)?;
+    let mut description = NSPersistentStoreDescription::new()?;
     description.set_store_type(store_types::IN_MEMORY)?;
     description.set_should_add_asynchronously(false);
     container.set_persistent_store_descriptions(&[&description])?;
     container.load_persistent_stores()?;
 
     let context = container.new_background_context()?;
-    let person_object = NSManagedObject::new(&person, None)?;
-    context.insert(&person_object)?;
+    let person_object = NSManagedObject::new(&person, &context)?;
     person_object.set_value("name", "doom-fish")?;
     person_object.set_value("age", 7_i32)?;
     context.save()?;
@@ -120,7 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 - [`COVERAGE_AUDIT.md`](COVERAGE_AUDIT.md) counts top-level SDK symbols (155 of 161 non-exempt symbols against MacOSX26.2.sdk; the gaps are opaque types with no methods), and [`COVERAGE.md`](COVERAGE.md) tracks family-level depth and missing members.
 - `examples/01_in_memory_smoke.rs` plus `examples/02_*` through `examples/16_*` cover every logical area.
-- `tests/*_tests.rs` provides smoke coverage for each logical area; `tests/soundness_tests.rs` covers queue confinement, invalidated objects and errors in place of Objective-C exceptions.
+- `tests/*_tests.rs` provides smoke coverage for each logical area; `tests/soundness_tests.rs` covers queue confinement, invalidated objects and errors in place of Objective-C exceptions, and `tests/ownership_tests.rs` covers independent copies, read-only views and the `Send`/`Sync` bounds.
 
 Run the full verification suite with:
 

@@ -11,8 +11,9 @@ use crate::ffi;
 use crate::model::NSManagedObjectModel;
 use crate::persistent_container::NSPersistentStoreDescription;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, json_cstring,
-    parse_json_ptr, status_result, take_string,
+    borrowed_from, borrowed_ptr, collect_borrowed, cstring_from_str, error_from_status,
+    impl_object_wrapper, json_cstring, optional_borrowed_ptr, parse_json_ptr, status_result,
+    take_string, Borrowed, RetainedObject,
 };
 use crate::store::NSPersistentContainer;
 
@@ -69,7 +70,7 @@ unsafe extern "C" fn migration_handler_trampoline(
 
 #[must_use = "the handler is removed when the registration is dropped"]
 pub struct CustomMigrationStageHandlerRegistration {
-    stage: NSCustomMigrationStage,
+    stage: RetainedObject,
     did_migrate: bool,
     context: MigrationHandlerContext,
 }
@@ -157,14 +158,6 @@ impl_object_wrapper!(NSLightweightMigrationStage);
 impl_object_wrapper!(NSCustomMigrationStage);
 impl_object_wrapper!(NSStagedMigrationManager);
 
-fn clone_retained_wrapper<T>(ptr: *mut c_void, context: &str) -> Result<T, CoreDataError>
-where
-    T: crate::private::FromRetainedPtr,
-{
-    let retained = unsafe { ffi::cd_retain_object(ptr) };
-    unsafe { T::from_retained_ptr(retained, context) }
-}
-
 impl NSEntityMapping {
     /// Wraps `NSEntityMapping.init(...)`.
     pub fn new() -> Result<Self, CoreDataError> {
@@ -186,7 +179,7 @@ impl NSEntityMapping {
     }
 
     /// Mirrors `NSEntityMapping.name`.
-    pub fn set_name(&self, name: &str) -> Result<(), CoreDataError> {
+    pub fn set_name(&mut self, name: &str) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name, "entity mapping name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -206,7 +199,10 @@ impl NSEntityMapping {
     }
 
     /// Mirrors `NSEntityMapping.mapping_type`.
-    pub fn set_mapping_type(&self, mapping_type: NSEntityMappingType) -> Result<(), CoreDataError> {
+    pub fn set_mapping_type(
+        &mut self,
+        mapping_type: NSEntityMappingType,
+    ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_entity_mapping_set_mapping_type(
@@ -228,7 +224,7 @@ impl NSEntityMapping {
     }
 
     /// Mirrors `NSEntityMapping.source_entity_name`.
-    pub fn set_source_entity_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
+    pub fn set_source_entity_name(&mut self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "entity mapping source entity name"))
             .transpose()?;
@@ -254,7 +250,7 @@ impl NSEntityMapping {
     }
 
     /// Mirrors `NSEntityMapping.destination_entity_name`.
-    pub fn set_destination_entity_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
+    pub fn set_destination_entity_name(&mut self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "entity mapping destination entity name"))
             .transpose()?;
@@ -294,7 +290,7 @@ impl NSPropertyMapping {
     }
 
     /// Mirrors `NSPropertyMapping.name`.
-    pub fn set_name(&self, name: Option<&str>) -> Result<(), CoreDataError> {
+    pub fn set_name(&mut self, name: Option<&str>) -> Result<(), CoreDataError> {
         let name = name
             .map(|value| cstring_from_str(value, "property mapping name"))
             .transpose()?;
@@ -339,15 +335,10 @@ impl NSManagedObjectModelReference {
     }
 
     /// Wraps `NSManagedObjectModelReference.resolved_model(...)`.
-    pub fn resolved_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
+    pub fn resolved_model(&self) -> Result<Borrowed<'_, NSManagedObjectModel>, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_managed_object_model_reference_get_resolved_model(self.as_ptr()) };
-        unsafe {
-            NSManagedObjectModel::from_retained_ptr(
-                ptr,
-                "managed object model reference resolved model",
-            )
-        }
+        unsafe { borrowed_ptr(ptr, "managed object model reference resolved model") }
     }
 
     /// Wraps `NSManagedObjectModelReference.version_checksum(...)`.
@@ -371,7 +362,7 @@ impl NSMigrationStage {
     }
 
     /// Mirrors `NSMigrationStage.label`.
-    pub fn set_label(&self, label: Option<&str>) -> Result<(), CoreDataError> {
+    pub fn set_label(&mut self, label: Option<&str>) -> Result<(), CoreDataError> {
         let label = label
             .map(|value| cstring_from_str(value, "migration stage label"))
             .transpose()?;
@@ -434,16 +425,16 @@ impl NSLightweightMigrationStage {
     }
 
     /// Wraps `NSLightweightMigrationStage.as_migration_stage(...)`.
-    pub fn as_migration_stage(&self) -> Result<NSMigrationStage, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "migration stage")
+    pub fn as_migration_stage(&self) -> Borrowed<'_, NSMigrationStage> {
+        borrowed_from(&self.inner)
     }
 }
 
 impl NSCustomMigrationStage {
     /// Wraps `NSCustomMigrationStage.init(...)`.
     pub fn new(
-        current_model: &NSManagedObjectModelReference,
-        next_model: &NSManagedObjectModelReference,
+        current_model: NSManagedObjectModelReference,
+        next_model: NSManagedObjectModelReference,
     ) -> Result<Self, CoreDataError> {
         let mut out_stage = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
@@ -462,34 +453,26 @@ impl NSCustomMigrationStage {
     }
 
     /// Wraps `NSCustomMigrationStage.current_model(...)`.
-    pub fn current_model(&self) -> Result<NSManagedObjectModelReference, CoreDataError> {
+    pub fn current_model(
+        &self,
+    ) -> Result<Borrowed<'_, NSManagedObjectModelReference>, CoreDataError> {
         let ptr = unsafe { ffi::cd_custom_migration_stage_get_current_model(self.as_ptr()) };
-        unsafe {
-            NSManagedObjectModelReference::from_retained_ptr(
-                ptr,
-                "custom migration stage current model",
-            )
-        }
+        unsafe { borrowed_ptr(ptr, "custom migration stage current model") }
     }
 
     /// Wraps `NSCustomMigrationStage.next_model(...)`.
-    pub fn next_model(&self) -> Result<NSManagedObjectModelReference, CoreDataError> {
+    pub fn next_model(&self) -> Result<Borrowed<'_, NSManagedObjectModelReference>, CoreDataError> {
         let ptr = unsafe { ffi::cd_custom_migration_stage_get_next_model(self.as_ptr()) };
-        unsafe {
-            NSManagedObjectModelReference::from_retained_ptr(
-                ptr,
-                "custom migration stage next model",
-            )
-        }
+        unsafe { borrowed_ptr(ptr, "custom migration stage next model") }
     }
 
     /// Wraps `NSCustomMigrationStage.as_migration_stage(...)`.
-    pub fn as_migration_stage(&self) -> Result<NSMigrationStage, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "migration stage")
+    pub fn as_migration_stage(&self) -> Borrowed<'_, NSMigrationStage> {
+        borrowed_from(&self.inner)
     }
 
     pub fn set_will_migrate_handler<F>(
-        &self,
+        &mut self,
         handler: F,
     ) -> Result<CustomMigrationStageHandlerRegistration, CoreDataError>
     where
@@ -502,7 +485,7 @@ impl NSCustomMigrationStage {
     }
 
     pub fn set_did_migrate_handler<F>(
-        &self,
+        &mut self,
         handler: F,
     ) -> Result<CustomMigrationStageHandlerRegistration, CoreDataError>
     where
@@ -515,7 +498,7 @@ impl NSCustomMigrationStage {
     }
 
     fn set_handler(
-        &self,
+        &mut self,
         did_migrate: bool,
         handler: MigrationHandler,
     ) -> Result<CustomMigrationStageHandlerRegistration, CoreDataError> {
@@ -533,23 +516,37 @@ impl NSCustomMigrationStage {
         };
         status_result(status, out_error)?;
         Ok(CustomMigrationStageHandlerRegistration {
-            stage: self.clone(),
+            stage: self.inner.clone(),
             did_migrate,
             context,
         })
     }
 }
 
+impl From<NSLightweightMigrationStage> for NSMigrationStage {
+    fn from(stage: NSLightweightMigrationStage) -> Self {
+        Self { inner: stage.inner }
+    }
+}
+
+impl From<NSCustomMigrationStage> for NSMigrationStage {
+    fn from(stage: NSCustomMigrationStage) -> Self {
+        Self { inner: stage.inner }
+    }
+}
+
 impl NSPersistentStoreDescription {
     pub fn set_staged_migration_manager(
-        &self,
-        manager: Option<&NSStagedMigrationManager>,
+        &mut self,
+        manager: Option<NSStagedMigrationManager>,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_persistent_store_description_set_staged_migration_manager(
                 self.as_ptr(),
-                manager.map_or(core::ptr::null_mut(), NSStagedMigrationManager::as_ptr),
+                manager
+                    .as_ref()
+                    .map_or(core::ptr::null_mut(), NSStagedMigrationManager::as_ptr),
                 &raw mut out_error,
             )
         };
@@ -559,10 +556,10 @@ impl NSPersistentStoreDescription {
 
 impl NSStagedMigrationManager {
     /// Wraps `NSStagedMigrationManager.init(...)`.
-    pub fn new(stages: &[&NSMigrationStage]) -> Result<Self, CoreDataError> {
+    pub fn new(stages: Vec<NSMigrationStage>) -> Result<Self, CoreDataError> {
         let raw_stages = stages
             .iter()
-            .map(|stage| stage.as_ptr())
+            .map(NSMigrationStage::as_ptr)
             .collect::<Vec<_>>();
         let count = i32::try_from(raw_stages.len()).map_err(|_| {
             CoreDataError::bridge(-1, "staged migration manager stage count overflow")
@@ -584,19 +581,14 @@ impl NSStagedMigrationManager {
     }
 
     /// Wraps `NSStagedMigrationManager.stages(...)`.
-    pub fn stages(&self) -> Result<Vec<NSMigrationStage>, CoreDataError> {
+    pub fn stages(&self) -> Result<Vec<Borrowed<'_, NSMigrationStage>>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_staged_migration_manager_get_stages(self.as_ptr()) };
-        collect_array(array_ptr, "staged migration manager stages")
+        collect_borrowed(array_ptr, "staged migration manager stages")
     }
 
     /// Wraps `NSStagedMigrationManager.container(...)`.
-    pub fn container(&self) -> Result<Option<NSPersistentContainer>, CoreDataError> {
+    pub fn container(&self) -> Result<Option<Borrowed<'_, NSPersistentContainer>>, CoreDataError> {
         let ptr = unsafe { ffi::cd_staged_migration_manager_get_container(self.as_ptr()) };
-        if ptr.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(unsafe {
-            NSPersistentContainer::from_retained_ptr(ptr, "staged migration manager container")?
-        }))
+        unsafe { optional_borrowed_ptr(ptr, "staged migration manager container") }
     }
 }

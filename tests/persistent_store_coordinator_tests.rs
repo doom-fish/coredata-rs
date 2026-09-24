@@ -14,7 +14,7 @@ fn persistent_store_coordinator_can_add_remove_and_destroy_sqlite_store(
     let artifact = SqliteStoreArtifact::new("coordinator-tests")?;
     let coordinator = NSPersistentStoreCoordinator::new(&fixture.model)?;
 
-    let description = NSPersistentStoreDescription::with_url(&artifact.path)?;
+    let mut description = NSPersistentStoreDescription::with_url(&artifact.path)?;
     description.set_store_type(store_types::SQLITE)?;
     description.set_should_add_asynchronously(false);
 

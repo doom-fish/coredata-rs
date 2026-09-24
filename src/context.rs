@@ -3,8 +3,8 @@ use core::ffi::c_void;
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_sync_object_wrapper, json_cstring,
-    parse_json_ptr, status_result,
+    borrowed_ptr, collect_array, cstring_from_str, error_from_status, impl_sync_object_wrapper,
+    json_cstring, parse_json_ptr, status_result, Borrowed,
 };
 use crate::query::NSFetchRequest;
 use crate::schema::NSEntityDescription;
@@ -256,14 +256,14 @@ impl NSManagedObject {
     /// Wraps `NSManagedObject.init(...)`.
     pub fn new(
         entity: &NSEntityDescription,
-        context: Option<&NSManagedObjectContext>,
+        context: &NSManagedObjectContext,
     ) -> Result<Self, CoreDataError> {
         let mut out_object = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_managed_object_new(
                 entity.as_ptr(),
-                context.map_or(core::ptr::null_mut(), NSManagedObjectContext::as_ptr),
+                context.as_ptr(),
                 &raw mut out_object,
                 &raw mut out_error,
             )
@@ -275,14 +275,14 @@ impl NSManagedObject {
     }
 
     /// Wraps `NSManagedObject.entity(...)`.
-    pub fn entity(&self) -> Result<NSEntityDescription, CoreDataError> {
+    pub fn entity(&self) -> Result<Borrowed<'_, NSEntityDescription>, CoreDataError> {
         let mut out_entity = core::ptr::null_mut();
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_managed_object_entity(self.as_ptr(), &raw mut out_entity, &raw mut out_error)
         };
         status_result(status, out_error)?;
-        unsafe { NSEntityDescription::from_retained_ptr(out_entity, "managed object entity") }
+        unsafe { borrowed_ptr(out_entity, "managed object entity") }
     }
 
     /// Mirrors `NSManagedObject.value`.

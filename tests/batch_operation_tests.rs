@@ -16,7 +16,7 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
         artifact = sqlite_artifact;
 
         let context = container.new_background_context()?;
-        let insert_request = NSBatchInsertRequest::new(
+        let mut insert_request = NSBatchInsertRequest::new(
             "Person",
             &[
                 person_row("Ada", 32),
@@ -30,7 +30,7 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
         let request = NSFetchRequest::new("Person")?;
         assert_eq!(context.count(&request)?, 3);
 
-        let batch_update = NSBatchUpdateRequest::new("Person")?;
+        let mut batch_update = NSBatchUpdateRequest::new("Person")?;
         batch_update.set_predicate(Some(&NSPredicate::from_format(
             "name == %@",
             &["Ada".into()],
@@ -42,7 +42,7 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
         batch_update.set_result_type(BatchUpdateRequestResultType::Count)?;
         assert_eq!(batch_update.execute(&context)?.count(), 1);
 
-        let verification_request = NSFetchRequest::new("Person")?;
+        let mut verification_request = NSFetchRequest::new("Person")?;
         verification_request.set_predicate(Some(&NSPredicate::from_format(
             "name == %@",
             &["Ada".into()],
@@ -51,7 +51,7 @@ fn batch_insert_update_and_delete_work_against_sqlite() -> Result<(), Box<dyn st
         assert_eq!(updated.len(), 1);
         assert_eq!(updated[0].value("age")?.as_i32(), Some(33));
 
-        let delete_request = NSBatchDeleteRequest::from_fetch_request(&request)?;
+        let mut delete_request = NSBatchDeleteRequest::from_fetch_request(&request)?;
         delete_request.set_result_type(BatchDeleteRequestResultType::Count)?;
         assert_eq!(delete_request.execute(&context)?.count(), 3);
     }

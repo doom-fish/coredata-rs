@@ -6,8 +6,8 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::model::NSManagedObjectModel;
 use crate::private::{
-    cstring_from_str, error_from_status, impl_object_wrapper, json_cstring, opt_cstring_ptr,
-    parse_json_ptr, path_cstring,
+    borrowed_ptr, cstring_from_str, error_from_status, impl_object_wrapper, json_cstring,
+    opt_cstring_ptr, parse_json_ptr, path_cstring, Borrowed,
 };
 use crate::store::PersistentStoreOptions;
 use crate::value::ValuePayload;
@@ -129,17 +129,15 @@ impl NSMigrationManager {
     }
 
     /// Wraps `NSMigrationManager.source_model(...)`.
-    pub fn source_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
+    pub fn source_model(&self) -> Result<Borrowed<'_, NSManagedObjectModel>, CoreDataError> {
         let ptr = unsafe { ffi::cd_migration_manager_get_source_model(self.as_ptr()) };
-        unsafe { NSManagedObjectModel::from_retained_ptr(ptr, "migration manager source model") }
+        unsafe { borrowed_ptr(ptr, "migration manager source model") }
     }
 
     /// Wraps `NSMigrationManager.destination_model(...)`.
-    pub fn destination_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
+    pub fn destination_model(&self) -> Result<Borrowed<'_, NSManagedObjectModel>, CoreDataError> {
         let ptr = unsafe { ffi::cd_migration_manager_get_destination_model(self.as_ptr()) };
-        unsafe {
-            NSManagedObjectModel::from_retained_ptr(ptr, "migration manager destination model")
-        }
+        unsafe { borrowed_ptr(ptr, "migration manager destination model") }
     }
 
     /// Wraps `NSMigrationManager.source_context(...)`.
@@ -167,7 +165,7 @@ impl NSMigrationManager {
 
     /// Mirrors `NSMigrationManager.uses_store_specific_migration_manager`.
     pub fn set_uses_store_specific_migration_manager(
-        &self,
+        &mut self,
         uses_store_specific_migration_manager: bool,
     ) {
         unsafe {

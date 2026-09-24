@@ -8,7 +8,7 @@ use support::*;
 
 #[test]
 fn entity_description_round_trips_metadata_and_lookup() -> Result<(), Box<dyn std::error::Error>> {
-    let fixture = basic_model()?;
+    let mut fixture = basic_model()?;
     fixture.person.set_user_info(&BTreeMap::from([(
         String::from("suite"),
         String::from("entity-tests"),

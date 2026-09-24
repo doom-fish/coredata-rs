@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use support::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let fixture = basic_model()?;
+    let mut fixture = basic_model()?;
 
     fixture.person.set_user_info(&BTreeMap::from([(
         String::from("module"),
@@ -30,7 +30,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some("LegacyPerson")
     );
     assert_eq!(fixture.person.uniqueness_constraints()?.len(), 1);
-    assert_eq!(fixture.person.managed_object_model()?.entities()?.len(), 1);
+    assert!(fixture.person.managed_object_model()?.is_none());
+    let model_person = fixture
+        .model
+        .entity_named("Person")?
+        .ok_or_else(|| std::io::Error::other("missing Person entity"))?;
+    let owning_model = model_person
+        .managed_object_model()?
+        .ok_or_else(|| std::io::Error::other("entity is not in a model"))?;
+    assert_eq!(owning_model.entities()?.len(), 1);
     assert!(!fixture.person.version_hash()?.is_empty());
 
     assert!(fixture.model.entity_named("Person")?.is_some());

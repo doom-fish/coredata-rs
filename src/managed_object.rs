@@ -7,7 +7,6 @@ use crate::private::{
     collect_array, cstring_from_str, error_from_status, impl_sync_object_wrapper, json_cstring,
     parse_json_ptr, status_result, take_string,
 };
-use crate::schema::NSEntityDescription;
 use crate::value::{Value, ValuePayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -246,10 +245,10 @@ impl NSManagedObject {
 }
 
 impl NSManagedObjectID {
-    /// Wraps `NSManagedObjectID.entity(...)`.
-    pub fn entity(&self) -> Result<NSEntityDescription, CoreDataError> {
-        let ptr = unsafe { ffi::cd_managed_object_id_get_entity(self.as_ptr()) };
-        unsafe { NSEntityDescription::from_retained_ptr(ptr, "managed object ID entity") }
+    pub fn entity_name(&self) -> Result<String, CoreDataError> {
+        let ptr = unsafe { ffi::cd_managed_object_id_get_entity_name(self.as_ptr()) };
+        unsafe { take_string(ptr) }
+            .ok_or_else(|| CoreDataError::bridge(-1, "managed object ID entity name was nil"))
     }
 
     /// Wraps `NSManagedObjectID.is_temporary(...)`.

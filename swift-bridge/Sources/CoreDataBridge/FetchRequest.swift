@@ -21,34 +21,6 @@ public func cdFetchRequestNew(
     }
 }
 
-@_cdecl("cd_fetch_request_get_entity")
-public func cdFetchRequestGetEntity(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let requestPtr else {
-        return nil
-    }
-    let request: NSFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-    return request.entity.map(cdRetain)
-}
-
-@_cdecl("cd_fetch_request_set_entity")
-public func cdFetchRequestSetEntity(
-    _ requestPtr: UnsafeMutableRawPointer?,
-    _ entityPtr: UnsafeMutableRawPointer?,
-    _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
-) -> Int32 {
-    do {
-        guard let requestPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing fetch request")
-        }
-        let request: NSFetchRequest<NSFetchRequestResult> = cdBorrow(requestPtr)
-        request.entity = entityPtr.map { cdBorrow($0) as NSEntityDescription }
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
-    }
-}
-
 @_cdecl("cd_fetch_request_get_entity_name")
 public func cdFetchRequestGetEntityName(_ requestPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     guard let requestPtr else {
@@ -323,9 +295,7 @@ public func cdFetchRequestExecuteObjectIDs(
 ) -> Int32 {
     cdStatus(outError) {
         let request: NSFetchRequest<NSFetchRequestResult> = try cdArg(requestPtr, "fetch request")
-        guard let snapshot = try cdObjCValue({ CDXCopyObject(request, $0) }) as? NSFetchRequest<NSFetchRequestResult> else {
-            throw cdBridgeNSError(code: CDR_FAILURE, message: "Could not copy the fetch request")
-        }
+        let snapshot = cdCopyFetchRequest(request)
         snapshot.resultType = .managedObjectIDResultType
         let results = try cdWithContext(contextPtr) { context in try cdFetch(snapshot, in: context) }
         guard let objectIDs = results as? [NSManagedObjectID] else {

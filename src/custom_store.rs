@@ -87,7 +87,7 @@ impl NSIncrementalStoreNode {
 
     /// Wraps `NSIncrementalStoreNode.update(...)`.
     pub fn update(
-        &self,
+        &mut self,
         values: &BTreeMap<String, Value>,
         version: u64,
     ) -> Result<(), CoreDataError> {

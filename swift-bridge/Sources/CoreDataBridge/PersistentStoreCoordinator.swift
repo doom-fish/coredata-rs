@@ -39,32 +39,57 @@ func cdRegisteredStoreType(_ storeType: UnsafePointer<CChar>?) throws -> String 
     return type
 }
 
+let cdStoreLock = NSRecursiveLock()
+
+func cdOnCoordinatorQueue<T>(_ coordinator: NSPersistentStoreCoordinator, _ body: () throws -> T) throws -> T {
+    var outcome: Result<T, Error>?
+    coordinator.performAndWait {
+        outcome = Result { try body() }
+    }
+    guard let outcome else {
+        throw cdBridgeNSError(code: CDR_FAILURE, message: "The persistent store coordinator did not run the block")
+    }
+    return try outcome.get()
+}
+
+func cdWithCoordinator<T>(
+    _ coordinatorPtr: UnsafeMutableRawPointer?,
+    _ body: (NSPersistentStoreCoordinator) throws -> T
+) throws -> T {
+    let coordinator: NSPersistentStoreCoordinator = try cdArg(coordinatorPtr, "persistent store coordinator")
+    return try cdOnCoordinatorQueue(coordinator) { try body(coordinator) }
+}
+
+func cdLockedStore<T>(_ store: NSPersistentStore, _ body: (NSPersistentStore) throws -> T) rethrows -> T {
+    cdStoreLock.lock()
+    defer { cdStoreLock.unlock() }
+    return try body(store)
+}
+
+func cdWithStore<T>(_ storePtr: UnsafeMutableRawPointer?, _ body: (NSPersistentStore) throws -> T) throws -> T {
+    let store: NSPersistentStore = try cdArg(storePtr, "persistent store")
+    if let coordinator = store.persistentStoreCoordinator {
+        return try cdOnCoordinatorQueue(coordinator) { try cdLockedStore(store, body) }
+    }
+    return try cdLockedStore(store, body)
+}
+
 @_cdecl("cd_persistent_store_coordinator_new")
 public func cdPersistentStoreCoordinatorNew(
     _ modelPtr: UnsafeMutableRawPointer?,
     _ outCoordinator: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    do {
-        guard let modelPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing managed object model")
-        }
-        let model: NSManagedObjectModel = cdBorrow(modelPtr)
-        outCoordinator?.pointee = cdRetain(NSPersistentStoreCoordinator(managedObjectModel: model))
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+    cdStatus(outError) {
+        let model: NSManagedObjectModel = try cdArg(modelPtr, "managed object model")
+        outCoordinator?.pointee = cdRetain(NSPersistentStoreCoordinator(managedObjectModel: try cdHandoffModel(model)))
     }
 }
 
 @_cdecl("cd_persistent_store_coordinator_get_name")
 public func cdPersistentStoreCoordinatorGetName(_ coordinatorPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
-    guard let coordinatorPtr else {
-        return nil
-    }
-    let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-    return coordinator.name.flatMap { cdCString($0) }
+    let name = try? cdWithCoordinator(coordinatorPtr) { $0.name }
+    return name.flatMap { cdCString($0) }
 }
 
 @_cdecl("cd_persistent_store_coordinator_set_name")
@@ -73,35 +98,26 @@ public func cdPersistentStoreCoordinatorSetName(
     _ name: UnsafePointer<CChar>?,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    do {
-        guard let coordinatorPtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store coordinator")
-        }
-        let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-        coordinator.name = cdOptionalString(name)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+    cdStatus(outError) {
+        let value = cdOptionalString(name)
+        try cdWithCoordinator(coordinatorPtr) { $0.name = value }
     }
 }
 
 @_cdecl("cd_persistent_store_coordinator_managed_object_model")
 public func cdPersistentStoreCoordinatorManagedObjectModel(_ coordinatorPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let coordinatorPtr else {
+    guard let coordinator = try? cdArg(coordinatorPtr, "persistent store coordinator") as NSPersistentStoreCoordinator else {
         return nil
     }
-    let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
     return cdRetain(coordinator.managedObjectModel)
 }
 
 @_cdecl("cd_persistent_store_coordinator_persistent_stores")
 public func cdPersistentStoreCoordinatorPersistentStores(_ coordinatorPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let coordinatorPtr else {
+    guard let stores = try? cdWithCoordinator(coordinatorPtr, { $0.persistentStores }) else {
         return nil
     }
-    let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-    return cdRetain(coordinator.persistentStores as NSArray)
+    return cdRetain(stores as NSArray)
 }
 
 @_cdecl("cd_persistent_store_coordinator_add_persistent_store")
@@ -114,12 +130,13 @@ public func cdPersistentStoreCoordinatorAddPersistentStore(
     _ outError: CDOutError
 ) -> Int32 {
     cdStatus(outError) {
-        let coordinator: NSPersistentStoreCoordinator = try cdArg(coordinatorPtr, "persistent store coordinator")
         let type = try cdRegisteredStoreType(storeType)
         let configurationName = configuration.map(String.init(cString:))
         let url = cdURL(from: urlPath)
         let options = try cdPersistentStoreOptions(from: optionsJSON)
-        _ = try cdObjCValue { CDXAddPersistentStore(coordinator, type, configurationName, url, options, $0) }
+        _ = try cdWithCoordinator(coordinatorPtr) { coordinator in
+            try cdObjCValue { CDXAddPersistentStore(coordinator, type, configurationName, url, options, $0) }
+        }
     }
 }
 
@@ -133,14 +150,19 @@ public func cdPersistentStoreCoordinatorAddPersistentStoreWithDescription(
 ) -> Int32 {
     cdStatus(outError) {
         let coordinator: NSPersistentStoreCoordinator = try cdArg(coordinatorPtr, "persistent store coordinator")
-        let description: NSPersistentStoreDescription = try cdArg(descriptionPtr, "persistent store description")
+        let source: NSPersistentStoreDescription = try cdArg(descriptionPtr, "persistent store description")
+        let description = try cdCopyStoreDescription(source)
         try cdEnsureRegisteredStoreTypes([description])
         let tracker = CDStoreAddTracker()
-        try cdObjCCall {
-            CDXAddPersistentStoreWithDescription(coordinator, description, { addedDescription, error in
-                let store = addedDescription.url.flatMap { coordinator.persistentStore(for: $0) } ?? coordinator.persistentStores.last
-                tracker.record(store: store, error: error as NSError?)
-            }, $0)
+        try cdOnCoordinatorQueue(coordinator) {
+            try cdObjCCall {
+                CDXAddPersistentStoreWithDescription(coordinator, description, { addedDescription, error in
+                    let store = try? cdOnCoordinatorQueue(coordinator) {
+                        addedDescription.url.flatMap { coordinator.persistentStore(for: $0) } ?? coordinator.persistentStores.last
+                    }
+                    tracker.record(store: store.flatMap { $0 }, error: error as NSError?)
+                }, $0)
+            }
         }
         let (store, error) = tracker.wait(timeoutSeconds: timeoutSeconds)
         if let error {
@@ -156,17 +178,14 @@ public func cdPersistentStoreCoordinatorRemovePersistentStore(
     _ storePtr: UnsafeMutableRawPointer?,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    do {
-        guard let coordinatorPtr, let storePtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store coordinator or store")
+    cdStatus(outError) {
+        let store: NSPersistentStore = try cdArg(storePtr, "persistent store")
+        try cdWithCoordinator(coordinatorPtr) { coordinator in
+            guard coordinator.persistentStores.contains(where: { $0 === store }) else {
+                throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "The persistent store does not belong to this coordinator")
+            }
+            try coordinator.remove(store)
         }
-        let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-        let store: NSPersistentStore = cdBorrow(storePtr)
-        try coordinator.remove(store)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
     }
 }
 
@@ -175,11 +194,12 @@ public func cdPersistentStoreCoordinatorPersistentStoreForURL(
     _ coordinatorPtr: UnsafeMutableRawPointer?,
     _ path: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
-    guard let coordinatorPtr, let url = cdURL(from: path) else {
+    guard let url = cdURL(from: path),
+          let store = try? cdWithCoordinator(coordinatorPtr, { $0.persistentStore(for: url) })
+    else {
         return nil
     }
-    let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-    return coordinator.persistentStore(for: url).map(cdRetain)
+    return cdRetain(store)
 }
 
 @_cdecl("cd_persistent_store_coordinator_url_for_persistent_store")
@@ -187,24 +207,25 @@ public func cdPersistentStoreCoordinatorURLForPersistentStore(
     _ coordinatorPtr: UnsafeMutableRawPointer?,
     _ storePtr: UnsafeMutableRawPointer?
 ) -> UnsafeMutablePointer<CChar>? {
-    guard let coordinatorPtr, let storePtr else {
+    guard let store = try? cdArg(storePtr, "persistent store") as NSPersistentStore,
+          let path = try? cdWithCoordinator(coordinatorPtr, { coordinator -> String? in
+              guard coordinator.persistentStores.contains(where: { $0 === store }) else {
+                  return nil
+              }
+              return coordinator.url(for: store).path
+          })
+    else {
         return nil
     }
-    let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-    let store: NSPersistentStore = cdBorrow(storePtr)
-    guard coordinator.persistentStores.contains(where: { $0 === store }) else {
-        return nil
-    }
-    return cdCString(coordinator.url(for: store).path)
+    return cdCString(path)
 }
 
 @_cdecl("cd_persistent_store_coordinator_current_persistent_history_token")
 public func cdPersistentStoreCoordinatorCurrentPersistentHistoryToken(_ coordinatorPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let coordinatorPtr else {
+    guard let token = try? cdWithCoordinator(coordinatorPtr, { $0.currentPersistentHistoryToken(fromStores: nil) }) else {
         return nil
     }
-    let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
-    return coordinator.currentPersistentHistoryToken(fromStores: nil).map(cdRetain)
+    return cdRetain(token)
 }
 
 @_cdecl("cd_persistent_store_coordinator_destroy_persistent_store")
@@ -215,40 +236,37 @@ public func cdPersistentStoreCoordinatorDestroyPersistentStore(
     _ optionsJSON: UnsafePointer<CChar>?,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    do {
-        guard let coordinatorPtr, let path, let storeType else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store coordinator, path, or store type")
+    cdStatus(outError) {
+        guard let path else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store path")
         }
-        let coordinator: NSPersistentStoreCoordinator = cdBorrow(coordinatorPtr)
         let type = try cdRegisteredStoreType(storeType)
-        try coordinator.destroyPersistentStore(
-            at: URL(fileURLWithPath: String(cString: path)),
-            type: NSPersistentStore.StoreType(rawValue: type),
-            options: try cdPersistentStoreOptions(from: optionsJSON)
-        )
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+        let options = try cdPersistentStoreOptions(from: optionsJSON)
+        let url = URL(fileURLWithPath: String(cString: path))
+        try cdWithCoordinator(coordinatorPtr) { coordinator in
+            try coordinator.destroyPersistentStore(
+                at: url,
+                type: NSPersistentStore.StoreType(rawValue: type),
+                options: options
+            )
+        }
     }
 }
 
 @_cdecl("cd_persistent_store_get_configuration_name")
 public func cdPersistentStoreGetConfigurationName(_ storePtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
-    guard let storePtr else {
+    guard let name = try? cdWithStore(storePtr, { $0.configurationName }) else {
         return nil
     }
-    let store: NSPersistentStore = cdBorrow(storePtr)
-    return cdCString(store.configurationName)
+    return cdCString(name)
 }
 
 @_cdecl("cd_persistent_store_get_url")
 public func cdPersistentStoreGetURL(_ storePtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
-    guard let storePtr else {
+    guard let url = try? cdWithStore(storePtr, { $0.url }) else {
         return nil
     }
-    let store: NSPersistentStore = cdBorrow(storePtr)
-    return store.url.flatMap { cdCString($0.path) }
+    return cdCString(url.path)
 }
 
 @_cdecl("cd_persistent_store_set_url")
@@ -257,26 +275,18 @@ public func cdPersistentStoreSetURL(
     _ path: UnsafePointer<CChar>?,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    do {
-        guard let storePtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store")
-        }
-        let store: NSPersistentStore = cdBorrow(storePtr)
-        store.url = cdURL(from: path)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+    cdStatus(outError) {
+        let url = cdURL(from: path)
+        try cdWithStore(storePtr) { $0.url = url }
     }
 }
 
 @_cdecl("cd_persistent_store_get_identifier")
 public func cdPersistentStoreGetIdentifier(_ storePtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
-    guard let storePtr else {
+    guard let identifier = try? cdWithStore(storePtr, { $0.identifier }) else {
         return nil
     }
-    let store: NSPersistentStore = cdBorrow(storePtr)
-    return cdCString(store.identifier)
+    return cdCString(identifier)
 }
 
 @_cdecl("cd_persistent_store_set_identifier")
@@ -285,35 +295,26 @@ public func cdPersistentStoreSetIdentifier(
     _ identifier: UnsafePointer<CChar>?,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    do {
-        guard let storePtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store")
-        }
-        let store: NSPersistentStore = cdBorrow(storePtr)
-        store.identifier = cdOptionalString(identifier)
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+    cdStatus(outError) {
+        let value = cdOptionalString(identifier)
+        try cdWithStore(storePtr) { $0.identifier = value }
     }
 }
 
 @_cdecl("cd_persistent_store_get_type")
 public func cdPersistentStoreGetType(_ storePtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
-    guard let storePtr else {
+    guard let type = try? cdWithStore(storePtr, { $0.type }) else {
         return nil
     }
-    let store: NSPersistentStore = cdBorrow(storePtr)
-    return cdCString(store.type)
+    return cdCString(type)
 }
 
 @_cdecl("cd_persistent_store_get_read_only")
 public func cdPersistentStoreGetReadOnly(_ storePtr: UnsafeMutableRawPointer?) -> Int32 {
-    guard let storePtr else {
+    guard let readOnly = try? cdWithStore(storePtr, { $0.isReadOnly }) else {
         return 0
     }
-    let store: NSPersistentStore = cdBorrow(storePtr)
-    return store.isReadOnly ? 1 : 0
+    return readOnly ? 1 : 0
 }
 
 @_cdecl("cd_persistent_store_set_read_only")
@@ -322,15 +323,7 @@ public func cdPersistentStoreSetReadOnly(
     _ readOnly: Int32,
     _ outError: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    do {
-        guard let storePtr else {
-            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent store")
-        }
-        let store: NSPersistentStore = cdBorrow(storePtr)
-        store.isReadOnly = readOnly != 0
-        return CDR_OK
-    } catch let error as NSError {
-        cdWriteError(error, to: outError)
-        return cdErrorStatus(error)
+    cdStatus(outError) {
+        try cdWithStore(storePtr) { $0.isReadOnly = readOnly != 0 }
     }
 }

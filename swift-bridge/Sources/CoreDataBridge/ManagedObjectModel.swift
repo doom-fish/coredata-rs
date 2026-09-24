@@ -45,10 +45,7 @@ public func cdManagedObjectModelAddEntity(
         }
         let model: NSManagedObjectModel = cdBorrow(modelPtr)
         let entity: NSEntityDescription = cdBorrow(entityPtr)
-        var entities = model.entities
-        entities.removeAll { existing in existing.name == entity.name }
-        entities.append(entity)
-        try cdTrySetValue(entities, forKey: "entities", on: model)
+        try cdAddEntity(entity, to: model)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -72,5 +69,9 @@ public func cdManagedObjectModelGetVersionChecksum(_ modelPtr: UnsafeMutableRawP
         return nil
     }
     let model: NSManagedObjectModel = cdBorrow(modelPtr)
-    return cdCString(model.versionChecksum)
+    guard let frozen = try? cdCopyModel(model) else {
+        return nil
+    }
+    _ = NSPersistentStoreCoordinator(managedObjectModel: frozen)
+    return cdCString(frozen.versionChecksum)
 }

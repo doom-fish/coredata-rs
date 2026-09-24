@@ -6,6 +6,7 @@ extern "C" {
     pub fn cd_string_free(s: *mut c_char);
     pub fn cd_retain_object(ptr: *mut c_void) -> *mut c_void;
     pub fn cd_release_object(ptr: *mut c_void);
+    pub fn cd_object_copy(ptr: *mut c_void) -> *mut c_void;
 
     pub fn cd_array_count(array: *mut c_void) -> i64;
     pub fn cd_array_get_object(array: *mut c_void, index: i64) -> *mut c_void;
@@ -110,17 +111,23 @@ extern "C" {
     pub fn cd_relationship_description_get_destination_entity(
         relationship: *mut c_void,
     ) -> *mut c_void;
-    pub fn cd_relationship_description_set_destination_entity(
+    pub fn cd_relationship_description_get_destination_entity_name(
         relationship: *mut c_void,
-        entity: *mut c_void,
+    ) -> *mut c_char;
+    pub fn cd_relationship_description_set_destination_entity_name(
+        relationship: *mut c_void,
+        entity_name: *const c_char,
         out_error: *mut *mut c_char,
     ) -> i32;
     pub fn cd_relationship_description_get_inverse_relationship(
         relationship: *mut c_void,
     ) -> *mut c_void;
-    pub fn cd_relationship_description_set_inverse_relationship(
+    pub fn cd_relationship_description_get_inverse_relationship_name(
         relationship: *mut c_void,
-        inverse_relationship: *mut c_void,
+    ) -> *mut c_char;
+    pub fn cd_relationship_description_set_inverse_relationship_name(
+        relationship: *mut c_void,
+        relationship_name: *const c_char,
         out_error: *mut *mut c_char,
     ) -> i32;
     pub fn cd_relationship_description_get_min_count(relationship: *mut c_void) -> u64;

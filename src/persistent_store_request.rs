@@ -12,7 +12,8 @@ use crate::history::NSPersistentHistoryResult;
 use crate::managed_object::NSManagedObjectID;
 use crate::persistent_store_coordinator::NSPersistentStore;
 use crate::private::{
-    collect_array, error_from_status, impl_object_wrapper, parse_error_ptr, status_result,
+    borrowed_from, collect_array, error_from_status, impl_copied_object_wrapper,
+    impl_object_wrapper, impl_shared_object_wrapper, parse_error_ptr, status_result, Borrowed,
 };
 use crate::query::NSFetchRequest;
 
@@ -54,12 +55,61 @@ impl NSPersistentStoreRequestType {
 }
 
 impl_object_wrapper!(NSPersistentStoreRequest);
-impl_object_wrapper!(NSPersistentStoreResult);
-impl_object_wrapper!(NSPersistentStoreAsynchronousResult);
-impl_object_wrapper!(NSAsynchronousFetchRequest);
-impl_object_wrapper!(NSAsynchronousFetchResult);
-impl_object_wrapper!(NSSaveChangesRequest);
-impl_object_wrapper!(NSFetchRequestExpression);
+impl_shared_object_wrapper!(NSPersistentStoreResult);
+impl_shared_object_wrapper!(NSPersistentStoreAsynchronousResult);
+impl_copied_object_wrapper!(NSAsynchronousFetchRequest);
+impl_shared_object_wrapper!(NSAsynchronousFetchResult);
+impl_copied_object_wrapper!(NSSaveChangesRequest);
+impl_shared_object_wrapper!(NSFetchRequestExpression);
+
+fn set_affected_stores(
+    request: *mut c_void,
+    stores: &[&NSPersistentStore],
+) -> Result<(), CoreDataError> {
+    let raw_stores = stores
+        .iter()
+        .map(|store| store.as_ptr())
+        .collect::<Vec<_>>();
+    let count = i32::try_from(raw_stores.len())
+        .map_err(|_| CoreDataError::bridge(-1, "persistent store request store count overflow"))?;
+    let mut out_error = core::ptr::null_mut();
+    let status = unsafe {
+        ffi::cd_persistent_store_request_set_affected_stores(
+            request,
+            raw_stores.as_ptr(),
+            count,
+            &raw mut out_error,
+        )
+    };
+    if status != ffi::status::OK {
+        return Err(unsafe { error_from_status(status, out_error) });
+    }
+    Ok(())
+}
+
+macro_rules! impl_persistent_store_request {
+    ($name:ident) => {
+        impl $name {
+            pub fn as_persistent_store_request(&self) -> Borrowed<'_, NSPersistentStoreRequest> {
+                borrowed_from(&self.inner)
+            }
+
+            pub fn set_affected_stores(
+                &mut self,
+                stores: &[&NSPersistentStore],
+            ) -> Result<(), CoreDataError> {
+                set_affected_stores(self.as_ptr(), stores)
+            }
+        }
+    };
+}
+
+impl_persistent_store_request!(NSFetchRequest);
+impl_persistent_store_request!(NSAsynchronousFetchRequest);
+impl_persistent_store_request!(NSSaveChangesRequest);
+impl_persistent_store_request!(NSBatchDeleteRequest);
+impl_persistent_store_request!(NSBatchInsertRequest);
+impl_persistent_store_request!(NSBatchUpdateRequest);
 
 fn clone_retained_wrapper<T>(ptr: *mut c_void, context: &str) -> Result<T, CoreDataError>
 where
@@ -87,30 +137,6 @@ impl NSPersistentStoreRequest {
         let array_ptr =
             unsafe { ffi::cd_persistent_store_request_get_affected_stores(self.as_ptr()) };
         collect_array(array_ptr, "persistent store request affected stores")
-    }
-
-    /// Mirrors `NSPersistentStoreRequest.affected_stores`.
-    pub fn set_affected_stores(&self, stores: &[&NSPersistentStore]) -> Result<(), CoreDataError> {
-        let raw_stores = stores
-            .iter()
-            .map(|store| store.as_ptr())
-            .collect::<Vec<_>>();
-        let count = i32::try_from(raw_stores.len()).map_err(|_| {
-            CoreDataError::bridge(-1, "persistent store request store count overflow")
-        })?;
-        let mut out_error = core::ptr::null_mut();
-        let status = unsafe {
-            ffi::cd_persistent_store_request_set_affected_stores(
-                self.as_ptr(),
-                raw_stores.as_ptr(),
-                count,
-                &raw mut out_error,
-            )
-        };
-        if status != ffi::status::OK {
-            return Err(unsafe { error_from_status(status, out_error) });
-        }
-        Ok(())
     }
 
     /// Wraps `NSPersistentStoreRequest.request_type(...)`.
@@ -211,7 +237,7 @@ impl NSAsynchronousFetchRequest {
     }
 
     /// Mirrors `NSAsynchronousFetchRequest.estimated_result_count`.
-    pub fn set_estimated_result_count(&self, estimated_result_count: i64) {
+    pub fn set_estimated_result_count(&mut self, estimated_result_count: i64) {
         unsafe {
             ffi::cd_asynchronous_fetch_request_set_estimated_result_count(
                 self.as_ptr(),
@@ -241,11 +267,6 @@ impl NSAsynchronousFetchRequest {
         unsafe {
             NSAsynchronousFetchResult::from_retained_ptr(out_result, "asynchronous fetch result")
         }
-    }
-
-    /// Wraps `NSAsynchronousFetchRequest.as_persistent_store_request(...)`.
-    pub fn as_persistent_store_request(&self) -> Result<NSPersistentStoreRequest, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "persistent store request")
     }
 }
 
@@ -340,11 +361,6 @@ impl NSSaveChangesRequest {
         let array_ptr = unsafe { ffi::cd_save_changes_request_get_locked_objects(self.as_ptr()) };
         collect_array(array_ptr, "save changes request locked objects")
     }
-
-    /// Wraps `NSSaveChangesRequest.as_persistent_store_request(...)`.
-    pub fn as_persistent_store_request(&self) -> Result<NSPersistentStoreRequest, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "persistent store request")
-    }
 }
 
 impl NSFetchRequestExpression {
@@ -374,34 +390,6 @@ impl NSFetchRequestExpression {
     /// Wraps `NSFetchRequestExpression.is_count_only_request(...)`.
     pub fn is_count_only_request(&self) -> bool {
         unsafe { ffi::cd_fetch_request_expression_get_count_only_request(self.as_ptr()) != 0 }
-    }
-}
-
-impl NSFetchRequest {
-    /// Wraps `NSFetchRequest.as_persistent_store_request(...)`.
-    pub fn as_persistent_store_request(&self) -> Result<NSPersistentStoreRequest, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "persistent store request")
-    }
-}
-
-impl NSBatchDeleteRequest {
-    /// Wraps `NSBatchDeleteRequest.as_persistent_store_request(...)`.
-    pub fn as_persistent_store_request(&self) -> Result<NSPersistentStoreRequest, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "persistent store request")
-    }
-}
-
-impl NSBatchInsertRequest {
-    /// Wraps `NSBatchInsertRequest.as_persistent_store_request(...)`.
-    pub fn as_persistent_store_request(&self) -> Result<NSPersistentStoreRequest, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "persistent store request")
-    }
-}
-
-impl NSBatchUpdateRequest {
-    /// Wraps `NSBatchUpdateRequest.as_persistent_store_request(...)`.
-    pub fn as_persistent_store_request(&self) -> Result<NSPersistentStoreRequest, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "persistent store request")
     }
 }
 

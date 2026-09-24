@@ -80,7 +80,7 @@ impl NSAttributeDescription {
     }
 
     /// Mirrors `NSAttributeDescription.validation_rules`.
-    pub fn set_validation_rules(&self, rules: &[ValidationRule]) -> Result<(), CoreDataError> {
+    pub fn set_validation_rules(&mut self, rules: &[ValidationRule]) -> Result<(), CoreDataError> {
         let rules_json = json_cstring(rules, "attribute validation rules")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -116,7 +116,7 @@ impl NSRelationshipDescription {
     }
 
     /// Mirrors `NSRelationshipDescription.validation_rules`.
-    pub fn set_validation_rules(&self, rules: &[ValidationRule]) -> Result<(), CoreDataError> {
+    pub fn set_validation_rules(&mut self, rules: &[ValidationRule]) -> Result<(), CoreDataError> {
         let rules_json = json_cstring(rules, "relationship validation rules")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {

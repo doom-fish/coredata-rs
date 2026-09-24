@@ -1,13 +1,13 @@
 use coredata::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let model = NSManagedObjectModel::new()?;
-    let person = NSEntityDescription::named("Person")?;
+    let mut model = NSManagedObjectModel::new()?;
+    let mut person = NSEntityDescription::named("Person")?;
     person.set_managed_object_class_name("NSManagedObject")?;
 
-    let name = NSAttributeDescription::new("name", AttributeType::String)?;
+    let mut name = NSAttributeDescription::new("name", AttributeType::String)?;
     name.set_optional(false)?;
-    let age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
+    let mut age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
     age.set_optional(false)?;
 
     person.add_attribute(&name)?;
@@ -22,8 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     context.perform_and_wait(move |ctx| -> Result<(), CoreDataError> {
         for (name, age) in [("Ada", 32_i32), ("Bea", 25_i32), ("Cleo", 41_i32)] {
-            let object = NSManagedObject::new(&person, None)?;
-            ctx.insert(&object)?;
+            let object = NSManagedObject::new(&person, &ctx)?;
             object.set_value("name", name)?;
             object.set_value("age", age)?;
         }
@@ -38,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         ctx.save()?;
 
-        let request = NSFetchRequest::new("Person")?;
+        let mut request = NSFetchRequest::new("Person")?;
         request.set_sort_descriptors(&[SortDescriptor::ascending("age")])?;
         let people = request.execute(&ctx)?;
         if people.len() != 3 {

@@ -7,8 +7,9 @@ use crate::model::NSManagedObjectModel;
 use crate::persistent_container::NSPersistentStoreDescription;
 use crate::persistent_store_coordinator::NSPersistentStore;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, parse_error_ptr,
-    parse_json_ptr, status_result, take_string,
+    borrowed_ptr, collect_array, cstring_from_str, error_from_status, impl_copied_object_wrapper,
+    impl_object_wrapper, impl_shared_object_wrapper, optional_borrowed_ptr, parse_error_ptr,
+    parse_json_ptr, status_result, take_string, Borrowed,
 };
 use crate::query::NSFetchRequest;
 use crate::store::NSPersistentStoreCoordinator;
@@ -111,7 +112,7 @@ impl NSPersistentCloudKitContainerOptions {
 
     /// Mirrors `NSPersistentCloudKitContainerOptions.database_scope`.
     pub fn set_database_scope(
-        &self,
+        &mut self,
         database_scope: CloudKitDatabaseScope,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -133,31 +134,23 @@ impl NSPersistentStoreDescription {
     /// Wraps `NSPersistentStoreDescription.cloudkit_container_options(...)`.
     pub fn cloudkit_container_options(
         &self,
-    ) -> Result<Option<NSPersistentCloudKitContainerOptions>, CoreDataError> {
+    ) -> Result<Option<Borrowed<'_, NSPersistentCloudKitContainerOptions>>, CoreDataError> {
         let ptr = unsafe {
             ffi::cd_persistent_store_description_get_cloudkit_container_options(self.as_ptr())
         };
-        if ptr.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(unsafe {
-            NSPersistentCloudKitContainerOptions::from_retained_ptr(
-                ptr,
-                "CloudKit container options",
-            )?
-        }))
+        unsafe { optional_borrowed_ptr(ptr, "CloudKit container options") }
     }
 
     /// Mirrors `NSPersistentStoreDescription.cloudkit_container_options`.
     pub fn set_cloudkit_container_options(
-        &self,
-        options: Option<&NSPersistentCloudKitContainerOptions>,
+        &mut self,
+        options: Option<NSPersistentCloudKitContainerOptions>,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_persistent_store_description_set_cloudkit_container_options(
                 self.as_ptr(),
-                options.map_or(
+                options.as_ref().map_or(
                     core::ptr::null_mut(),
                     NSPersistentCloudKitContainerOptions::as_ptr,
                 ),
@@ -199,10 +192,12 @@ impl NSPersistentCloudKitContainer {
     }
 
     /// Wraps `NSPersistentCloudKitContainer.managed_object_model(...)`.
-    pub fn managed_object_model(&self) -> Result<NSManagedObjectModel, CoreDataError> {
+    pub fn managed_object_model(
+        &self,
+    ) -> Result<Borrowed<'_, NSManagedObjectModel>, CoreDataError> {
         let ptr =
             unsafe { ffi::cd_persistent_cloudkit_container_managed_object_model(self.as_ptr()) };
-        unsafe { NSManagedObjectModel::from_retained_ptr(ptr, "CloudKit container model") }
+        unsafe { borrowed_ptr(ptr, "CloudKit container model") }
     }
 
     /// Wraps `NSPersistentCloudKitContainer.persistent_store_coordinator(...)`.
@@ -232,7 +227,7 @@ impl NSPersistentCloudKitContainer {
 
     /// Mirrors `NSPersistentCloudKitContainer.persistent_store_descriptions`.
     pub fn set_persistent_store_descriptions(
-        &self,
+        &mut self,
         descriptions: &[&NSPersistentStoreDescription],
     ) -> Result<(), CoreDataError> {
         let raw_descriptions = descriptions
@@ -419,9 +414,9 @@ impl NSPersistentCloudKitContainerEventResultType {
     }
 }
 
-impl_object_wrapper!(NSPersistentCloudKitContainerEvent);
-impl_object_wrapper!(NSPersistentCloudKitContainerEventRequest);
-impl_object_wrapper!(NSPersistentCloudKitContainerEventResult);
+impl_shared_object_wrapper!(NSPersistentCloudKitContainerEvent);
+impl_copied_object_wrapper!(NSPersistentCloudKitContainerEventRequest);
+impl_shared_object_wrapper!(NSPersistentCloudKitContainerEventResult);
 
 fn seconds_since_epoch(time: SystemTime) -> Result<f64, CoreDataError> {
     time.duration_since(UNIX_EPOCH)
@@ -559,7 +554,7 @@ impl NSPersistentCloudKitContainerEventRequest {
 
     /// Mirrors `NSPersistentCloudKitContainerEventRequest.result_type`.
     pub fn set_result_type(
-        &self,
+        &mut self,
         result_type: NSPersistentCloudKitContainerEventResultType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();

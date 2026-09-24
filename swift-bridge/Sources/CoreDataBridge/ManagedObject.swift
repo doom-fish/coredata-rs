@@ -75,15 +75,18 @@ public func cdManagedObjectNew(
 ) -> Int32 {
     cdStatus(outError) {
         let entity: NSEntityDescription = try cdArg(entityPtr, "entity description")
-        guard contextPtr != nil else {
-            try cdEnsureInstantiable(entity, in: nil)
-            let object = try cdObjCValue { CDXNewManagedObject(entity, nil, $0) }
-            outObject?.pointee = Unmanaged.passRetained(CDManagedObjectBox(object, context: nil)).toOpaque()
-            return
+        guard let name = entity.name else {
+            throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "The entity has no name")
         }
         outObject?.pointee = try cdWithContext(contextPtr) { context in
-            try cdEnsureInstantiable(entity, in: context)
-            let object = try cdObjCValue { CDXNewManagedObject(entity, context, $0) }
+            guard let modelEntity = context.persistentStoreCoordinator?.managedObjectModel.entitiesByName[name] else {
+                throw cdBridgeNSError(
+                    code: CDR_INVALID_ARGUMENT,
+                    message: "The context's managed object model has no entity named '\(name)'"
+                )
+            }
+            try cdEnsureInstantiable(modelEntity, in: context)
+            let object = try cdObjCValue { CDXNewManagedObject(modelEntity, context, $0) }
             return cdRetainManagedObject(object, in: context)
         }
     }
@@ -293,13 +296,13 @@ public func cdManagedObjectChangedValuesForCurrentEventJSON(
     }
 }
 
-@_cdecl("cd_managed_object_id_get_entity")
-public func cdManagedObjectIDGetEntity(_ objectIDPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+@_cdecl("cd_managed_object_id_get_entity_name")
+public func cdManagedObjectIDGetEntityName(_ objectIDPtr: UnsafeMutableRawPointer?) -> UnsafeMutablePointer<CChar>? {
     guard let objectIDPtr else {
         return nil
     }
     let objectID: NSManagedObjectID = cdBorrow(objectIDPtr)
-    return cdRetain(objectID.entity)
+    return objectID.entity.name.flatMap { cdCString($0) }
 }
 
 @_cdecl("cd_managed_object_id_get_temporary")

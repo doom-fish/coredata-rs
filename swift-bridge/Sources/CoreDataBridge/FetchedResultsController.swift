@@ -130,9 +130,7 @@ public func cdFetchedResultsControllerNew(
                 )
             }
             try cdEnsureFetchable(fetchRequest, in: context)
-            guard let snapshot = try cdObjCValue({ CDXCopyObject(fetchRequest, $0) }) as? NSFetchRequest<NSFetchRequestResult> else {
-                throw cdBridgeNSError(code: CDR_FAILURE, message: "Could not copy the fetch request")
-            }
+            let snapshot = cdCopyFetchRequest(fetchRequest)
             return try cdObjCValue { CDXNewFetchedResultsController(snapshot, context, sectionKeyPath, cache, $0) }
         }
         outController?.pointee = cdRetain(controller)
@@ -200,9 +198,7 @@ public func cdFetchedResultsControllerRemoveDelegate(
 
 @_cdecl("cd_fetched_results_controller_get_fetch_request")
 public func cdFetchedResultsControllerGetFetchRequest(_ controllerPtr: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
-    guard let controller = try? cdController(controllerPtr),
-          let snapshot = (try? cdObjCValue { CDXCopyObject(controller.fetchRequest, $0) }) as? NSFetchRequest<NSFetchRequestResult>
-    else {
+    guard let snapshot = try? cdWithController(controllerPtr, { controller, _ in cdCopyFetchRequest(controller.fetchRequest) }) else {
         return nil
     }
     return cdRetain(snapshot)

@@ -6,8 +6,8 @@ use crate::error::CoreDataError;
 use crate::ffi;
 use crate::model::NSManagedObjectModel;
 use crate::private::{
-    cstring_from_str, error_from_status, impl_object_wrapper, json_cstring, opt_cstring_ptr,
-    optional_cstring_from_str, path_cstring,
+    cstring_from_str, error_from_status, impl_object_wrapper, impl_sync_object_wrapper,
+    json_cstring, opt_cstring_ptr, optional_cstring_from_str, path_cstring,
 };
 use crate::value::{Value, ValuePayload};
 
@@ -26,7 +26,7 @@ pub mod store_types {
 /// Rust map alias for persistent-store options passed to `NSPersistentStoreCoordinator.addPersistentStore(...)`.
 pub type PersistentStoreOptions = BTreeMap<String, Value>;
 
-impl_object_wrapper!(NSPersistentStoreCoordinator);
+impl_sync_object_wrapper!(NSPersistentStoreCoordinator);
 impl_object_wrapper!(NSPersistentContainer);
 
 impl NSPersistentStoreCoordinator {

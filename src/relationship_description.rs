@@ -15,7 +15,7 @@ impl NSRelationshipDescription {
     }
 
     /// Mirrors `NSRelationshipDescription.ordered`.
-    pub fn set_ordered(&self, ordered: bool) -> Result<(), CoreDataError> {
+    pub fn set_ordered(&mut self, ordered: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_relationship_description_set_ordered(

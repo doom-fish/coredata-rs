@@ -74,7 +74,7 @@ public func cdEntityDescriptionGetManagedObjectModel(_ entityPtr: UnsafeMutableR
         return nil
     }
     let entity: NSEntityDescription = cdBorrow(entityPtr)
-    return cdRetain(entity.managedObjectModel)
+    return (entity.value(forKey: "managedObjectModel") as? NSManagedObjectModel).map(cdRetain)
 }
 
 @_cdecl("cd_entity_description_get_name")
@@ -330,9 +330,10 @@ public func cdEntityDescriptionAddAttribute(
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
         let attribute: NSAttributeDescription = cdBorrow(attributePtr)
+        let copy = try cdCopyProperty(attribute)
         var properties = entity.properties
-        properties.removeAll { existing in existing.name == attribute.name }
-        properties.append(attribute)
+        properties.removeAll { existing in existing.name == copy.name }
+        properties.append(copy)
         try cdTrySetValue(properties, forKey: "properties", on: entity)
         return CDR_OK
     } catch let error as NSError {
@@ -353,9 +354,10 @@ public func cdEntityDescriptionAddRelationship(
         }
         let entity: NSEntityDescription = cdBorrow(entityPtr)
         let relationship: NSRelationshipDescription = cdBorrow(relationshipPtr)
+        let copy = try cdCopyProperty(relationship)
         var properties = entity.properties
-        properties.removeAll { existing in existing.name == relationship.name }
-        properties.append(relationship)
+        properties.removeAll { existing in existing.name == copy.name }
+        properties.append(copy)
         try cdTrySetValue(properties, forKey: "properties", on: entity)
         return CDR_OK
     } catch let error as NSError {
@@ -394,7 +396,10 @@ public func cdEntityDescriptionRelationshipsWithDestinationEntity(
     }
     let entity: NSEntityDescription = cdBorrow(entityPtr)
     let destination: NSEntityDescription = cdBorrow(destinationEntityPtr)
-    return cdRetain(entity.relationships(forDestination: destination) as NSArray)
+    let matches = entity.relationshipsByName.values
+        .filter { destination.name != nil && cdDestinationEntityName($0) == destination.name }
+        .sorted { $0.name < $1.name }
+    return cdRetain(matches as NSArray)
 }
 
 @_cdecl("cd_entity_description_is_kind_of_entity")

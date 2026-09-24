@@ -177,7 +177,7 @@ public func cdManagedObjectModelReferenceNewWithModel(
         guard let modelPtr, let versionChecksum else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing model or version checksum")
         }
-        let model: NSManagedObjectModel = cdBorrow(modelPtr)
+        let model = try cdHandoffModel(cdBorrow(modelPtr))
         outReference?.pointee = cdRetain(NSManagedObjectModelReference(
             model: model,
             versionChecksum: String(cString: versionChecksum)

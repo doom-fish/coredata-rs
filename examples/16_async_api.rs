@@ -27,8 +27,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = basic_model()?;
 
     // ── 1. AsyncPersistentContainer.load_persistent_stores ─────────────────
-    let container = NSPersistentContainer::new("AsyncExample", &fixture.model)?;
-    let description = NSPersistentStoreDescription::new()?;
+    let mut container = NSPersistentContainer::new("AsyncExample", &fixture.model)?;
+    let mut description = NSPersistentStoreDescription::new()?;
     description.set_store_type(store_types::IN_MEMORY)?;
     description.set_should_add_asynchronously(false);
     container.set_persistent_store_descriptions(&[&description])?;
@@ -44,7 +44,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = container.new_background_context()?;
 
     // Insert an object, then save asynchronously.
-    let person = NSManagedObject::new(&fixture.person, Some(&ctx))?;
+    let person = NSManagedObject::new(&fixture.person, &ctx)?;
     person.set_value("name", "Alice")?;
     person.set_value("age", 30_i32)?;
 
@@ -62,7 +62,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         false,
     )?;
     let bg = sqlite_container.new_background_context()?;
-    let insert_req = NSBatchInsertRequest::new(
+    let mut insert_req = NSBatchInsertRequest::new(
         "Person",
         &[{
             let mut m = std::collections::BTreeMap::new();

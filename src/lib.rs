@@ -139,6 +139,7 @@ pub use persistent_store_request::{
     NSFetchRequestResult, NSPersistentStoreAsynchronousResult, NSPersistentStoreRequest,
     NSPersistentStoreRequestType, NSPersistentStoreResult, NSSaveChangesRequest,
 };
+pub use private::Borrowed;
 pub use query::{NSFetchRequest, NSPredicate, PredicateOperator, PredicateOptions, SortDescriptor};
 pub use query_generation::NSQueryGenerationToken;
 pub use schema::{
@@ -213,6 +214,7 @@ pub mod prelude {
         NSFetchRequestResult, NSPersistentStoreAsynchronousResult, NSPersistentStoreRequest,
         NSPersistentStoreRequestType, NSPersistentStoreResult, NSSaveChangesRequest,
     };
+    pub use crate::private::Borrowed;
     pub use crate::query::{
         NSFetchRequest, NSPredicate, PredicateOperator, PredicateOptions, SortDescriptor,
     };

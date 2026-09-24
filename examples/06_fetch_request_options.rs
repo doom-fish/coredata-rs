@@ -1,16 +1,11 @@
 #![allow(clippy::wildcard_imports)]
 
-mod support;
-
 use coredata::prelude::*;
-use support::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let fixture = basic_model()?;
-    let request = NSFetchRequest::new("Person")?;
+    let mut request = NSFetchRequest::new("Person")?;
     let empty_prefetch: [&str; 0] = [];
 
-    request.set_entity(Some(&fixture.person))?;
     request.set_result_type(FetchRequestResultType::ManagedObjectId)?;
     request.set_includes_property_values(false);
     request.set_includes_subentities(true);

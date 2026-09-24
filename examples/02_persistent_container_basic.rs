@@ -12,9 +12,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(container.name()?, "PersistentContainerExample");
     assert!(NSPersistentContainer::default_directory()?.is_absolute());
 
-    let descriptions = container.persistent_store_descriptions()?;
+    let mut descriptions = container.persistent_store_descriptions()?;
     assert_eq!(descriptions.len(), 1);
-    let description = &descriptions[0];
+    let description = &mut descriptions[0];
     assert_eq!(description.store_type()?, store_types::IN_MEMORY);
     description.set_timeout(3.5)?;
     assert!((description.timeout() - 3.5).abs() < f64::EPSILON);

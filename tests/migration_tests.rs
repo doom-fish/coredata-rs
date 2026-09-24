@@ -13,9 +13,9 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
     let destination_artifact = SqliteStoreArtifact::new("migration-destination")?;
 
     {
-        let source_container =
+        let mut source_container =
             NSPersistentContainer::new("MigrationSource", &fixture.source_model)?;
-        let source_description = NSPersistentStoreDescription::with_url(&source_artifact.path)?;
+        let mut source_description = NSPersistentStoreDescription::with_url(&source_artifact.path)?;
         source_description.set_store_type(store_types::SQLITE)?;
         source_description.set_should_add_asynchronously(false);
         source_container.set_persistent_store_descriptions(&[&source_description])?;
@@ -30,7 +30,7 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
         NSMappingModel::inferred(&fixture.source_model, &fixture.destination_model)?;
     assert_eq!(mapping_model.entity_mapping_names()?.len(), 1);
 
-    let migration_manager =
+    let mut migration_manager =
         NSMigrationManager::new(&fixture.source_model, &fixture.destination_model)?;
     migration_manager.set_uses_store_specific_migration_manager(false);
     assert!(!migration_manager.uses_store_specific_migration_manager());
@@ -46,9 +46,9 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
     assert!(migration_manager.migration_progress() >= 0.0);
 
     {
-        let destination_container =
+        let mut destination_container =
             NSPersistentContainer::new("MigrationDestination", &fixture.destination_model)?;
-        let destination_description =
+        let mut destination_description =
             NSPersistentStoreDescription::with_url(&destination_artifact.path)?;
         destination_description.set_store_type(store_types::SQLITE)?;
         destination_description.set_should_add_asynchronously(false);
@@ -56,7 +56,7 @@ fn inferred_mapping_models_and_migration_manager_migrate_sqlite_store(
         destination_container.load_persistent_stores()?;
 
         let destination_context = destination_container.new_background_context()?;
-        let request = NSFetchRequest::new("Person")?;
+        let mut request = NSFetchRequest::new("Person")?;
         request.set_sort_descriptors(&[SortDescriptor::ascending("name")])?;
         let migrated = request.execute(&destination_context)?;
         assert_eq!(migrated.len(), 1);
@@ -73,10 +73,10 @@ fn load_sqlite_container(
     name: &str,
     model: &NSManagedObjectModel,
     path: &std::path::Path,
-    manager: Option<&NSStagedMigrationManager>,
+    manager: Option<NSStagedMigrationManager>,
 ) -> Result<NSPersistentContainer, CoreDataError> {
-    let container = NSPersistentContainer::new(name, model)?;
-    let description = NSPersistentStoreDescription::with_url(path)?;
+    let mut container = NSPersistentContainer::new(name, model)?;
+    let mut description = NSPersistentStoreDescription::with_url(path)?;
     description.set_store_type(store_types::SQLITE)?;
     description.set_should_add_asynchronously(false);
     if let Some(manager) = manager {
@@ -112,7 +112,7 @@ fn staged_stage(
         &fixture.destination_model,
         &destination_checksum,
     )?;
-    Ok(NSCustomMigrationStage::new(&current, &next)?)
+    Ok(NSCustomMigrationStage::new(current, next)?)
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn custom_migration_stage_handlers_run_during_a_staged_migration(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let fixture = migration_models()?;
     let artifact = SqliteStoreArtifact::new("staged-migration")?;
-    let stage = staged_stage(&fixture, &artifact)?;
+    let mut stage = staged_stage(&fixture, &artifact)?;
 
     let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let will_calls = std::sync::Arc::clone(&calls);
@@ -134,13 +134,13 @@ fn custom_migration_stage_handlers_run_during_a_staged_migration(
         assert!(manager.container()?.is_some());
         Ok(())
     })?;
-    let manager = NSStagedMigrationManager::new(&[&stage.as_migration_stage()?])?;
+    let manager = NSStagedMigrationManager::new(vec![stage.into()])?;
 
     let destination = load_sqlite_container(
         "StagedDestination",
         &fixture.destination_model,
         &artifact.path,
-        Some(&manager),
+        Some(manager),
     )?;
     assert_eq!(*calls.lock().unwrap(), vec!["will", "did"]);
 
@@ -161,7 +161,7 @@ fn failing_custom_migration_stage_handler_fails_the_store_load(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let fixture = migration_models()?;
     let artifact = SqliteStoreArtifact::new("staged-migration-failure")?;
-    let stage = staged_stage(&fixture, &artifact)?;
+    let mut stage = staged_stage(&fixture, &artifact)?;
     let _will = stage.set_will_migrate_handler(|_manager, _stage| {
         Err(CoreDataError {
             domain: String::from("StagedMigrationTest"),
@@ -169,13 +169,13 @@ fn failing_custom_migration_stage_handler_fails_the_store_load(
             message: String::from("refusing to migrate"),
         })
     })?;
-    let manager = NSStagedMigrationManager::new(&[&stage.as_migration_stage()?])?;
+    let manager = NSStagedMigrationManager::new(vec![stage.into()])?;
 
     let result = load_sqlite_container(
         "StagedFailure",
         &fixture.destination_model,
         &artifact.path,
-        Some(&manager),
+        Some(manager),
     );
     assert!(result.is_err());
     artifact.cleanup();

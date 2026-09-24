@@ -74,14 +74,14 @@ impl SqliteStoreArtifact {
 }
 
 pub fn basic_model() -> Result<BasicModelFixture, CoreDataError> {
-    let model = NSManagedObjectModel::new()?;
-    let person = NSEntityDescription::named("Person")?;
+    let mut model = NSManagedObjectModel::new()?;
+    let mut person = NSEntityDescription::named("Person")?;
     person.set_managed_object_class_name("NSManagedObject")?;
 
-    let name = NSAttributeDescription::new("name", AttributeType::String)?;
+    let mut name = NSAttributeDescription::new("name", AttributeType::String)?;
     name.set_optional(false)?;
 
-    let age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
+    let mut age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
     age.set_optional(false)?;
 
     person.add_attribute(&name)?;
@@ -97,36 +97,36 @@ pub fn basic_model() -> Result<BasicModelFixture, CoreDataError> {
 }
 
 pub fn relationship_model() -> Result<RelationshipModelFixture, CoreDataError> {
-    let model = NSManagedObjectModel::new()?;
+    let mut model = NSManagedObjectModel::new()?;
 
-    let person = NSEntityDescription::named("Person")?;
+    let mut person = NSEntityDescription::named("Person")?;
     person.set_managed_object_class_name("NSManagedObject")?;
-    let person_name = NSAttributeDescription::new("name", AttributeType::String)?;
+    let mut person_name = NSAttributeDescription::new("name", AttributeType::String)?;
     person_name.set_optional(false)?;
     person.add_attribute(&person_name)?;
 
-    let task = NSEntityDescription::named("Task")?;
+    let mut task = NSEntityDescription::named("Task")?;
     task.set_managed_object_class_name("NSManagedObject")?;
-    let title = NSAttributeDescription::new("title", AttributeType::String)?;
+    let mut title = NSAttributeDescription::new("title", AttributeType::String)?;
     title.set_optional(false)?;
     task.add_attribute(&title)?;
 
-    let children = NSRelationshipDescription::new("tasks")?;
-    children.set_destination_entity(Some(&task))?;
+    let mut children = NSRelationshipDescription::new("tasks")?;
+    children.set_destination_entity_name(Some("Task"))?;
     children.set_optional(true)?;
     children.set_min_count(0)?;
     children.set_max_count(0)?;
     children.set_delete_rule(DeleteRule::Cascade)?;
 
-    let parent = NSRelationshipDescription::new("owner")?;
-    parent.set_destination_entity(Some(&person))?;
+    let mut parent = NSRelationshipDescription::new("owner")?;
+    parent.set_destination_entity_name(Some("Person"))?;
     parent.set_optional(true)?;
     parent.set_min_count(0)?;
     parent.set_max_count(1)?;
     parent.set_delete_rule(DeleteRule::Nullify)?;
 
-    children.set_inverse_relationship(Some(&parent))?;
-    parent.set_inverse_relationship(Some(&children))?;
+    children.set_inverse_relationship_name(Some("owner"))?;
+    parent.set_inverse_relationship_name(Some("tasks"))?;
 
     person.add_relationship(&children)?;
     task.add_relationship(&parent)?;
@@ -144,27 +144,27 @@ pub fn relationship_model() -> Result<RelationshipModelFixture, CoreDataError> {
 }
 
 pub fn migration_models() -> Result<MigrationModelFixture, CoreDataError> {
-    let source_model = NSManagedObjectModel::new()?;
-    let source_person = NSEntityDescription::named("Person")?;
+    let mut source_model = NSManagedObjectModel::new()?;
+    let mut source_person = NSEntityDescription::named("Person")?;
     source_person.set_managed_object_class_name("NSManagedObject")?;
 
-    let source_name = NSAttributeDescription::new("name", AttributeType::String)?;
+    let mut source_name = NSAttributeDescription::new("name", AttributeType::String)?;
     source_name.set_optional(false)?;
-    let source_age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
+    let mut source_age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
     source_age.set_optional(false)?;
     source_person.add_attribute(&source_name)?;
     source_person.add_attribute(&source_age)?;
     source_model.add_entity(&source_person)?;
 
-    let destination_model = NSManagedObjectModel::new()?;
-    let destination_person = NSEntityDescription::named("Person")?;
+    let mut destination_model = NSManagedObjectModel::new()?;
+    let mut destination_person = NSEntityDescription::named("Person")?;
     destination_person.set_managed_object_class_name("NSManagedObject")?;
 
-    let destination_name = NSAttributeDescription::new("name", AttributeType::String)?;
+    let mut destination_name = NSAttributeDescription::new("name", AttributeType::String)?;
     destination_name.set_optional(false)?;
-    let destination_age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
+    let mut destination_age = NSAttributeDescription::new("age", AttributeType::Integer32)?;
     destination_age.set_optional(false)?;
-    let nickname = NSAttributeDescription::new("nickname", AttributeType::String)?;
+    let mut nickname = NSAttributeDescription::new("nickname", AttributeType::String)?;
     nickname.set_optional(true)?;
     destination_person.add_attribute(&destination_name)?;
     destination_person.add_attribute(&destination_age)?;
@@ -200,8 +200,8 @@ pub fn in_memory_container(
     name: &str,
     model: &NSManagedObjectModel,
 ) -> Result<NSPersistentContainer, CoreDataError> {
-    let container = NSPersistentContainer::new(name, model)?;
-    let description = NSPersistentStoreDescription::new()?;
+    let mut container = NSPersistentContainer::new(name, model)?;
+    let mut description = NSPersistentStoreDescription::new()?;
     description.set_store_type(store_types::IN_MEMORY)?;
     description.set_should_add_asynchronously(false);
     container.set_persistent_store_descriptions(&[&description])?;
@@ -216,8 +216,8 @@ pub fn sqlite_container(
     history_tracking: bool,
 ) -> Result<(NSPersistentContainer, SqliteStoreArtifact), CoreDataError> {
     let artifact = SqliteStoreArtifact::new(prefix)?;
-    let container = NSPersistentContainer::new(name, model)?;
-    let description = NSPersistentStoreDescription::with_url(&artifact.path)?;
+    let mut container = NSPersistentContainer::new(name, model)?;
+    let mut description = NSPersistentStoreDescription::with_url(&artifact.path)?;
     description.set_store_type(store_types::SQLITE)?;
     description.set_should_add_asynchronously(false);
     description.set_should_migrate_automatically(true);
@@ -240,8 +240,7 @@ pub fn insert_person(
     name: &str,
     age: i32,
 ) -> Result<NSManagedObject, CoreDataError> {
-    let object = NSManagedObject::new(entity, None)?;
-    context.insert(&object)?;
+    let object = NSManagedObject::new(entity, context)?;
     object.set_value("name", name)?;
     object.set_value("age", age)?;
     Ok(object)

@@ -12,8 +12,8 @@ public func cdMappingModelInferred(
         guard let sourceModelPtr, let destinationModelPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing source or destination model")
         }
-        let sourceModel: NSManagedObjectModel = cdBorrow(sourceModelPtr)
-        let destinationModel: NSManagedObjectModel = cdBorrow(destinationModelPtr)
+        let sourceModel = try cdHandoffModel(cdBorrow(sourceModelPtr))
+        let destinationModel = try cdHandoffModel(cdBorrow(destinationModelPtr))
         let mappingModel = try NSMappingModel.inferredMappingModel(
             forSourceModel: sourceModel,
             destinationModel: destinationModel
@@ -74,8 +74,8 @@ public func cdMigrationManagerNew(
         guard let sourceModelPtr, let destinationModelPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing source or destination model")
         }
-        let sourceModel: NSManagedObjectModel = cdBorrow(sourceModelPtr)
-        let destinationModel: NSManagedObjectModel = cdBorrow(destinationModelPtr)
+        let sourceModel = try cdHandoffModel(cdBorrow(sourceModelPtr))
+        let destinationModel = try cdHandoffModel(cdBorrow(destinationModelPtr))
         outManager?.pointee = cdRetain(NSMigrationManager(sourceModel: sourceModel, destinationModel: destinationModel))
         return CDR_OK
     } catch let error as NSError {

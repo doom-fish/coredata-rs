@@ -316,7 +316,7 @@ public func cdPersistentContainerNew(
         guard let name, let modelPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing persistent container name or model")
         }
-        let model: NSManagedObjectModel = cdBorrow(modelPtr)
+        let model = try cdHandoffModel(cdBorrow(modelPtr))
         let container = NSPersistentContainer(name: String(cString: name), managedObjectModel: model)
         outContainer?.pointee = cdRetain(container)
         return CDR_OK
@@ -359,7 +359,10 @@ public func cdPersistentContainerPersistentStoreDescriptions(_ containerPtr: Uns
         return nil
     }
     let container: NSPersistentContainer = cdBorrow(containerPtr)
-    return cdRetain(container.persistentStoreDescriptions as NSArray)
+    guard let copies = try? container.persistentStoreDescriptions.map(cdCopyStoreDescription) else {
+        return nil
+    }
+    return cdRetain(copies as NSArray)
 }
 
 @_cdecl("cd_persistent_container_set_persistent_store_descriptions")
@@ -375,7 +378,7 @@ public func cdPersistentContainerSetPersistentStoreDescriptions(
         }
         let container: NSPersistentContainer = cdBorrow(containerPtr)
         let descriptions: [NSPersistentStoreDescription] = cdObjects(from: descriptionPtrs, count: count)
-        container.persistentStoreDescriptions = descriptions
+        container.persistentStoreDescriptions = try descriptions.map(cdCopyStoreDescription)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)

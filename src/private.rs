@@ -1,4 +1,7 @@
 use core::ffi::{c_char, c_void};
+use core::fmt;
+use core::marker::PhantomData;
+use core::ops::Deref;
 use core::ptr::NonNull;
 use std::ffi::{CStr, CString};
 use std::path::Path;
@@ -42,15 +45,73 @@ impl RetainedObject {
     pub(crate) fn as_ptr(&self) -> *mut c_void {
         self.0.as_ptr()
     }
+
+    pub(crate) fn copied(&self) -> Self {
+        let ptr = unsafe { ffi::cd_object_copy(self.as_ptr()) };
+        Self(NonNull::new(ptr).expect("Core Data bridge could not copy the object"))
+    }
 }
 
 pub(crate) trait FromRetainedPtr: Sized {
-    unsafe fn from_retained_ptr(ptr: *mut c_void, context: &str) -> Result<Self, CoreDataError>;
+    fn from_retained(inner: RetainedObject) -> Self;
+
+    unsafe fn from_retained_ptr(ptr: *mut c_void, context: &str) -> Result<Self, CoreDataError> {
+        RetainedObject::from_retained_ptr(ptr, context).map(Self::from_retained)
+    }
+}
+
+pub struct Borrowed<'a, T> {
+    value: T,
+    _owner: PhantomData<(&'a (), *const ())>,
+}
+
+impl<T> Borrowed<'_, T> {
+    pub(crate) fn new(value: T) -> Self {
+        Self {
+            value,
+            _owner: PhantomData,
+        }
+    }
+}
+
+impl<T> Deref for Borrowed<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.value
+    }
+}
+
+impl<T: fmt::Debug> fmt::Debug for Borrowed<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Borrowed").field(&self.value).finish()
+    }
+}
+
+pub(crate) fn borrowed_from<T: FromRetainedPtr>(inner: &RetainedObject) -> Borrowed<'_, T> {
+    Borrowed::new(T::from_retained(inner.clone()))
+}
+
+pub(crate) unsafe fn borrowed_ptr<'a, T: FromRetainedPtr>(
+    ptr: *mut c_void,
+    context: &str,
+) -> Result<Borrowed<'a, T>, CoreDataError> {
+    T::from_retained_ptr(ptr, context).map(Borrowed::new)
+}
+
+pub(crate) unsafe fn optional_borrowed_ptr<'a, T: FromRetainedPtr>(
+    ptr: *mut c_void,
+    context: &str,
+) -> Result<Option<Borrowed<'a, T>>, CoreDataError> {
+    if ptr.is_null() {
+        return Ok(None);
+    }
+    borrowed_ptr(ptr, context).map(Some)
 }
 
 macro_rules! impl_object_wrapper {
     ($name:ident) => {
-        #[derive(Debug, Clone)]
+        #[derive(Debug)]
         #[doc = concat!("Wraps `", stringify!($name), "`.")]
         pub struct $name {
             pub(crate) inner: $crate::private::RetainedObject,
@@ -58,6 +119,7 @@ macro_rules! impl_object_wrapper {
 
         unsafe impl Send for $name {}
 
+        #[allow(dead_code)]
         impl $name {
             pub(crate) unsafe fn from_retained_ptr(
                 ptr: *mut core::ffi::c_void,
@@ -74,11 +136,8 @@ macro_rules! impl_object_wrapper {
         }
 
         impl $crate::private::FromRetainedPtr for $name {
-            unsafe fn from_retained_ptr(
-                ptr: *mut core::ffi::c_void,
-                context: &str,
-            ) -> Result<Self, $crate::error::CoreDataError> {
-                Self::from_retained_ptr(ptr, context)
+            fn from_retained(inner: $crate::private::RetainedObject) -> Self {
+                Self { inner }
             }
         }
     };
@@ -86,15 +145,47 @@ macro_rules! impl_object_wrapper {
 
 pub(crate) use impl_object_wrapper;
 
-macro_rules! impl_sync_object_wrapper {
+macro_rules! impl_shared_object_wrapper {
     ($name:ident) => {
         $crate::private::impl_object_wrapper!($name);
+
+        impl Clone for $name {
+            fn clone(&self) -> Self {
+                Self {
+                    inner: self.inner.clone(),
+                }
+            }
+        }
+    };
+}
+
+pub(crate) use impl_shared_object_wrapper;
+
+macro_rules! impl_sync_object_wrapper {
+    ($name:ident) => {
+        $crate::private::impl_shared_object_wrapper!($name);
 
         unsafe impl Sync for $name {}
     };
 }
 
 pub(crate) use impl_sync_object_wrapper;
+
+macro_rules! impl_copied_object_wrapper {
+    ($name:ident) => {
+        $crate::private::impl_object_wrapper!($name);
+
+        impl Clone for $name {
+            fn clone(&self) -> Self {
+                Self {
+                    inner: self.inner.copied(),
+                }
+            }
+        }
+    };
+}
+
+pub(crate) use impl_copied_object_wrapper;
 
 pub(crate) fn cstring_from_str(value: &str, context: &str) -> Result<CString, CoreDataError> {
     CString::new(value).map_err(|error| {
@@ -224,4 +315,14 @@ pub(crate) fn collect_array<T: FromRetainedPtr>(
         items.push(item);
     }
     Ok(items)
+}
+
+pub(crate) fn collect_borrowed<'a, T: FromRetainedPtr>(
+    array_ptr: *mut c_void,
+    context: &str,
+) -> Result<Vec<Borrowed<'a, T>>, CoreDataError> {
+    Ok(collect_array(array_ptr, context)?
+        .into_iter()
+        .map(Borrowed::new)
+        .collect())
 }

@@ -1,9 +1,8 @@
-use core::ffi::c_void;
-
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::private::{
-    collect_array, cstring_from_str, error_from_status, impl_object_wrapper, take_string,
+    borrowed_from, collect_borrowed, cstring_from_str, error_from_status,
+    impl_copied_object_wrapper, take_string, Borrowed,
 };
 use crate::query::NSFetchRequest;
 use crate::schema::{AttributeType, NSAttributeDescription};
@@ -38,21 +37,13 @@ impl NSFetchIndexElementType {
     }
 }
 
-impl_object_wrapper!(NSPropertyDescription);
-impl_object_wrapper!(NSFetchedPropertyDescription);
-impl_object_wrapper!(NSExpressionDescription);
-impl_object_wrapper!(NSDerivedAttributeDescription);
-impl_object_wrapper!(NSCompositeAttributeDescription);
-impl_object_wrapper!(NSFetchIndexDescription);
-impl_object_wrapper!(NSFetchIndexElementDescription);
-
-fn clone_retained_wrapper<T>(ptr: *mut c_void, context: &str) -> Result<T, CoreDataError>
-where
-    T: crate::private::FromRetainedPtr,
-{
-    let retained = unsafe { ffi::cd_retain_object(ptr) };
-    unsafe { T::from_retained_ptr(retained, context) }
-}
+impl_copied_object_wrapper!(NSPropertyDescription);
+impl_copied_object_wrapper!(NSFetchedPropertyDescription);
+impl_copied_object_wrapper!(NSExpressionDescription);
+impl_copied_object_wrapper!(NSDerivedAttributeDescription);
+impl_copied_object_wrapper!(NSCompositeAttributeDescription);
+impl_copied_object_wrapper!(NSFetchIndexDescription);
+impl_copied_object_wrapper!(NSFetchIndexElementDescription);
 
 impl NSPropertyDescription {
     /// Wraps `NSPropertyDescription.init(...)`.
@@ -75,7 +66,7 @@ impl NSPropertyDescription {
     }
 
     /// Mirrors `NSPropertyDescription.name`.
-    pub fn set_name(&self, name: &str) -> Result<(), CoreDataError> {
+    pub fn set_name(&mut self, name: &str) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name, "property description name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -93,7 +84,7 @@ impl NSPropertyDescription {
     }
 
     /// Mirrors `NSPropertyDescription.optional`.
-    pub fn set_optional(&self, optional: bool) -> Result<(), CoreDataError> {
+    pub fn set_optional(&mut self, optional: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_property_description_set_optional(
@@ -114,7 +105,7 @@ impl NSPropertyDescription {
     }
 
     /// Mirrors `NSPropertyDescription.transient`.
-    pub fn set_transient(&self, transient: bool) -> Result<(), CoreDataError> {
+    pub fn set_transient(&mut self, transient: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_property_description_set_transient(
@@ -157,7 +148,7 @@ impl NSFetchedPropertyDescription {
 
     /// Mirrors `NSFetchedPropertyDescription.fetch_request`.
     pub fn set_fetch_request(
-        &self,
+        &mut self,
         fetch_request: Option<&NSFetchRequest>,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -175,8 +166,8 @@ impl NSFetchedPropertyDescription {
     }
 
     /// Wraps `NSFetchedPropertyDescription.as_property_description(...)`.
-    pub fn as_property_description(&self) -> Result<NSPropertyDescription, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "property description")
+    pub fn as_property_description(&self) -> Borrowed<'_, NSPropertyDescription> {
+        borrowed_from(&self.inner)
     }
 }
 
@@ -203,7 +194,7 @@ impl NSExpressionDescription {
 
     /// Mirrors `NSExpressionDescription.expression_result_type`.
     pub fn set_expression_result_type(
-        &self,
+        &mut self,
         result_type: AttributeType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -221,8 +212,8 @@ impl NSExpressionDescription {
     }
 
     /// Wraps `NSExpressionDescription.as_property_description(...)`.
-    pub fn as_property_description(&self) -> Result<NSPropertyDescription, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "property description")
+    pub fn as_property_description(&self) -> Borrowed<'_, NSPropertyDescription> {
+        borrowed_from(&self.inner)
     }
 }
 
@@ -241,8 +232,8 @@ impl NSDerivedAttributeDescription {
     }
 
     /// Wraps `NSDerivedAttributeDescription.as_attribute_description(...)`.
-    pub fn as_attribute_description(&self) -> Result<NSAttributeDescription, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "attribute description")
+    pub fn as_attribute_description(&self) -> Borrowed<'_, NSAttributeDescription> {
+        borrowed_from(&self.inner)
     }
 }
 
@@ -261,14 +252,17 @@ impl NSCompositeAttributeDescription {
     }
 
     /// Wraps `NSCompositeAttributeDescription.elements(...)`.
-    pub fn elements(&self) -> Result<Vec<NSAttributeDescription>, CoreDataError> {
+    pub fn elements(&self) -> Result<Vec<Borrowed<'_, NSAttributeDescription>>, CoreDataError> {
         let array_ptr =
             unsafe { ffi::cd_composite_attribute_description_get_elements(self.as_ptr()) };
-        collect_array(array_ptr, "composite attribute elements")
+        collect_borrowed(array_ptr, "composite attribute elements")
     }
 
     /// Mirrors `NSCompositeAttributeDescription.elements`.
-    pub fn set_elements(&self, elements: &[&NSAttributeDescription]) -> Result<(), CoreDataError> {
+    pub fn set_elements(
+        &mut self,
+        elements: &[&NSAttributeDescription],
+    ) -> Result<(), CoreDataError> {
         let raw_elements = elements
             .iter()
             .map(|element| element.as_ptr())
@@ -291,15 +285,15 @@ impl NSCompositeAttributeDescription {
     }
 
     /// Wraps `NSCompositeAttributeDescription.as_attribute_description(...)`.
-    pub fn as_attribute_description(&self) -> Result<NSAttributeDescription, CoreDataError> {
-        clone_retained_wrapper(self.as_ptr(), "attribute description")
+    pub fn as_attribute_description(&self) -> Borrowed<'_, NSAttributeDescription> {
+        borrowed_from(&self.inner)
     }
 }
 
 impl NSFetchIndexElementDescription {
     /// Wraps `NSFetchIndexElementDescription.init(...)`.
     pub fn new(
-        property: &NSPropertyDescription,
+        property: &NSAttributeDescription,
         collation_type: NSFetchIndexElementType,
     ) -> Result<Self, CoreDataError> {
         let mut out_element = core::ptr::null_mut();
@@ -334,7 +328,7 @@ impl NSFetchIndexElementDescription {
 
     /// Mirrors `NSFetchIndexElementDescription.collation_type`.
     pub fn set_collation_type(
-        &self,
+        &mut self,
         collation_type: NSFetchIndexElementType,
     ) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
@@ -357,7 +351,7 @@ impl NSFetchIndexElementDescription {
     }
 
     /// Mirrors `NSFetchIndexElementDescription.ascending`.
-    pub fn set_ascending(&self, ascending: bool) -> Result<(), CoreDataError> {
+    pub fn set_ascending(&mut self, ascending: bool) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_fetch_index_element_description_set_ascending(
@@ -411,7 +405,7 @@ impl NSFetchIndexDescription {
     }
 
     /// Mirrors `NSFetchIndexDescription.name`.
-    pub fn set_name(&self, name: &str) -> Result<(), CoreDataError> {
+    pub fn set_name(&mut self, name: &str) -> Result<(), CoreDataError> {
         let name = cstring_from_str(name, "fetch index description name")?;
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
@@ -428,14 +422,16 @@ impl NSFetchIndexDescription {
     }
 
     /// Wraps `NSFetchIndexDescription.elements(...)`.
-    pub fn elements(&self) -> Result<Vec<NSFetchIndexElementDescription>, CoreDataError> {
+    pub fn elements(
+        &self,
+    ) -> Result<Vec<Borrowed<'_, NSFetchIndexElementDescription>>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_fetch_index_description_get_elements(self.as_ptr()) };
-        collect_array(array_ptr, "fetch index description elements")
+        collect_borrowed(array_ptr, "fetch index description elements")
     }
 
     /// Mirrors `NSFetchIndexDescription.elements`.
     pub fn set_elements(
-        &self,
+        &mut self,
         elements: &[&NSFetchIndexElementDescription],
     ) -> Result<(), CoreDataError> {
         let raw_elements = elements

@@ -3,11 +3,12 @@ use std::path::Path;
 use crate::error::CoreDataError;
 use crate::ffi;
 use crate::private::{
-    collect_array, error_from_status, impl_object_wrapper, path_cstring, take_string,
+    collect_borrowed, error_from_status, impl_copied_object_wrapper, path_cstring, take_string,
+    Borrowed,
 };
 use crate::schema::NSEntityDescription;
 
-impl_object_wrapper!(NSManagedObjectModel);
+impl_copied_object_wrapper!(NSManagedObjectModel);
 
 impl NSManagedObjectModel {
     /// Wraps `NSManagedObjectModel.init(...)`.
@@ -41,7 +42,7 @@ impl NSManagedObjectModel {
     }
 
     /// Wraps `NSManagedObjectModel.add_entity(...)`.
-    pub fn add_entity(&self, entity: &NSEntityDescription) -> Result<(), CoreDataError> {
+    pub fn add_entity(&mut self, entity: &NSEntityDescription) -> Result<(), CoreDataError> {
         let mut out_error = core::ptr::null_mut();
         let status = unsafe {
             ffi::cd_managed_object_model_add_entity(
@@ -57,13 +58,16 @@ impl NSManagedObjectModel {
     }
 
     /// Wraps `NSManagedObjectModel.entities(...)`.
-    pub fn entities(&self) -> Result<Vec<NSEntityDescription>, CoreDataError> {
+    pub fn entities(&self) -> Result<Vec<Borrowed<'_, NSEntityDescription>>, CoreDataError> {
         let array_ptr = unsafe { ffi::cd_managed_object_model_entities(self.as_ptr()) };
-        collect_array(array_ptr, "managed object model entities")
+        collect_borrowed(array_ptr, "managed object model entities")
     }
 
     /// Wraps `NSManagedObjectModel.entity_named(...)`.
-    pub fn entity_named(&self, name: &str) -> Result<Option<NSEntityDescription>, CoreDataError> {
+    pub fn entity_named(
+        &self,
+        name: &str,
+    ) -> Result<Option<Borrowed<'_, NSEntityDescription>>, CoreDataError> {
         let entities = self.entities()?;
         entities
             .into_iter()

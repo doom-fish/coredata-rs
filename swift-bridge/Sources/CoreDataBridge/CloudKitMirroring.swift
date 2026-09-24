@@ -101,7 +101,7 @@ public func cdPersistentCloudKitContainerNew(
         guard let name, let modelPtr else {
             throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "Missing CloudKit container name or model")
         }
-        let model: NSManagedObjectModel = cdBorrow(modelPtr)
+        let model = try cdHandoffModel(cdBorrow(modelPtr))
         let container = NSPersistentCloudKitContainer(name: String(cString: name), managedObjectModel: model)
         outContainer?.pointee = cdRetain(container)
         return CDR_OK
@@ -144,7 +144,10 @@ public func cdPersistentCloudKitContainerPersistentStoreDescriptions(_ container
         return nil
     }
     let container: NSPersistentCloudKitContainer = cdBorrow(containerPtr)
-    return cdRetain(container.persistentStoreDescriptions as NSArray)
+    guard let copies = try? container.persistentStoreDescriptions.map(cdCopyStoreDescription) else {
+        return nil
+    }
+    return cdRetain(copies as NSArray)
 }
 
 @_cdecl("cd_persistent_cloudkit_container_set_persistent_store_descriptions")
@@ -160,7 +163,7 @@ public func cdPersistentCloudKitContainerSetPersistentStoreDescriptions(
         }
         let container: NSPersistentCloudKitContainer = cdBorrow(containerPtr)
         let descriptions: [NSPersistentStoreDescription] = cdObjects(from: descriptionPtrs, count: count)
-        container.persistentStoreDescriptions = descriptions
+        container.persistentStoreDescriptions = try descriptions.map(cdCopyStoreDescription)
         return CDR_OK
     } catch let error as NSError {
         cdWriteError(error, to: outError)
@@ -276,7 +279,9 @@ public func cdPersistentCloudKitEventRequestFetchAfterDate(
     _ outRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
     _: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    outRequest?.pointee = cdRetain(NSPersistentCloudKitContainerEventRequest.fetchEvents(after: Date(timeIntervalSince1970: timestamp)))
+    let request = NSPersistentCloudKitContainerEventRequest.fetchEvents(after: Date(timeIntervalSince1970: timestamp))
+    cdSetEventRequestSource(request, Date(timeIntervalSince1970: timestamp) as NSDate)
+    outRequest?.pointee = cdRetain(request)
     return CDR_OK
 }
 
@@ -287,7 +292,9 @@ public func cdPersistentCloudKitEventRequestFetchAfterEvent(
     _: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
     let event = eventPtr.map { cdBorrow($0) as NSPersistentCloudKitContainer.Event }
-    outRequest?.pointee = cdRetain(NSPersistentCloudKitContainerEventRequest.fetchEvents(after: event))
+    let request = NSPersistentCloudKitContainerEventRequest.fetchEvents(after: event)
+    cdSetEventRequestSource(request, event ?? NSNull())
+    outRequest?.pointee = cdRetain(request)
     return CDR_OK
 }
 
@@ -296,7 +303,7 @@ public func cdPersistentCloudKitEventRequestFetchRequestForEvents(
     _ outFetchRequest: UnsafeMutablePointer<UnsafeMutableRawPointer?>?,
     _: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
-    outFetchRequest?.pointee = cdRetain(NSPersistentCloudKitContainerEventRequest.fetchForEvents())
+    outFetchRequest?.pointee = cdRetain(cdCopyFetchRequest(NSPersistentCloudKitContainerEventRequest.fetchForEvents()))
     return CDR_OK
 }
 
