@@ -287,7 +287,7 @@ NSArray<NSManagedObjectID *> *_Nullable CDXObjectIDsForRelationshipNamed(
     NSError *_Nullable *_Nullable error
 ) {
     @try {
-        return [object objectIDsForRelationshipNamed:name];
+        return [object objectIDsForRelationshipNamed:name] ?: @[];
     } @catch (NSException *exception) {
         CDXAssignException(exception, error);
         return nil;
