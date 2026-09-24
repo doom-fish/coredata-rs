@@ -24,7 +24,7 @@ This matrix covers persistent containers, store coordinators, contexts, managed 
 
 | API row | Status | Notes |
 | --- | --- | --- |
-| Object construction, entity lookup, keyed value set/get, and context lookup | ✅ implemented | Values are read and written on the owning context's queue. Keys must name attributes of the entity; handles fail with an invalidated error after reset, rollback, or delete and save. |
+| Object construction, entity lookup, keyed value set/get, and context lookup | ✅ implemented | Objects are created in a context and use the entity with the same name in the context's model; `entity()` returns a read-only view. Values are read and written on the owning context's queue. Keys must name attributes of the entity; handles fail with an invalidated error after reset, rollback, or delete and save. |
 | Inserted/updated/deleted/fault/change-state inspection, committed/changed-value snapshots, relationship-fault inspection, object IDs, URI representations, and snapshot-event type coverage | ✅ implemented | Exposed through object/object-id wrappers plus `managed_object::NSSnapshotEventType`. |
 | Reference-object helpers and KVC collection mutation helpers | 🟡 partial | Still deferred for a later release. |
 
@@ -32,15 +32,16 @@ This matrix covers persistent containers, store coordinators, contexts, managed 
 
 | API row | Status | Notes |
 | --- | --- | --- |
-| Entity, attribute, and relationship construction; user info, renaming identifiers, uniqueness constraints, ordering, and validation rules | ✅ implemented | Covered by `schema`, `entity_description`, `relationship_description`, and `validation`. |
-| Property-description wrappers, fetched/expression/derived/composite properties, fetch-index descriptions/elements, and fetched-property request attachment | ✅ implemented | Added in `src/model_metadata.rs` and `swift-bridge/.../ModelMetadata.swift`. |
+| Entity, attribute, and relationship construction; user info, renaming identifiers, uniqueness constraints, ordering, and validation rules | ✅ implemented | Covered by `schema`, `entity_description`, `relationship_description`, and `validation`. Relationships name their destination entity and inverse relationship; the model links them when the entities are added. Adding copies the argument, and children are returned as read-only views. |
+| Property-description wrappers, fetched/expression/derived/composite properties, and fetch-index descriptions/elements | ✅ implemented | Added in `src/model_metadata.rs` and `swift-bridge/.../ModelMetadata.swift`. Fetch-index elements take an attribute. |
+| Fetched-property requests, fetched properties and fetch indexes inside entities | 🟡 partial | Core Data only accepts a fetched-property request that has a resolved entity, and the crate builds requests from entity names, so `set_fetch_request` returns an error. Fetched properties and fetch indexes cannot be added to entities. |
 | Subentity graph authoring, richer aggregation helpers, and app-specific schema convenience layers | 🟡 partial | The top-level SDK symbols are wrapped; deeper authoring helpers remain additive. |
 
 ## FetchRequest / PersistentStoreRequest
 
 | API row | Status | Notes |
 | --- | --- | --- |
-| Fetch-request construction, predicate assignment, sort descriptors, limits/offsets, entity assignment, prefetch flags, batch sizing, and execution | ✅ implemented | Existing fetch-request surface retained and expanded. |
+| Fetch-request construction, predicate assignment, sort descriptors, limits/offsets, prefetch flags, batch sizing, and execution | ✅ implemented | Requests name their entity. Execution runs on a copy, so Core Data never stores its resolved entity in the caller's request. |
 | Base persistent-store request/result wrappers, async fetch request/result wrappers, save-changes requests, fetch-request expressions, and request/result type enums | ✅ implemented | Added in `src/persistent_store_request.rs` and `PersistentStoreRequest.swift`. |
 | `propertiesToFetch`, grouping/aggregation authoring, completion-block customization, and progress observation ergonomics | 🟡 partial | Symbol coverage is complete, but higher-level async orchestration remains intentionally thin. |
 

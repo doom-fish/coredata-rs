@@ -21,6 +21,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   such as `%@` made Foundation dereference a missing argument and crash.
   The validation-rule path did this with every rule. Predicates are now
   always parsed with an argument array.
+- Configuration wrappers were `Send + Clone`, and a clone shared the original's
+  Objective-C object, so safe code could mutate one model, entity, property,
+  request or store description from two threads. This covered models, entity,
+  property, relationship and fetch-index descriptions, fetch, batch, history,
+  CloudKit event and save requests, store descriptions, containers and
+  migration objects. Each handle now owns its object: setters take
+  `&mut self`, `Clone` makes an independent copy, and anything added to a
+  parent or handed to Core Data is copied first.
+- Relationship destinations and inverses, an entity's model, a property's
+  entity and a superentity are unretained back-pointers in Core Data. Once the
+  target was freed, `destination_entity()`, `inverse_relationship()`,
+  `managed_object_model()` and Core Data itself read freed memory.
+  Relationships now name their destination entity and inverse relationship,
+  the model links them, and objects inside a model are only reachable through
+  views that borrow their owner.
+- Executing a fetch request makes Core Data store the resolved entity in the
+  request without retaining it. Once that model was freed, cloning or
+  re-executing the request read freed memory. Requests are now executed as
+  fresh copies built from the entity name, and clones are built the same way.
+- A managed object created without a context shared the caller's editable
+  entity with a `Send + Sync` handle. Objects are now always created in a
+  context.
+- `NSFetchRequest::entity` and `NSBatchUpdateRequest::entity` raised an
+  uncaught exception (aborting the process) on requests built from an entity
+  name, which is every request the crate builds. They are removed.
+  `NSFetchIndexElementDescription::new` aborted for every property it
+  accepted; it now takes an attribute and its initializer cannot abort.
+- `NSPersistentStoreCoordinator` and `NSPersistentStore` handles reached
+  several threads through the container and contexts, with no
+  synchronization. Their operations now run on the coordinator's queue.
 
 ### Fixed
 
@@ -58,6 +88,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cannot be cancelled and keeps running (documented).
 - Package.swift no longer ships the excluded duplicate sources
   `Context.swift`, `Model.swift` and `Store.swift`.
+- Core Data's `-copy` drops the fetch request, filter or objects of
+  asynchronous fetch, batch delete, CloudKit event and save-changes requests,
+  drops the result type or entity of others, and raises for batch insert
+  requests and for fetched properties that hold a name-based request. Clones
+  and execution snapshots are now rebuilt field by field.
+- `object_ids_for_relationship_named` returned an error for an empty to-one
+  relationship; it now returns an empty list.
+- `NSManagedObject::new` with a same-named entity from another model created
+  an object that failed to save (error 134020). Objects now use the entity of
+  the context's own model.
+- `version_checksum` on a model still being edited logged Core Data's
+  "unstable version checksum" warning; it is now computed on a frozen copy.
+- `managed_object_model()` on an entity outside any model passed a nil
+  pointer through a non-optional Swift value; it now returns `None`.
+- Handing a model to a container, coordinator, migration manager, model
+  reference or mapping inference returns `INVALID_ARGUMENT` when a
+  relationship names a destination entity that is not in the model.
 
 ### Changed
 
@@ -86,6 +133,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `object_ids_for_relationship_named` accept only relationship names.
 - **Breaking:** unsupported `NSManagedObjectContextConcurrencyType` values
   are rejected.
+- **Breaking:** setters on configuration types take `&mut self`, as do
+  `add_entity`, `add_attribute`, `add_relationship`,
+  `NSPersistentStoreDescription::clear_url`, `NSIncrementalStoreNode::update`,
+  `set_persistent_store_descriptions` and the custom-stage
+  `set_will_migrate_handler` / `set_did_migrate_handler`.
+- **Breaking:** `Clone` makes an independent copy for models, entity and
+  property descriptions, fetch-index descriptions, requests and store
+  descriptions. Containers, CloudKit container options, mapping models,
+  migration managers, entity and property mappings, model references,
+  migration stages, staged migration managers, `NSPersistentStoreRequest`,
+  custom stores and store nodes, `NSEntityMigrationPolicy`, merge conflicts
+  and `NSCoreDataCoreSpotlightDelegate` are no longer `Clone`.
+- **Breaking:** children and Core Data-owned objects are returned as
+  read-only `Borrowed<'_, T>` views: `NSManagedObjectModel::{entities,
+  entity_named}`, `NSEntityDescription::{attributes, relationships,
+  relationships_with_destination_entity, entity_for_name}`,
+  `NSEntityDescription::managed_object_model` (now `Option`),
+  `NSRelationshipDescription::{destination_entity, inverse_relationship}`,
+  composite-attribute and fetch-index `elements`, the
+  `as_property_description`, `as_attribute_description`,
+  `as_migration_stage` and `as_persistent_store_request` upcasts,
+  `managed_object_model()` on containers, coordinators and migration managers,
+  `NSManagedObjectModelReference::resolved_model`,
+  `NSPersistentStoreDescription::cloudkit_container_options`,
+  `NSStagedMigrationManager::{stages, container}`,
+  `NSCustomMigrationStage::{current_model, next_model}` and
+  `NSManagedObject::entity`.
+- **Breaking:** relationships are linked by name.
+  `set_destination_entity_name` and `set_inverse_relationship_name` replace
+  `set_destination_entity` and `set_inverse_relationship`.
+  `add_entity`, `add_attribute` and `add_relationship` copy their argument,
+  and `add_entity` refuses to replace an entity that has a superentity or
+  subentities.
+- **Breaking:** containers, coordinators, migration managers, model
+  references and mapping inference copy the model they are given.
+  `set_persistent_store_descriptions` and
+  `add_persistent_store_with_description` copy the descriptions, and
+  `persistent_store_descriptions()` returns copies. Fetched properties,
+  asynchronous fetch requests, batch deletes, fetch-request expressions and
+  fetched-results controllers copy the fetch request they are given, and
+  their `fetch_request()` getters return copies.
+- **Breaking:** `NSManagedObject::new(entity, context)` requires a context and
+  uses the entity with the same name in the context's model.
+- **Breaking:** `NSManagedObjectID::entity` is replaced by `entity_name`.
+- **Breaking:** `NSFetchRequest::{entity, set_entity}`,
+  `NSBatchInsertRequest::entity` and `NSBatchUpdateRequest::entity` are
+  removed; requests name their entity. `NSBatchInsertRequest::with_entity`
+  uses the entity's name.
+- **Breaking:** `set_affected_stores` moved from `NSPersistentStoreRequest` to
+  the concrete request types.
+- **Breaking:** `NSPersistentStoreDescription::set_cloudkit_container_options`
+  and `set_staged_migration_manager` take ownership of their argument.
+  `NSStagedMigrationManager::new` takes a `Vec<NSMigrationStage>`, built with
+  `From` conversions from the concrete stages. `NSCustomMigrationStage::new`
+  takes its model references by value.
+- **Breaking:** `NSFetchIndexElementDescription::new` takes an
+  `&NSAttributeDescription`.
+- **Breaking:** `NSPersistentStoreCoordinator` and `NSPersistentStore` are
+  `Sync`.
 - `NSFetchedResultsController` keeps its own copy of the fetch request, and
   `fetch_request()` returns a copy.
 - `rust-version` is now 1.82 (was 1.76).
@@ -105,6 +211,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `PredicateOptions`, to build predicates without format strings.
 - `NSFetchRequest::fetch_limit` and `fetch_offset`.
 - `bridge_error_codes` for the bridge error codes.
+- `Borrowed<'_, T>`, the read-only view type, exported from the crate root
+  and the prelude.
+- `NSRelationshipDescription::{destination_entity_name,
+  inverse_relationship_name}` and the concrete requests'
+  `as_persistent_store_request` / `set_affected_stores`.
 
 ### Removed
 
