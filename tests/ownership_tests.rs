@@ -537,16 +537,34 @@ fn requests_executed_against_a_dropped_store_can_still_be_copied_and_reused() ->
 }
 
 #[test]
-fn object_ids_report_their_entity_name_after_the_store_is_gone() -> TestResult {
+fn object_ids_outlive_the_container_that_produced_them() -> TestResult {
     let fixture = basic_model()?;
-    let object_id = {
-        let container = in_memory_container("DroppedIds", &fixture.model)?;
+    let model = fixture.model;
+    let object_id = thread::spawn(move || -> Result<NSManagedObjectID, CoreDataError> {
+        let container = in_memory_container("DroppedIds", &model)?;
         let context = container.new_background_context()?;
-        let object = insert_person(&context, &fixture.person, "Ada", 36)?;
+        let object = NSEntityDescription::insert_new_object_for_name("Person", &context)?;
+        object.set_value("name", "Ada")?;
+        object.set_value("age", 36_i32)?;
+        context.obtain_permanent_ids(&[&object])?;
         context.save()?;
-        object.object_id()?
-    };
+        object.object_id()
+    })
+    .join()
+    .expect("worker panicked")?;
     assert_eq!(object_id.entity_name()?, "Person");
+    assert!(object_id.uri_representation()?.contains("/Person/"));
+
+    let delete = NSBatchDeleteRequest::from_object_ids(&[&object_id])?;
+    let copy = delete.clone();
+    assert_eq!(
+        copy.fetch_request()?.entity_name().as_deref(),
+        Some("Person")
+    );
+    assert_eq!(
+        delete.fetch_request()?.entity_name().as_deref(),
+        Some("Person")
+    );
     Ok(())
 }
 

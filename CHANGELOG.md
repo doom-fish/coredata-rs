@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request without retaining it. Once that model was freed, cloning or
   re-executing the request read freed memory. Requests are now executed as
   fresh copies built from the entity name, and clones are built the same way.
+- Object IDs, and batch deletes built from them, keep unretained references
+  to their entity. Once the container and its model were freed,
+  `entity_name`, `uri_representation` and copies of ID-based batch deletes
+  read freed memory. A model copy handed to Core Data now stays alive for the
+  rest of the process.
 - A managed object created without a context shared the caller's editable
   entity with a `Send + Sync` handle. Objects are now always created in a
   context.
@@ -164,8 +169,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `set_destination_entity_name` and `set_inverse_relationship_name` replace
   `set_destination_entity` and `set_inverse_relationship`.
   `add_entity`, `add_attribute` and `add_relationship` copy their argument,
-  and `add_entity` refuses to replace an entity that has a superentity or
-  subentities.
+  and `add_entity` refuses to add or replace an entity that has a superentity
+  or subentities (copying such an entity into another model produced a model
+  that could not be copied).
 - **Breaking:** containers, coordinators, migration managers, model
   references and mapping inference copy the model they are given.
   `set_persistent_store_descriptions` and

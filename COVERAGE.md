@@ -35,7 +35,7 @@ This matrix covers persistent containers, store coordinators, contexts, managed 
 | Entity, attribute, and relationship construction; user info, renaming identifiers, uniqueness constraints, ordering, and validation rules | ✅ implemented | Covered by `schema`, `entity_description`, `relationship_description`, and `validation`. Relationships name their destination entity and inverse relationship; the model links them when the entities are added. Adding copies the argument, and children are returned as read-only views. |
 | Property-description wrappers, fetched/expression/derived/composite properties, and fetch-index descriptions/elements | ✅ implemented | Added in `src/model_metadata.rs` and `swift-bridge/.../ModelMetadata.swift`. Fetch-index elements take an attribute. |
 | Fetched-property requests, fetched properties and fetch indexes inside entities | 🟡 partial | Core Data only accepts a fetched-property request that has a resolved entity, and the crate builds requests from entity names, so `set_fetch_request` returns an error. Fetched properties and fetch indexes cannot be added to entities. |
-| Subentity graph authoring, richer aggregation helpers, and app-specific schema convenience layers | 🟡 partial | The top-level SDK symbols are wrapped; deeper authoring helpers remain additive. |
+| Subentity graph authoring, richer aggregation helpers, and app-specific schema convenience layers | 🟡 partial | The top-level SDK symbols are wrapped; deeper authoring helpers remain additive. Entities that belong to a hierarchy (for example from a loaded model) cannot be added to another model. |
 
 ## FetchRequest / PersistentStoreRequest
 

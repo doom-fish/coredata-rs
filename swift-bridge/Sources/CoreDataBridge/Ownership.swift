@@ -145,6 +145,12 @@ func cdAddEntity(_ entity: NSEntityDescription, to model: NSManagedObjectModel) 
     guard let name = entity.name, !name.isEmpty else {
         throw cdBridgeNSError(code: CDR_INVALID_ARGUMENT, message: "An entity needs a name before it can be added to a model")
     }
+    guard entity.superentity == nil, entity.subentities.isEmpty else {
+        throw cdBridgeNSError(
+            code: CDR_INVALID_ARGUMENT,
+            message: "Entity '\(name)' is part of an entity hierarchy and cannot be added to another model"
+        )
+    }
     if let existing = model.entitiesByName[name], existing.superentity != nil || !existing.subentities.isEmpty {
         throw cdBridgeNSError(
             code: CDR_INVALID_ARGUMENT,
@@ -173,7 +179,18 @@ func cdAddEntity(_ entity: NSEntityDescription, to model: NSManagedObjectModel) 
     try cdResolveRelationships(in: model)
 }
 
+private let cdHandedOffModelsLock = NSLock()
+private var cdHandedOffModels: [NSManagedObjectModel] = []
+
 func cdHandoffModel(_ model: NSManagedObjectModel) throws -> NSManagedObjectModel {
+    let copy = try cdValidatedModelCopy(model)
+    cdHandedOffModelsLock.lock()
+    cdHandedOffModels.append(copy)
+    cdHandedOffModelsLock.unlock()
+    return copy
+}
+
+func cdValidatedModelCopy(_ model: NSManagedObjectModel) throws -> NSManagedObjectModel {
     for entity in model.entities {
         for relationship in cdOwnRelationships(entity) where relationship.destinationEntity == nil {
             if let destination = cdDestinationEntityName(relationship) {
