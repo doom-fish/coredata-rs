@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .persistent_store_for_url(&artifact.path)?
         .is_some());
     assert_eq!(coordinator.url_for_persistent_store(&store)?, artifact.path);
-    assert!(!store.identifier()?.is_empty());
+    assert_ne!(store.identifier()?, "");
 
     coordinator.remove_persistent_store(&store)?;
     coordinator.destroy_persistent_store(&artifact.path, store_types::SQLITE, None)?;

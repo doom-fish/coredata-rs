@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         1
     );
     assert!(fixture.person.is_kind_of_entity(&fixture.person));
-    assert!(!fixture.children.version_hash()?.is_empty());
+    assert_ne!(fixture.children.version_hash()?, "");
 
     println!("✅ relationship description example OK");
     Ok(())

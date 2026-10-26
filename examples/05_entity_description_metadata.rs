@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .managed_object_model()?
         .ok_or_else(|| std::io::Error::other("entity is not in a model"))?;
     assert_eq!(owning_model.entities()?.len(), 1);
-    assert!(!fixture.person.version_hash()?.is_empty());
+    assert_ne!(fixture.person.version_hash()?, "");
 
     assert!(fixture.model.entity_named("Person")?.is_some());
 

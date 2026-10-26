@@ -21,7 +21,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         request.result_type(),
         FetchRequestResultType::ManagedObjectId
     ));
-    assert!(request.relationship_key_paths_for_prefetching()?.is_empty());
+    assert_eq!(
+        request.relationship_key_paths_for_prefetching()?,
+        [] as [std::string::String; 0]
+    );
     assert_eq!(request.fetch_batch_size(), 16);
 
     println!("✅ fetch request example OK");

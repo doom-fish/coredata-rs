@@ -38,6 +38,9 @@ fn fetched_results_controller_fetches_sorted_objects_and_sections(
 
     let index_path = controller.index_path_for_object(&objects[2])?;
     assert_eq!(index_path, Some(FetchedResultsIndexPath::new(0, 2)));
-    assert!(controller.section_index_titles()?.is_empty());
+    assert_eq!(
+        controller.section_index_titles()?,
+        [] as [std::string::String; 0]
+    );
     Ok(())
 }
